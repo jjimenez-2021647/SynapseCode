@@ -1,10 +1,10 @@
 {
   "info": {
-    "_postman_id": "2f025495-c92e-4a09-b6d0-9770aa23d646",
+    "_postman_id": "83ebd40f-e6ed-471a-866d-d8510ed65296",
     "name": "SynapseCode",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "48332495",
-    "_collection_link": "https://go.postman.co/collection/48332495-2f025495-c92e-4a09-b6d0-9770aa23d646?source=collection_link"
+    "_exporter_id": "48332475",
+    "_collection_link": "https://go.postman.co/collection/48332475-83ebd40f-e6ed-471a-866d-d8510ed65296?source=collection_link"
   },
   "item": [
     {
@@ -116,7 +116,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n    \"emailOrUsername\": \"JosueJimenez\",\n    \"password\": \"1111\"\n}"
+                  "raw": "{\n    \"emailOrUsername\": \"synapsecode823@gmail.com\",\n    \"password\": \"admin_synapse\"\n}"
                 },
                 "url": {
                   "raw": "http://localhost:3006/api/v1/auth/login",
@@ -1150,6 +1150,160 @@
     {
       "name": "SynapseCode Service",
       "item": [
+        {
+          "name": "Rooms / Salas",
+          "item": [
+            {
+              "name": "create - room",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfVEg4ejZwVWlZaFVUIiwianRpIjoiY2IyMTdjNzgtNjc5NS00ZTVhLWFkMzYtY2UyMjA4M2JkM2E5IiwiaWF0IjoxNzcyNDAwMzMwLCJyb2xlIjoiTUFOQUdFUl9ST0xFIiwiZW1haWwiOiJqZWZyeXl1NjdAZ21haWwuY29tIiwibmFtZSI6IlNoaW5qaSIsInN1cm5hbWUiOiJLIiwiZXhwIjoxNzcyNDAyMTMwLCJhdWQiOiJBdXRoU2VydmljZSIsImlzcyI6IkF1dGhTZXJ2aWNlIn0.kIIxylTT56ac6f0rfnXNBzRhIV_yRjToSP-GXESIWEg",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"roomName\": \"Sala de JavaScript Avanzado\",\r\n  \"roomType\": \"PUBLICA\",\r\n  \"roomLanguage\": \"C#\",\r\n  \"hostId\": \"usr_XRzSuMfRwu9M\",\r\n  \"maxUsers\": 8\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:3007/api/v1/rooms",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3007",
+                  "path": [
+                    "api",
+                    "v1",
+                    "rooms"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "update-room",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfVEg4ejZwVWlZaFVUIiwianRpIjoiY2IyMTdjNzgtNjc5NS00ZTVhLWFkMzYtY2UyMjA4M2JkM2E5IiwiaWF0IjoxNzcyNDAwMzMwLCJyb2xlIjoiTUFOQUdFUl9ST0xFIiwiZW1haWwiOiJqZWZyeXl1NjdAZ21haWwuY29tIiwibmFtZSI6IlNoaW5qaSIsInN1cm5hbWUiOiJLIiwiZXhwIjoxNzcyNDAyMTMwLCJhdWQiOiJBdXRoU2VydmljZSIsImlzcyI6IkF1dGhTZXJ2aWNlIn0.kIIxylTT56ac6f0rfnXNBzRhIV_yRjToSP-GXESIWEg",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PUT",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"roomName\": \"Sala de Python Avanzado\",\r\n  \"roomStatus\": \"PAUSADA\",\r\n  \"maxUsers\": 2\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:3007/api/v1/rooms/code/FNZ-8ZA-M6C",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3007",
+                  "path": [
+                    "api",
+                    "v1",
+                    "rooms",
+                    "code",
+                    "FNZ-8ZA-M6C"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "listar-salas",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://localhost:3007/api/v1/rooms",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3007",
+                  "path": [
+                    "api",
+                    "v1",
+                    "rooms"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "eliminar-room",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "http://localhost:3007/api/v1/rooms/code/FNZ-8ZA-M6C",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3007",
+                  "path": [
+                    "api",
+                    "v1",
+                    "rooms",
+                    "code",
+                    "FNZ-8ZA-M6C"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "buscar-room",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://localhost:3007/api/v1/rooms/code/FNZ-8ZA-M6C",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3007",
+                  "path": [
+                    "api",
+                    "v1",
+                    "rooms",
+                    "code",
+                    "FNZ-8ZA-M6C"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
         {
           "name": "Health Check Auth",
           "request": {
