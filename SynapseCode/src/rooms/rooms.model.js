@@ -67,7 +67,7 @@ const RoomSchema = new Schema(
             max: [12, 'El maximo de usuarios no puede ser mayor a 12'],
         },
 
-        // listar los usuarios que estan dentro de la sala con su username y su id
+        // listar los usuarios que estan dentro de la sala con su username, su id y su subRole dentro de la sala
         connectedUsers: {
             type: [
                 {
@@ -79,6 +79,12 @@ const RoomSchema = new Schema(
                         type: String,
                         required: true,
                         trim: true,
+                    },
+                    subRole: {
+                        type: String,
+                        enum: ['HOST_ROLE', 'ASSISTANT_ROLE'],
+                        required: true,
+                        default: 'ASSISTANT_ROLE',
                     },
                     _id: false,
                 },

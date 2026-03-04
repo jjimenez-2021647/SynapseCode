@@ -7,6 +7,7 @@ import { dbConnection } from './db.js';
 import { corsOptions } from './cors-configuration.js';
 import { helmetConfiguration } from './helmet-configuration.js';
 import roomsRoutes from '../src/rooms/rooms.routes.js';
+import roomParticipationsRoutes from '../src/roomParticipations/roomParticipations.routes.js';
 
 const BASE_PATH = '/api/v1';
 
@@ -21,6 +22,7 @@ const middlewares = (app) => {
 //rutas para conectar los enpoint
 const routes = (app) => {
     app.use(`${BASE_PATH}/rooms`, roomsRoutes);
+    app.use(`${BASE_PATH}/room-participations`, roomParticipationsRoutes);
    
     app.get(`${BASE_PATH}/Health`, (request, response) => {
         response.status(200).json({

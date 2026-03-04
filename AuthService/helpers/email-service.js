@@ -16,7 +16,7 @@ const createTransporter = () => {
         secure: false,
         auth: {
         user: "synapsecode823@gmail.com",
-        pass: "qxoqnwdtcyzbyrof",
+        pass: "osghribdqekbkfps",
         },
         connectionTimeout: 10_000,
         greetingTimeout: 10_000,
