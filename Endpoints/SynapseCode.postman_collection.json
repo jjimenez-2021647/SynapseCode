@@ -1305,6 +1305,221 @@
           ]
         },
         {
+          "name": "Room Participations / Participación en Salas",
+          "item": [
+            {
+              "name": "create - participation (host)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"roomId\": \"{{roomId}}\",\r\n  \"userId\": \"{{userId}}\",\r\n  \"role\": \"ANFITRION\"\r\n}"
+                },
+                "url": {
+                  "raw": "http://localhost:3007/api/v1/room-participations",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3007",
+                  "path": [
+                    "api",
+                    "v1",
+                    "room-participations"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "create - participation (member)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"roomId\": \"{{roomId}}\",\r\n  \"userId\": \"{{userId}}\"\r\n}"
+                },
+                "url": {
+                  "raw": "http://localhost:3007/api/v1/room-participations",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3007",
+                  "path": [
+                    "api",
+                    "v1",
+                    "room-participations"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "update - participation (set leftAt)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"leftAt\": \"2026-03-03T18:00:00.000Z\"\r\n}"
+                },
+                "url": {
+                  "raw": "http://localhost:3007/api/v1/room-participations/{{participationId}}",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3007",
+                  "path": [
+                    "api",
+                    "v1",
+                    "room-participations",
+                    "{{participationId}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "list - all participations",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://localhost:3007/api/v1/room-participations",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3007",
+                  "path": [
+                    "api",
+                    "v1",
+                    "room-participations"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "list - by room",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://localhost:3007/api/v1/room-participations/room/{{roomId}}",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3007",
+                  "path": [
+                    "api",
+                    "v1",
+                    "room-participations",
+                    "room",
+                    "{{roomId}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "list - by user",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://localhost:3007/api/v1/room-participations/user/{{userId}}",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3007",
+                  "path": [
+                    "api",
+                    "v1",
+                    "room-participations",
+                    "user",
+                    "{{userId}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "delete - participation",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "http://localhost:3007/api/v1/room-participations/{{participationId}}",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3007",
+                  "path": [
+                    "api",
+                    "v1",
+                    "room-participations",
+                    "{{participationId}}"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
           "name": "Health Check Auth",
           "request": {
             "method": "GET",

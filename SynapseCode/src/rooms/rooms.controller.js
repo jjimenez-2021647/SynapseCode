@@ -1,6 +1,8 @@
 'use strict'
 import Room from './rooms.model.js';
+import RoomParticipation from '../roomParticipations/roomParticipations.model.js';
 import generateUniqueRoomCode from '../../helpers/rooms.helpers.js';
+import { getRoleDefaultPermissions } from '../../helpers/roomParticipations.helpers.js';
 
 export const createRoom = async (req, res) => {
     try {
@@ -13,6 +15,15 @@ export const createRoom = async (req, res) => {
         }
 
         const room = await Room.create(payload);
+
+        // Quien crea la sala pasa a ser anfitrión (HOST): se crea su participación con rol ANFITRION y todos los privilegios
+        await RoomParticipation.create({
+            roomId: room._id,
+            userId: room.hostId,
+            role: 'ANFITRION',
+            permissions: getRoleDefaultPermissions('ANFITRION'),
+        });
+
         return res.status(201).json(room);
     } catch (error) {
         console.error('createRoom error:', error);
