@@ -28,10 +28,11 @@ const CodeSessionSchema = new Schema(
             type: String,
             required: [true, 'El lenguaje es obligatorio'],
             enum: {
-                values: SESSION_LANGUAGES,
+                values: EXECUTION_LANGUAGES,
                 message: 'Lenguaje invalido',
             },
             uppercase: true,
+            set: (value) => (value === 'C#' ? 'CSHARP' : value),
         },
 
         // Contenido completo del código en este snapshot
