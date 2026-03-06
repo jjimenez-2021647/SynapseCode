@@ -1,10 +1,10 @@
 {
   "info": {
-    "_postman_id": "83ebd40f-e6ed-471a-866d-d8510ed65296",
+    "_postman_id": "2f025495-c92e-4a09-b6d0-9770aa23d646",
     "name": "SynapseCode",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "48332475",
-    "_collection_link": "https://go.postman.co/collection/48332475-83ebd40f-e6ed-471a-866d-d8510ed65296?source=collection_link"
+    "_exporter_id": "48332495",
+    "_collection_link": "https://go.postman.co/collection/48332495-2f025495-c92e-4a09-b6d0-9770aa23d646?source=collection_link"
   },
   "item": [
     {
@@ -46,7 +46,7 @@
                     },
                     {
                       "key": "username",
-                      "value": "j",
+                      "value": "jjd",
                       "type": "text"
                     },
                     {
@@ -116,7 +116,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n    \"emailOrUsername\": \"synapsecode823@gmail.com\",\n    \"password\": \"admin_synapse\"\n}"
+                  "raw": "{\n    \"emailOrUsername\": \"jjd\",\n    \"password\": \"123123123\"\n}"
                 },
                 "url": {
                   "raw": "http://localhost:3006/api/v1/auth/login",
@@ -147,7 +147,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n    \"token\": \"iFjI0xK2CJFoK6wsMx_xcQu6KpN9xsxd-9R8XdSA7JQ\"\n}"
+                  "raw": "{\n    \"token\": \"FnwxstoyoBWM-z1QXnL8bzfINyBGI7FMIEH8lx906Xw\"\n}"
                 },
                 "url": {
                   "raw": "http://localhost:3006/api/v1/auth/verify-email",
@@ -1161,7 +1161,7 @@
                   "bearer": [
                     {
                       "key": "token",
-                      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfVEg4ejZwVWlZaFVUIiwianRpIjoiY2IyMTdjNzgtNjc5NS00ZTVhLWFkMzYtY2UyMjA4M2JkM2E5IiwiaWF0IjoxNzcyNDAwMzMwLCJyb2xlIjoiTUFOQUdFUl9ST0xFIiwiZW1haWwiOiJqZWZyeXl1NjdAZ21haWwuY29tIiwibmFtZSI6IlNoaW5qaSIsInN1cm5hbWUiOiJLIiwiZXhwIjoxNzcyNDAyMTMwLCJhdWQiOiJBdXRoU2VydmljZSIsImlzcyI6IkF1dGhTZXJ2aWNlIn0.kIIxylTT56ac6f0rfnXNBzRhIV_yRjToSP-GXESIWEg",
+                      "value": "{{vault:authorization-secret}}",
                       "type": "string"
                     }
                   ]
@@ -1201,7 +1201,7 @@
                   "bearer": [
                     {
                       "key": "token",
-                      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfVEg4ejZwVWlZaFVUIiwianRpIjoiY2IyMTdjNzgtNjc5NS00ZTVhLWFkMzYtY2UyMjA4M2JkM2E5IiwiaWF0IjoxNzcyNDAwMzMwLCJyb2xlIjoiTUFOQUdFUl9ST0xFIiwiZW1haWwiOiJqZWZyeXl1NjdAZ21haWwuY29tIiwibmFtZSI6IlNoaW5qaSIsInN1cm5hbWUiOiJLIiwiZXhwIjoxNzcyNDAyMTMwLCJhdWQiOiJBdXRoU2VydmljZSIsImlzcyI6IkF1dGhTZXJ2aWNlIn0.kIIxylTT56ac6f0rfnXNBzRhIV_yRjToSP-GXESIWEg",
+                      "value": "{{vault:authorization-secret}}",
                       "type": "string"
                     }
                   ]
@@ -1512,6 +1512,463 @@
                     "v1",
                     "room-participations",
                     "{{participationId}}"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Messages",
+          "item": [
+            {
+              "name": "Crear Mensaje de Texto",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"roomId\": \"65abc123def456ghi789\",\n  \"messageType\": \"TEXTO\",\n  \"content\": \"Revisa el archivo main.py, tiene un error en la línea 15\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/messages",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "messages"
+                  ]
+                },
+                "description": "Crear un nuevo mensaje de texto en una sala"
+              },
+              "response": []
+            },
+            {
+              "name": "Crear Mensaje con Imagen",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "roomId",
+                      "value": "65abc123def456ghi789",
+                      "type": "text"
+                    },
+                    {
+                      "key": "messageType",
+                      "value": "IMAGEN",
+                      "type": "text"
+                    },
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "value": ""
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/messages",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "messages"
+                  ]
+                },
+                "description": "Crear un mensaje con una imagen adjunta"
+              },
+              "response": []
+            },
+            {
+              "name": "Crear Mensaje con Audio",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "roomId",
+                      "value": "65abc123def456ghi789",
+                      "type": "text"
+                    },
+                    {
+                      "key": "messageType",
+                      "value": "AUDIO",
+                      "type": "text"
+                    },
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "value": ""
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/messages",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "messages"
+                  ]
+                },
+                "description": "Crear un mensaje con una nota de voz"
+              },
+              "response": []
+            },
+            {
+              "name": "Crear Mensaje con Archivo",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "roomId",
+                      "value": "65abc123def456ghi789",
+                      "type": "text"
+                    },
+                    {
+                      "key": "messageType",
+                      "value": "ARCHIVO",
+                      "type": "text"
+                    },
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "value": null
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/messages",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "messages"
+                  ]
+                },
+                "description": "Crear un mensaje con un archivo adjunto (PDF, ZIP, etc.)"
+              },
+              "response": []
+            },
+            {
+              "name": "Obtener Mensaje por ID",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/messages/65abc123def456ghi789",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "messages",
+                    "65abc123def456ghi789"
+                  ]
+                },
+                "description": "Obtener un mensaje específico por su ID"
+              },
+              "response": []
+            },
+            {
+              "name": "Obtener Mensajes de una Sala",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/messages/room/65abc123def456ghi789?page=1&limit=50",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "messages",
+                    "room",
+                    "65abc123def456ghi789"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "50"
+                    }
+                  ]
+                },
+                "description": "Obtener todos los mensajes de una sala con paginación"
+              },
+              "response": []
+            },
+            {
+              "name": "Editar Mensaje",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"content\": \"Error actualizado: la línea 15 tiene un problema con el tipo de dato\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/messages/65abc123def456ghi789",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "messages",
+                    "65abc123def456ghi789"
+                  ]
+                },
+                "description": "Editar un mensaje (solo dentro de 30 minutos después de su creación)"
+              },
+              "response": []
+            },
+            {
+              "name": "Eliminar Mensaje",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/messages/65abc123def456ghi789",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "messages",
+                    "65abc123def456ghi789"
+                  ]
+                },
+                "description": "Eliminar un mensaje (soft delete, solo dentro de 30 minutos)"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Files",
+          "item": [
+            {
+              "name": "Crear Archivo",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfTmNDUzcza2VCNnhGIiwidXNlcklkIjoidXNyX05jQ1M3M2tlQjZ4RiIsImlkIjoidXNyX05jQ1M3M2tlQjZ4RiIsImp0aSI6ImVkNjllYTNjLTEwMDItNDQ4Yi1hMDg0LTk1NTE1MTk4M2RiYiIsImlhdCI6MTc3Mjc2MzEwMiwicm9sZSI6IlVTRVJfUk9MRSIsImVtYWlsIjoiam9zaHVhLmphMjAwN0BnbWFpbC5jb20iLCJuYW1lIjoiSm9zdcOpIiwic3VybmFtZSI6IkppbcOpbmV6IiwidXNlcm5hbWUiOiJqamQiLCJleHAiOjE3NzI3NjQ5MDIsImF1ZCI6IlN5bmFwc2VDb2RlU2VydmljZSIsImlzcyI6IlN5bmFwc2VDb2RlU2VydmljZSJ9.ButxguFwOhTPtd9YHdkhK9BdbU3FSD6a6yIukrojA68",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"roomId\": \"69a9b0dc60b5d32ef28aa674\",\r\n  \"fileName\": \"HolaMundo\",   \r\n  \"fileExtension\": \"py\"\r\n}\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:3007/api/v1/files",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3007",
+                  "path": [
+                    "api",
+                    "v1",
+                    "files"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Sesión de Codigo",
+          "item": [
+            {
+              "name": "Agregar codigo a los archivos",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfTmNDUzcza2VCNnhGIiwidXNlcklkIjoidXNyX05jQ1M3M2tlQjZ4RiIsImlkIjoidXNyX05jQ1M3M2tlQjZ4RiIsImp0aSI6ImVkNjllYTNjLTEwMDItNDQ4Yi1hMDg0LTk1NTE1MTk4M2RiYiIsImlhdCI6MTc3Mjc2MzEwMiwicm9sZSI6IlVTRVJfUk9MRSIsImVtYWlsIjoiam9zaHVhLmphMjAwN0BnbWFpbC5jb20iLCJuYW1lIjoiSm9zdcOpIiwic3VybmFtZSI6IkppbcOpbmV6IiwidXNlcm5hbWUiOiJqamQiLCJleHAiOjE3NzI3NjQ5MDIsImF1ZCI6IlN5bmFwc2VDb2RlU2VydmljZSIsImlzcyI6IlN5bmFwc2VDb2RlU2VydmljZSJ9.ButxguFwOhTPtd9YHdkhK9BdbU3FSD6a6yIukrojA68",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"fileId\": \"69aa3c9e4d7f267ad81bca57\",\r\n  \"code\": \"class HolaMundo:\\n    @staticmethod\\n    def main():\\n        print(\\\"Hola usuarios de SynapseCode\\\")\\n\\n\\nif __name__ == \\\"__main__\\\":\\n    HolaMundo.main()\\n\"\r\n}\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:3007/api/v1/codeSessions",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3007",
+                  "path": [
+                    "api",
+                    "v1",
+                    "codeSessions"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "CodeExecution",
+          "item": [
+            {
+              "name": "Crear",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"roomId\": \"69a900ab30fd5d3843d118f7\",\r\n  \"fileId\": \"69a90abc30fd5d3843d118aa\",\r\n  \"language\": \"JAVASCRIPT\",\r\n  \"executedCode\": \"console.log(2 + 2);\",\r\n  \"executionStatus\": \"EXITOSO\"\r\n}\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": ""
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Ejecucion de codigo",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfTmNDUzcza2VCNnhGIiwidXNlcklkIjoidXNyX05jQ1M3M2tlQjZ4RiIsImlkIjoidXNyX05jQ1M3M2tlQjZ4RiIsImp0aSI6ImVkNjllYTNjLTEwMDItNDQ4Yi1hMDg0LTk1NTE1MTk4M2RiYiIsImlhdCI6MTc3Mjc2MzEwMiwicm9sZSI6IlVTRVJfUk9MRSIsImVtYWlsIjoiam9zaHVhLmphMjAwN0BnbWFpbC5jb20iLCJuYW1lIjoiSm9zdcOpIiwic3VybmFtZSI6IkppbcOpbmV6IiwidXNlcm5hbWUiOiJqamQiLCJleHAiOjE3NzI3NjQ5MDIsImF1ZCI6IlN5bmFwc2VDb2RlU2VydmljZSIsImlzcyI6IlN5bmFwc2VDb2RlU2VydmljZSJ9.ButxguFwOhTPtd9YHdkhK9BdbU3FSD6a6yIukrojA68",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"fileId\": \"69aa3c9e4d7f267ad81bca57\"\r\n}\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:3007/api/v1/codeExecutions/run",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3007",
+                  "path": [
+                    "api",
+                    "v1",
+                    "codeExecutions",
+                    "run"
                   ]
                 }
               },
