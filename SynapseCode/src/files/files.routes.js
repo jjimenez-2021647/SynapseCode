@@ -4,6 +4,12 @@ import { validateJWT } from '../../middlewares/validate-JWT.js';
 import { requireRole } from '../../middlewares/validate-role.js';
 import { checkValidators } from '../../middlewares/checkValidators.js';
 import {
+    requireFileRoomAccessByBodyRoomId,
+    requireFileRoomAccessByParamRoomId,
+    requireFileRoomAccessByFileIdParam,
+    requireFileRoomAccessForReorder,
+} from '../../middlewares/validate-file-room-access.js';
+import {
     validateFileExtensionMiddleware,
     validateFileNameMiddleware,
 } from '../../middlewares/validateFileExtension.js';
@@ -27,33 +33,35 @@ router.post(
     '/',
     validateJWT,
     requireRole('USER_ROLE'),
+    requireFileRoomAccessByBodyRoomId,
     validateFileNameMiddleware,
     validateFileExtensionMiddleware,
     checkValidators,
     createFile
 );
 
-router.get('/room/:roomId', validateJWT, getFilesByRoom);
-router.get('/:id', validateJWT, getFileById);
+router.get('/room/:roomId', validateJWT, requireFileRoomAccessByParamRoomId, getFilesByRoom);
+router.get('/:id', validateJWT, requireFileRoomAccessByFileIdParam, getFileById);
 
-router.put('/:id/content', validateJWT, requireRole('USER_ROLE'), updateFileContent);
+router.put('/:id/content', validateJWT, requireRole('USER_ROLE'), requireFileRoomAccessByFileIdParam, updateFileContent);
 
 router.patch(
     '/:id/rename',
     validateJWT,
     requireRole('USER_ROLE'),
+    requireFileRoomAccessByFileIdParam,
     validateFileNameMiddleware,
     checkValidators,
     renameFile
 );
 
-router.patch('/:id/readonly', validateJWT, requireRole('USER_ROLE'), toggleReadOnly);
+router.patch('/:id/readonly', validateJWT, requireRole('USER_ROLE'), requireFileRoomAccessByFileIdParam, toggleReadOnly);
 
-router.delete('/:id', validateJWT, requireRole('USER_ROLE'), deleteFile);
-router.patch('/:id/restore', validateJWT, requireRole('USER_ROLE'), restoreFile);
-router.delete('/:id/permanent', validateJWT, requireRole('USER_ROLE'), deleteFilePermanently);
+router.delete('/:id', validateJWT, requireRole('USER_ROLE'), requireFileRoomAccessByFileIdParam, deleteFile);
+router.patch('/:id/restore', validateJWT, requireRole('USER_ROLE'), requireFileRoomAccessByFileIdParam, restoreFile);
+router.delete('/:id/permanent', validateJWT, requireRole('USER_ROLE'), requireFileRoomAccessByFileIdParam, deleteFilePermanently);
 
-router.post('/:id/duplicate', validateJWT, requireRole('USER_ROLE'), duplicateFile);
-router.patch('/reorder', validateJWT, requireRole('USER_ROLE'), reorderFiles);
+router.post('/:id/duplicate', validateJWT, requireRole('USER_ROLE'), requireFileRoomAccessByFileIdParam, duplicateFile);
+router.patch('/reorder', validateJWT, requireRole('USER_ROLE'), requireFileRoomAccessForReorder, reorderFiles);
 
 export default router;
