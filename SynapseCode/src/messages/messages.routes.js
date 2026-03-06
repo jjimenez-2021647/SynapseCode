@@ -9,8 +9,8 @@ import {
     getSystemMessages,
     createSystemMessage,
 } from './messages.controller.js';
-import validateJWT from '../../middlewares/validate-JWT.js';
-import uploadMiddleware from '../../middlewares/cloudinary.js';
+import { validateJWT } from '../../middlewares/validate-JWT.js';
+import { upload as uploadMiddleware } from '../../middlewares/cloudinary.js';
 
 const router = Router();
 

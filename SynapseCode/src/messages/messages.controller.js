@@ -2,6 +2,8 @@
 import Message from './messages.model.js';
 import { uploadToCloudinary } from '../../helpers/cloudinary-service.js';
 import Room from '../rooms/rooms.model.js';
+import Chat from '../chats/chats.model.js';
+import mongoose from 'mongoose';
 
 const enrichMessagesWithRoomContext = (messages, room) => {
     const usernamesByUserId = new Map(
@@ -26,7 +28,7 @@ const enrichMessagesWithRoomContext = (messages, room) => {
  */
 export const createMessage = async (req, res) => {
     try {
-        const { roomId, typeMessage, content } = req.body;
+    let { roomId, typeMessage, content, numberChat } = req.body;
         const userId = req.user?.id || req.user?._id;
 
         if (!roomId || !typeMessage || (!content && !req.file)) {
@@ -35,9 +37,24 @@ export const createMessage = async (req, res) => {
             });
         }
 
-        // Validar que la sala exista
-        const room = await Room.findById(roomId).lean();
-        if (!room) {
+        // Resolver roomId: si el cliente envía un roomCode (ej: "TYM-SBP-FJR")
+        // intentar buscar la sala por roomCode y usar su _id.
+        let room = null;
+        if (roomId) {
+            const looksLikeObjectId = mongoose.Types.ObjectId.isValid(String(roomId));
+            if (looksLikeObjectId) {
+                room = await Room.findById(roomId).lean();
+            } else {
+                // Tratar roomId como roomCode
+                room = await Room.findOne({ roomCode: String(roomId).toUpperCase() }).lean();
+                if (room) {
+                    roomId = String(room._id);
+                }
+            }
+        }
+
+        // Si no se encontró sala pero tampoco se proporcionó numberChat, error
+        if (!room && !numberChat) {
             return res.status(404).json({
                 message: 'Sala no encontrada',
             });
@@ -81,15 +98,35 @@ export const createMessage = async (req, res) => {
             }
         }
 
-        // Crear el mensaje
-        const message = await Message.create({
+        // Crear el mensaje (incluye numberChat si fue provisto)
+        const messagePayload = {
             roomId,
             userId,
             typeMessage,
             content: messageContent,
             messageStatus: 'ENVIADO',
             sentAt: new Date(),
-        });
+        };
+
+        if (numberChat) {
+            messagePayload.numberChat = numberChat;
+        }
+
+        const message = await Message.create(messagePayload);
+
+        // Si se creó con numberChat, añadir referencia al Chat.messages
+        if (message.numberChat) {
+            try {
+                await Chat.findOneAndUpdate(
+                    { numberChat: message.numberChat },
+                    { $addToSet: { messages: message._id } },
+                    { new: true }
+                );
+            } catch (err) {
+                console.error('Error agregando mensaje al Chat.messages:', err);
+                // no bloqueamos la creación del mensaje por un fallo aquí
+            }
+        }
 
         // Poblar referencias
         await message.populate('roomId');

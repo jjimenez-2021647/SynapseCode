@@ -7,6 +7,7 @@ import { dbConnection } from './db.js';
 import { corsOptions } from './cors-configuration.js';
 import { helmetConfiguration } from './helmet-configuration.js';
 import roomsRoutes from '../src/rooms/rooms.routes.js';
+import messagesRoutes from '../src/messages/messages.routes.js';
 import filesRoutes from '../src/files/files.routes.js';
 import codeSessionsRoutes from '../src/codeSessions/codeSessions.routes.js';
 import codeExecutionsRoutes from '../src/codeExecutions/codeExecutions.routes.js';
@@ -25,11 +26,12 @@ const middlewares = (app) => {
 //rutas para conectar los enpoint
 const routes = (app) => {
     app.use(`${BASE_PATH}/rooms`, roomsRoutes);
+    app.use(`${BASE_PATH}/messages`, messagesRoutes);
     app.use(`${BASE_PATH}/room-participations`, roomParticipationsRoutes);
     app.use(`${BASE_PATH}/files`, filesRoutes);
     app.use(`${BASE_PATH}/codeSessions`, codeSessionsRoutes);
     app.use(`${BASE_PATH}/codeExecutions`, codeExecutionsRoutes);
-   
+
     app.get(`${BASE_PATH}/Health`, (request, response) => {
         response.status(200).json({
             status: 'Healthy',
