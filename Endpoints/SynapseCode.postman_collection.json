@@ -1,10 +1,10 @@
 {
   "info": {
-    "_postman_id": "2f025495-c92e-4a09-b6d0-9770aa23d646",
+    "_postman_id": "68e73180-1e17-4bc6-8546-f64c1b414a23",
     "name": "SynapseCode",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "48332495",
-    "_collection_link": "https://go.postman.co/collection/48332495-2f025495-c92e-4a09-b6d0-9770aa23d646?source=collection_link"
+    "_exporter_id": "48332475",
+    "_collection_link": "https://go.postman.co/collection/48332475-68e73180-1e17-4bc6-8546-f64c1b414a23?source=collection_link"
   },
   "item": [
     {
@@ -36,27 +36,27 @@
                   "formdata": [
                     {
                       "key": "name",
-                      "value": "Josué",
+                      "value": "Jefr",
                       "type": "text"
                     },
                     {
                       "key": "surname",
-                      "value": "Jiménez",
+                      "value": "cru",
                       "type": "text"
                     },
                     {
                       "key": "username",
-                      "value": "jjd",
+                      "value": "jcru",
                       "type": "text"
                     },
                     {
                       "key": "email",
-                      "value": "joshua.ja2007@gmail.com",
+                      "value": "jefryyu67@gmail.com",
                       "type": "text"
                     },
                     {
                       "key": "password",
-                      "value": "123123123",
+                      "value": "admin123",
                       "type": "text"
                     },
                     {
@@ -116,7 +116,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n    \"emailOrUsername\": \"jjd\",\n    \"password\": \"123123123\"\n}"
+                  "raw": "{\n    \"emailOrUsername\": \"jcru\",\n    \"password\": \"admin123\"\n}"
                 },
                 "url": {
                   "raw": "http://localhost:3006/api/v1/auth/login",
@@ -147,7 +147,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n    \"token\": \"FnwxstoyoBWM-z1QXnL8bzfINyBGI7FMIEH8lx906Xw\"\n}"
+                  "raw": "{\n    \"token\": \"mYuuD55dg7avxrRcygi2xxaw9cgo2kE2bOF_DbzVvcg\"\n}"
                 },
                 "url": {
                   "raw": "http://localhost:3006/api/v1/auth/verify-email",
@@ -1151,56 +1151,74 @@
       "name": "SynapseCode Service",
       "item": [
         {
-          "name": "Rooms",
+          "name": "Rooms / Salas",
           "item": [
             {
-              "name": "POST Create Room",
+              "name": "create - room",
               "request": {
-                "method": "POST",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/rooms",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "rooms"
-                  ],
-                  "query": []
-                },
                 "auth": {
                   "type": "bearer",
                   "bearer": [
                     {
                       "key": "token",
-                      "value": "{{vault:authorization-secret}}",
+                      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfRzNKSDlnNFJDd1dyIiwidXNlcklkIjoidXNyX0czSkg5ZzRSQ3dXciIsImlkIjoidXNyX0czSkg5ZzRSQ3dXciIsImp0aSI6ImEyOWFmZmVhLWE2ZjQtNDlhMy04OWU4LWQ2YzZmODhlZmU0NSIsImlhdCI6MTc3MjgzMTY5NSwicm9sZSI6IlVTRVJfUk9MRSIsImVtYWlsIjoiamVmcnl5dTY3QGdtYWlsLmNvbSIsIm5hbWUiOiJKZWZyIiwic3VybmFtZSI6ImNydSIsInVzZXJuYW1lIjoiamNydSIsImV4cCI6MTc3MjgzMzQ5NSwiYXVkIjoiU3luYXBzZUNvZGVTZXJ2aWNlIiwiaXNzIjoiU3luYXBzZUNvZGVTZXJ2aWNlIn0.8RmLz4G0G-EdI7G85hg_Yj2mKXRNTJql5UX-KAwMRnE",
                       "type": "string"
                     }
                   ]
                 },
+                "method": "POST",
+                "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"roomName\": \"Sala MultiLenguaje\",\n  \"roomType\": \"PUBLICA\",\n  \"maxUsers\": 10\n}",
+                  "raw": "{\r\n  \"roomName\": \"Sala Python 1 con chat\",\r\n  \"roomType\": \"PRIVADA\",\r\n  \"roomLanguage\": \"C#\",\r\n  \"maxUsers\": 10\r\n  \r\n}",
                   "options": {
                     "raw": {
                       "language": "json"
                     }
                   }
+                },
+                "url": {
+                  "raw": "http://localhost:3007/api/v1/rooms",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3007",
+                  "path": [
+                    "api",
+                    "v1",
+                    "rooms"
+                  ]
                 }
               },
               "response": []
             },
             {
-              "name": "PUT Update Room (by roomCode in :id)",
+              "name": "update-room",
               "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfN044SnlhWDQ2ZERrIiwidXNlcklkIjoidXNyXzdOOEp5YVg0NmREayIsImlkIjoidXNyXzdOOEp5YVg0NmREayIsImp0aSI6IjBjNTFhNzRiLWJiMDEtNGZhYy05OTNkLTQxNDJmYTA0YmE5OSIsImlhdCI6MTc3MjgyOTUxOCwicm9sZSI6IlVTRVJfUk9MRSIsImVtYWlsIjoiamNydXotMjAyMTY0NEBraW5hbC5lZHUuZ3QiLCJuYW1lIjoiSmVmcnkiLCJzdXJuYW1lIjoiY3J1eiIsInVzZXJuYW1lIjoiamNydXoiLCJleHAiOjE3NzI4MzEzMTgsImF1ZCI6IlN5bmFwc2VDb2RlU2VydmljZSIsImlzcyI6IlN5bmFwc2VDb2RlU2VydmljZSJ9.8ICeJ3o5CcbqQAg47Wf0cJ7tVIpKeiCbRFCzJGSQsgc",
+                      "type": "string"
+                    }
+                  ]
+                },
                 "method": "PUT",
                 "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"roomName\": \"Sala de Python Avanzado\",\r\n  \"roomStatus\": \"PAUSADA\",\r\n  \"maxUsers\": 2\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
                 "url": {
-                  "raw": "http://localhost:3007/api/v1/rooms/ABC-123-XYZ",
+                  "raw": "http://localhost:3007/api/v1/rooms/code/MYD-0DB-F89",
                   "protocol": "http",
                   "host": [
                     "localhost"
@@ -1210,25 +1228,26 @@
                     "api",
                     "v1",
                     "rooms",
-                    "ABC-123-XYZ"
-                  ],
-                  "query": []
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"roomName\": \"Sala MultiLenguaje Actualizada\",\n  \"roomType\": \"PRIVADA\",\n  \"roomStatus\": \"PAUSADA\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
+                    "code",
+                    "MYD-0DB-F89"
+                  ]
                 }
               },
               "response": []
             },
             {
-              "name": "GET List Rooms",
+              "name": "listar-salas",
               "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfN044SnlhWDQ2ZERrIiwidXNlcklkIjoidXNyXzdOOEp5YVg0NmREayIsImlkIjoidXNyXzdOOEp5YVg0NmREayIsImp0aSI6IjBjNTFhNzRiLWJiMDEtNGZhYy05OTNkLTQxNDJmYTA0YmE5OSIsImlhdCI6MTc3MjgyOTUxOCwicm9sZSI6IlVTRVJfUk9MRSIsImVtYWlsIjoiamNydXotMjAyMTY0NEBraW5hbC5lZHUuZ3QiLCJuYW1lIjoiSmVmcnkiLCJzdXJuYW1lIjoiY3J1eiIsInVzZXJuYW1lIjoiamNydXoiLCJleHAiOjE3NzI4MzEzMTgsImF1ZCI6IlN5bmFwc2VDb2RlU2VydmljZSIsImlzcyI6IlN5bmFwc2VDb2RlU2VydmljZSJ9.8ICeJ3o5CcbqQAg47Wf0cJ7tVIpKeiCbRFCzJGSQsgc",
+                      "type": "string"
+                    }
+                  ]
+                },
                 "method": "GET",
                 "header": [],
                 "url": {
@@ -1242,43 +1261,18 @@
                     "api",
                     "v1",
                     "rooms"
-                  ],
-                  "query": []
+                  ]
                 }
               },
               "response": []
             },
             {
-              "name": "GET Room By Code",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/rooms/code/ABC-123-XYZ",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "rooms",
-                    "code",
-                    "ABC-123-XYZ"
-                  ],
-                  "query": []
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "DELETE Room By Code",
+              "name": "eliminar-room",
               "request": {
                 "method": "DELETE",
                 "header": [],
                 "url": {
-                  "raw": "http://localhost:3007/api/v1/rooms/code/ABC-123-XYZ",
+                  "raw": "http://localhost:3007/api/v1/rooms/code/FNZ-8ZA-M6C",
                   "protocol": "http",
                   "host": [
                     "localhost"
@@ -1289,9 +1283,53 @@
                     "v1",
                     "rooms",
                     "code",
-                    "ABC-123-XYZ"
+                    "FNZ-8ZA-M6C"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "buscar-room",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfN044SnlhWDQ2ZERrIiwidXNlcklkIjoidXNyXzdOOEp5YVg0NmREayIsImlkIjoidXNyXzdOOEp5YVg0NmREayIsImp0aSI6IjBjNTFhNzRiLWJiMDEtNGZhYy05OTNkLTQxNDJmYTA0YmE5OSIsImlhdCI6MTc3MjgyOTUxOCwicm9sZSI6IlVTRVJfUk9MRSIsImVtYWlsIjoiamNydXotMjAyMTY0NEBraW5hbC5lZHUuZ3QiLCJuYW1lIjoiSmVmcnkiLCJzdXJuYW1lIjoiY3J1eiIsInVzZXJuYW1lIjoiamNydXoiLCJleHAiOjE3NzI4MzEzMTgsImF1ZCI6IlN5bmFwc2VDb2RlU2VydmljZSIsImlzcyI6IlN5bmFwc2VDb2RlU2VydmljZSJ9.8ICeJ3o5CcbqQAg47Wf0cJ7tVIpKeiCbRFCzJGSQsgc",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:3007/api/v1/rooms/code/MYD-0DB-F89",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
                   ],
-                  "query": []
+                  "port": "3007",
+                  "path": [
+                    "api",
+                    "v1",
+                    "rooms",
+                    "code",
+                    "MYD-0DB-F89"
+                  ]
                 }
               },
               "response": []
@@ -1299,13 +1337,32 @@
           ]
         },
         {
-          "name": "Room Participations",
+          "name": "Room Participations / Participación en Salas",
           "item": [
             {
-              "name": "POST Create Participation",
+              "name": "create - participation (host)",
               "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
                 "method": "POST",
-                "header": [],
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"roomId\": \"{{roomId}}\",\r\n  \"userId\": \"{{userId}}\",\r\n  \"role\": \"ANFITRION\"\r\n}"
+                },
                 "url": {
                   "raw": "http://localhost:3007/api/v1/room-participations",
                   "protocol": "http",
@@ -1317,36 +1374,75 @@
                     "api",
                     "v1",
                     "room-participations"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
                   ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"roomName\": \"Sala MultiLenguaje\",\n  \"roomCode\": \"ABC-123-XYZ\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
                 }
               },
               "response": []
             },
             {
-              "name": "PUT Update Participation",
+              "name": "create - participation (member)",
               "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"roomName\": \"Sala Python 1 con chat\",\r\n  \"roomCode\": \"MYD-0DB-F89\" \r\n}"
+                },
+                "url": {
+                  "raw": "http://localhost:3007/api/v1/room-participations",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3007",
+                  "path": [
+                    "api",
+                    "v1",
+                    "room-participations"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "update - participation (set leftAt)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{authToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
                 "method": "PUT",
-                "header": [],
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"leftAt\": \"2026-03-03T18:00:00.000Z\"\r\n}"
+                },
                 "url": {
                   "raw": "http://localhost:3007/api/v1/room-participations/{{participationId}}",
                   "protocol": "http",
@@ -1358,24 +1454,14 @@
                     "api",
                     "v1",
                     "room-participations",
-                    "%7B%7BparticipationId%7D%7D"
-                  ],
-                  "query": []
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"role\": \"MIEMBRO\",\n  \"permissions\": {\n    \"canEdit\": true,\n    \"canRun\": true,\n    \"canInvite\": false,\n    \"canKick\": false,\n    \"canCloseRoom\": false\n  }\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
+                    "{{participationId}}"
+                  ]
                 }
               },
               "response": []
             },
             {
-              "name": "GET List Participations",
+              "name": "list - all participations",
               "request": {
                 "method": "GET",
                 "header": [],
@@ -1390,14 +1476,13 @@
                     "api",
                     "v1",
                     "room-participations"
-                  ],
-                  "query": []
+                  ]
                 }
               },
               "response": []
             },
             {
-              "name": "GET Participations By Room",
+              "name": "list - by room",
               "request": {
                 "method": "GET",
                 "header": [],
@@ -1413,15 +1498,14 @@
                     "v1",
                     "room-participations",
                     "room",
-                    "%7B%7BroomId%7D%7D"
-                  ],
-                  "query": []
+                    "{{roomId}}"
+                  ]
                 }
               },
               "response": []
             },
             {
-              "name": "GET Participations By User",
+              "name": "list - by user",
               "request": {
                 "method": "GET",
                 "header": [],
@@ -1437,39 +1521,14 @@
                     "v1",
                     "room-participations",
                     "user",
-                    "%7B%7BuserId%7D%7D"
-                  ],
-                  "query": []
+                    "{{userId}}"
+                  ]
                 }
               },
               "response": []
             },
             {
-              "name": "PATCH Leave Participation",
-              "request": {
-                "method": "PATCH",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/room-participations/{{participationId}}/leave",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "room-participations",
-                    "%7B%7BparticipationId%7D%7D",
-                    "leave"
-                  ],
-                  "query": []
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "DELETE Participation",
+              "name": "delete - participation",
               "request": {
                 "method": "DELETE",
                 "header": [],
@@ -1484,427 +1543,7 @@
                     "api",
                     "v1",
                     "room-participations",
-                    "%7B%7BparticipationId%7D%7D"
-                  ],
-                  "query": []
-                }
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "Files",
-          "item": [
-            {
-              "name": "POST Create File",
-              "request": {
-                "method": "POST",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/files",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "files"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"roomId\": \"{{roomId}}\",\n  \"fileName\": \"main\",\n  \"fileExtension\": \"py\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "GET Files By Room",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/files/room/{{roomId}}",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "files",
-                    "room",
-                    "%7B%7BroomId%7D%7D"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "GET File By Id",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/files/{{fileId}}",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "files",
-                    "%7B%7BfileId%7D%7D"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "PUT Update File Content",
-              "request": {
-                "method": "PUT",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/files/{{fileId}}/content",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "files",
-                    "%7B%7BfileId%7D%7D",
-                    "content"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"currentCode\": \"print(\\\"Hola Synapse\\\")\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "PATCH Rename File",
-              "request": {
-                "method": "PATCH",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/files/{{fileId}}/rename",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "files",
-                    "%7B%7BfileId%7D%7D",
-                    "rename"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"fileName\": \"main_updated\",\n  \"fileExtension\": \"py\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "PATCH Toggle ReadOnly",
-              "request": {
-                "method": "PATCH",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/files/{{fileId}}/readonly",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "files",
-                    "%7B%7BfileId%7D%7D",
-                    "readonly"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"isReadOnly\": true\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "PATCH Reorder Files",
-              "request": {
-                "method": "PATCH",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/files/reorder",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "files",
-                    "reorder"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"fileOrders\": [\n    {\n      \"fileId\": \"{{fileId}}\",\n      \"displayOrder\": 0\n    },\n    {\n      \"fileId\": \"{{fileId2}}\",\n      \"displayOrder\": 1\n    }\n  ]\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "POST Duplicate File",
-              "request": {
-                "method": "POST",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/files/{{fileId}}/duplicate",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "files",
-                    "%7B%7BfileId%7D%7D",
-                    "duplicate"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "DELETE Soft Delete File",
-              "request": {
-                "method": "DELETE",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/files/{{fileId}}",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "files",
-                    "%7B%7BfileId%7D%7D"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "PATCH Restore File",
-              "request": {
-                "method": "PATCH",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/files/{{fileId}}/restore",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "files",
-                    "%7B%7BfileId%7D%7D",
-                    "restore"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "DELETE Permanent Delete File",
-              "request": {
-                "method": "DELETE",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/files/{{fileId}}/permanent",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "files",
-                    "%7B%7BfileId%7D%7D",
-                    "permanent"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
+                    "{{participationId}}"
                   ]
                 }
               },
@@ -1913,957 +1552,238 @@
           ]
         },
         {
-          "name": "Code Sessions",
+          "name": "Messages",
           "item": [
             {
-              "name": "POST Create Code Session",
+              "name": "Crear Mensaje de Texto",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfN044SnlhWDQ2ZERrIiwidXNlcklkIjoidXNyXzdOOEp5YVg0NmREayIsImlkIjoidXNyXzdOOEp5YVg0NmREayIsImp0aSI6IjBjNTFhNzRiLWJiMDEtNGZhYy05OTNkLTQxNDJmYTA0YmE5OSIsImlhdCI6MTc3MjgyOTUxOCwicm9sZSI6IlVTRVJfUk9MRSIsImVtYWlsIjoiamNydXotMjAyMTY0NEBraW5hbC5lZHUuZ3QiLCJuYW1lIjoiSmVmcnkiLCJzdXJuYW1lIjoiY3J1eiIsInVzZXJuYW1lIjoiamNydXoiLCJleHAiOjE3NzI4MzEzMTgsImF1ZCI6IlN5bmFwc2VDb2RlU2VydmljZSIsImlzcyI6IlN5bmFwc2VDb2RlU2VydmljZSJ9.8ICeJ3o5CcbqQAg47Wf0cJ7tVIpKeiCbRFCzJGSQsgc",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "\n{\n\"roomId\": \"MYD-0DB-F89\",\n\"typeMessage\": \"TEXTO\",\n\"content\": \"Soy el hpta admin\",\n\"numberChat\": \"chat_M1DCD117\"\n}"
+                },
+                "url": {
+                  "raw": "http://localhost:3007/api/v1/messages/",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3007",
+                  "path": [
+                    "api",
+                    "v1",
+                    "messages",
+                    ""
+                  ]
+                },
+                "description": "Crear un nuevo mensaje de texto en una sala"
+              },
+              "response": []
+            },
+            {
+              "name": "Crear Mensaje con Imagen",
               "request": {
                 "method": "POST",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/codeSessions",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "codeSessions"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"fileId\": \"{{fileId}}\",\n  \"code\": \"print(\\\"Hola usuarios de SynapseCode\\\")\",\n  \"isAutoSave\": false,\n  \"isBeforeExecution\": false\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
                   }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "PUT Update Code Session",
-              "request": {
-                "method": "PUT",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/codeSessions/{{sessionId}}",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "codeSessions",
-                    "%7B%7BsessionId%7D%7D"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                },
+                ],
                 "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"code\": \"print(\\\"Codigo actualizado\\\")\",\n  \"isAutoSave\": true\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "GET List Code Sessions (Scoped)",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/codeSessions?roomId={{roomId}}",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "codeSessions"
-                  ],
-                  "query": [
+                  "mode": "formdata",
+                  "formdata": [
                     {
                       "key": "roomId",
-                      "value": "{{roomId}}"
+                      "value": "65abc123def456ghi789",
+                      "type": "text"
+                    },
+                    {
+                      "key": "messageType",
+                      "value": "IMAGEN",
+                      "type": "text"
+                    },
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "value": ""
                     }
                   ]
                 },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "GET Latest Session By File",
-              "request": {
-                "method": "GET",
-                "header": [],
                 "url": {
-                  "raw": "http://localhost:3007/api/v1/codeSessions/file/{{fileId}}/latest",
-                  "protocol": "http",
+                  "raw": "{{baseUrl}}/api/messages",
                   "host": [
-                    "localhost"
+                    "{{baseUrl}}"
                   ],
-                  "port": "3007",
                   "path": [
                     "api",
-                    "v1",
-                    "codeSessions",
-                    "file",
-                    "%7B%7BfileId%7D%7D",
-                    "latest"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "GET Session By File Version",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/codeSessions/file/{{fileId}}/version/1",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "codeSessions",
-                    "file",
-                    "%7B%7BfileId%7D%7D",
-                    "version",
-                    "1"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "GET Sessions By File",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/codeSessions/file/{{fileId}}",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "codeSessions",
-                    "file",
-                    "%7B%7BfileId%7D%7D"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "GET Sessions By Room",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/codeSessions/room/{{roomId}}",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "codeSessions",
-                    "room",
-                    "%7B%7BroomId%7D%7D"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "GET Session By Id",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/codeSessions/{{sessionId}}",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "codeSessions",
-                    "%7B%7BsessionId%7D%7D"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "DELETE Sessions By File",
-              "request": {
-                "method": "DELETE",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/codeSessions/file/{{fileId}}",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "codeSessions",
-                    "file",
-                    "%7B%7BfileId%7D%7D"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "DELETE Sessions By Room",
-              "request": {
-                "method": "DELETE",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/codeSessions/room/{{roomId}}",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "codeSessions",
-                    "room",
-                    "%7B%7BroomId%7D%7D"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "DELETE Session By Id",
-              "request": {
-                "method": "DELETE",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/codeSessions/{{sessionId}}",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "codeSessions",
-                    "%7B%7BsessionId%7D%7D"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "Code Executions",
-          "item": [
-            {
-              "name": "GET Supported Languages",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/codeExecutions/languages",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "codeExecutions",
-                    "languages"
-                  ],
-                  "query": []
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "POST Run Code (sync)",
-              "request": {
-                "method": "POST",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/codeExecutions/run",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "codeExecutions",
-                    "run"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"fileId\": \"{{fileId}}\",\n  \"input\": \"\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "POST Submit Code (async)",
-              "request": {
-                "method": "POST",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/codeExecutions/submit",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "codeExecutions",
-                    "submit"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"fileId\": \"{{fileId}}\",\n  \"input\": \"\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "GET Execution Result By Token",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/codeExecutions/result/{{judgeToken}}",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "codeExecutions",
-                    "result",
-                    "%7B%7BjudgeToken%7D%7D"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "GET Rate Limit",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/codeExecutions/rate-limit",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "codeExecutions",
-                    "rate-limit"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "GET List Executions",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/codeExecutions?roomId={{roomId}}",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "codeExecutions"
-                  ],
-                  "query": [
-                    {
-                      "key": "roomId",
-                      "value": "{{roomId}}"
-                    }
-                  ]
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "GET Executions By File",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/codeExecutions/file/{{fileId}}",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "codeExecutions",
-                    "file",
-                    "%7B%7BfileId%7D%7D"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "GET Executions By Room",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/codeExecutions/room/{{roomId}}",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "codeExecutions",
-                    "room",
-                    "%7B%7BroomId%7D%7D"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "GET Execution By Id",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/codeExecutions/{{executionId}}",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "codeExecutions",
-                    "%7B%7BexecutionId%7D%7D"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "POST Create Execution",
-              "request": {
-                "method": "POST",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/codeExecutions",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "codeExecutions"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"fileId\": \"{{fileId}}\",\n  \"executionStatus\": \"PENDIENTE\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "DELETE Executions By File",
-              "request": {
-                "method": "DELETE",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/codeExecutions/file/{{fileId}}",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "codeExecutions",
-                    "file",
-                    "%7B%7BfileId%7D%7D"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "DELETE Executions By Room",
-              "request": {
-                "method": "DELETE",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/codeExecutions/room/{{roomId}}",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "codeExecutions",
-                    "room",
-                    "%7B%7BroomId%7D%7D"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "DELETE Execution By Id",
-              "request": {
-                "method": "DELETE",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/codeExecutions/{{executionId}}",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "codeExecutions",
-                    "%7B%7BexecutionId%7D%7D"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "Messages (Not Mounted in apps.js)",
-          "item": [
-            {
-              "name": "POST Create Message",
-              "request": {
-                "method": "POST",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/messages",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
                     "messages"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
                   ]
                 },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"roomId\": \"{{roomId}}\",\n  \"typeMessage\": \"TEXTO\",\n  \"content\": \"Hola equipo\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
+                "description": "Crear un mensaje con una imagen adjunta"
+              },
+              "response": []
+            },
+            {
+              "name": "Crear Mensaje con Audio",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
                   }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "GET Message By Id",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/messages/{{messageId}}",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "messages",
-                    "%7B%7BmessageId%7D%7D"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
                     {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
+                      "key": "roomId",
+                      "value": "65abc123def456ghi789",
+                      "type": "text"
+                    },
+                    {
+                      "key": "messageType",
+                      "value": "AUDIO",
+                      "type": "text"
+                    },
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "value": ""
                     }
                   ]
-                }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/messages",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "messages"
+                  ]
+                },
+                "description": "Crear un mensaje con una nota de voz"
               },
               "response": []
             },
             {
-              "name": "GET Messages By Room",
+              "name": "Crear Mensaje con Archivo",
               "request": {
-                "method": "GET",
-                "header": [],
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "roomId",
+                      "value": "65abc123def456ghi789",
+                      "type": "text"
+                    },
+                    {
+                      "key": "messageType",
+                      "value": "ARCHIVO",
+                      "type": "text"
+                    },
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "value": null
+                    }
+                  ]
+                },
                 "url": {
-                  "raw": "http://localhost:3007/api/v1/messages/room/{{roomId}}?page=1&limit=50",
-                  "protocol": "http",
+                  "raw": "{{baseUrl}}/api/messages",
                   "host": [
-                    "localhost"
+                    "{{baseUrl}}"
                   ],
-                  "port": "3007",
                   "path": [
                     "api",
-                    "v1",
+                    "messages"
+                  ]
+                },
+                "description": "Crear un mensaje con un archivo adjunto (PDF, ZIP, etc.)"
+              },
+              "response": []
+            },
+            {
+              "name": "Obtener Mensaje por ID",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/messages/65abc123def456ghi789",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "messages",
+                    "65abc123def456ghi789"
+                  ]
+                },
+                "description": "Obtener un mensaje específico por su ID"
+              },
+              "response": []
+            },
+            {
+              "name": "Obtener Mensajes de una Sala",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/messages/room/65abc123def456ghi789?page=1&limit=50",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
                     "messages",
                     "room",
-                    "%7B%7BroomId%7D%7D"
+                    "65abc123def456ghi789"
                   ],
                   "query": [
                     {
@@ -2876,168 +1796,112 @@
                     }
                   ]
                 },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                }
+                "description": "Obtener todos los mensajes de una sala con paginación"
               },
               "response": []
             },
             {
-              "name": "PATCH Edit Message",
+              "name": "Editar Mensaje",
               "request": {
                 "method": "PATCH",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/messages/{{messageId}}",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "messages",
-                    "%7B%7BmessageId%7D%7D"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                },
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"content\": \"Mensaje editado\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
+                  "raw": "{\n  \"content\": \"Error actualizado: la línea 15 tiene un problema con el tipo de dato\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/messages/65abc123def456ghi789",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "messages",
+                    "65abc123def456ghi789"
+                  ]
+                },
+                "description": "Editar un mensaje (solo dentro de 30 minutos después de su creación)"
               },
               "response": []
             },
             {
-              "name": "DELETE Message",
+              "name": "Eliminar Mensaje",
               "request": {
                 "method": "DELETE",
-                "header": [],
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}",
+                    "type": "text"
+                  }
+                ],
                 "url": {
-                  "raw": "http://localhost:3007/api/v1/messages/{{messageId}}",
-                  "protocol": "http",
+                  "raw": "{{baseUrl}}/api/messages/65abc123def456ghi789",
                   "host": [
-                    "localhost"
+                    "{{baseUrl}}"
                   ],
-                  "port": "3007",
                   "path": [
                     "api",
-                    "v1",
                     "messages",
-                    "%7B%7BmessageId%7D%7D"
-                  ],
-                  "query": []
+                    "65abc123def456ghi789"
+                  ]
                 },
+                "description": "Eliminar un mensaje (soft delete, solo dentro de 30 minutos)"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Files",
+          "item": [
+            {
+              "name": "Crear Archivo",
+              "request": {
                 "auth": {
                   "type": "bearer",
                   "bearer": [
                     {
                       "key": "token",
-                      "value": "{{vault:authorization-secret}}",
+                      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfTmNDUzcza2VCNnhGIiwidXNlcklkIjoidXNyX05jQ1M3M2tlQjZ4RiIsImlkIjoidXNyX05jQ1M3M2tlQjZ4RiIsImp0aSI6ImVkNjllYTNjLTEwMDItNDQ4Yi1hMDg0LTk1NTE1MTk4M2RiYiIsImlhdCI6MTc3Mjc2MzEwMiwicm9sZSI6IlVTRVJfUk9MRSIsImVtYWlsIjoiam9zaHVhLmphMjAwN0BnbWFpbC5jb20iLCJuYW1lIjoiSm9zdcOpIiwic3VybmFtZSI6IkppbcOpbmV6IiwidXNlcm5hbWUiOiJqamQiLCJleHAiOjE3NzI3NjQ5MDIsImF1ZCI6IlN5bmFwc2VDb2RlU2VydmljZSIsImlzcyI6IlN5bmFwc2VDb2RlU2VydmljZSJ9.ButxguFwOhTPtd9YHdkhK9BdbU3FSD6a6yIukrojA68",
                       "type": "string"
                     }
                   ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "GET System Messages",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/messages/system/list/{{roomId}}",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "messages",
-                    "system",
-                    "list",
-                    "%7B%7BroomId%7D%7D"
-                  ],
-                  "query": []
                 },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "POST Create System Message",
-              "request": {
                 "method": "POST",
                 "header": [],
-                "url": {
-                  "raw": "http://localhost:3007/api/v1/messages/system/create",
-                  "protocol": "http",
-                  "host": [
-                    "localhost"
-                  ],
-                  "port": "3007",
-                  "path": [
-                    "api",
-                    "v1",
-                    "messages",
-                    "system",
-                    "create"
-                  ],
-                  "query": []
-                },
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{vault:authorization-secret}}",
-                      "type": "string"
-                    }
-                  ]
-                },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"roomId\": \"{{roomId}}\",\n  \"templateKey\": \"USER_JOINED\",\n  \"values\": {\n    \"username\": \"joshua\"\n  }\n}",
+                  "raw": "{\r\n  \"roomId\": \"69a9b0dc60b5d32ef28aa674\",\r\n  \"fileName\": \"HolaMundo\",   \r\n  \"fileExtension\": \"py\"\r\n}\r\n",
                   "options": {
                     "raw": {
                       "language": "json"
                     }
                   }
+                },
+                "url": {
+                  "raw": "http://localhost:3007/api/v1/files",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3007",
+                  "path": [
+                    "api",
+                    "v1",
+                    "files"
+                  ]
                 }
               },
               "response": []
@@ -3045,15 +1909,34 @@
           ]
         },
         {
-          "name": "Health",
+          "name": "Sesión de Codigo",
           "item": [
             {
-              "name": "GET Health Check",
+              "name": "Agregar codigo a los archivos",
               "request": {
-                "method": "GET",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfTmNDUzcza2VCNnhGIiwidXNlcklkIjoidXNyX05jQ1M3M2tlQjZ4RiIsImlkIjoidXNyX05jQ1M3M2tlQjZ4RiIsImp0aSI6ImVkNjllYTNjLTEwMDItNDQ4Yi1hMDg0LTk1NTE1MTk4M2RiYiIsImlhdCI6MTc3Mjc2MzEwMiwicm9sZSI6IlVTRVJfUk9MRSIsImVtYWlsIjoiam9zaHVhLmphMjAwN0BnbWFpbC5jb20iLCJuYW1lIjoiSm9zdcOpIiwic3VybmFtZSI6IkppbcOpbmV6IiwidXNlcm5hbWUiOiJqamQiLCJleHAiOjE3NzI3NjQ5MDIsImF1ZCI6IlN5bmFwc2VDb2RlU2VydmljZSIsImlzcyI6IlN5bmFwc2VDb2RlU2VydmljZSJ9.ButxguFwOhTPtd9YHdkhK9BdbU3FSD6a6yIukrojA68",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
                 "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"fileId\": \"69aa3c9e4d7f267ad81bca57\",\r\n  \"code\": \"class HolaMundo:\\n    @staticmethod\\n    def main():\\n        print(\\\"Hola usuarios de SynapseCode\\\")\\n\\n\\nif __name__ == \\\"__main__\\\":\\n    HolaMundo.main()\\n\"\r\n}\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
                 "url": {
-                  "raw": "http://localhost:3007/api/v1/health",
+                  "raw": "http://localhost:3007/api/v1/codeSessions",
                   "protocol": "http",
                   "host": [
                     "localhost"
@@ -3062,14 +1945,103 @@
                   "path": [
                     "api",
                     "v1",
-                    "health"
-                  ],
-                  "query": []
+                    "codeSessions"
+                  ]
                 }
               },
               "response": []
             }
           ]
+        },
+        {
+          "name": "CodeExecution",
+          "item": [
+            {
+              "name": "Crear",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"roomId\": \"69a900ab30fd5d3843d118f7\",\r\n  \"fileId\": \"69a90abc30fd5d3843d118aa\",\r\n  \"language\": \"JAVASCRIPT\",\r\n  \"executedCode\": \"console.log(2 + 2);\",\r\n  \"executionStatus\": \"EXITOSO\"\r\n}\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": ""
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Ejecucion de codigo",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfTmNDUzcza2VCNnhGIiwidXNlcklkIjoidXNyX05jQ1M3M2tlQjZ4RiIsImlkIjoidXNyX05jQ1M3M2tlQjZ4RiIsImp0aSI6ImVkNjllYTNjLTEwMDItNDQ4Yi1hMDg0LTk1NTE1MTk4M2RiYiIsImlhdCI6MTc3Mjc2MzEwMiwicm9sZSI6IlVTRVJfUk9MRSIsImVtYWlsIjoiam9zaHVhLmphMjAwN0BnbWFpbC5jb20iLCJuYW1lIjoiSm9zdcOpIiwic3VybmFtZSI6IkppbcOpbmV6IiwidXNlcm5hbWUiOiJqamQiLCJleHAiOjE3NzI3NjQ5MDIsImF1ZCI6IlN5bmFwc2VDb2RlU2VydmljZSIsImlzcyI6IlN5bmFwc2VDb2RlU2VydmljZSJ9.ButxguFwOhTPtd9YHdkhK9BdbU3FSD6a6yIukrojA68",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"fileId\": \"69aa3c9e4d7f267ad81bca57\"\r\n}\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:3007/api/v1/codeExecutions/run",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3007",
+                  "path": [
+                    "api",
+                    "v1",
+                    "codeExecutions",
+                    "run"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Health Check Auth",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3007/api/v1/health",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3007",
+              "path": [
+                "api",
+                "v1",
+                "health"
+              ]
+            }
+          },
+          "response": []
         }
       ]
     }
