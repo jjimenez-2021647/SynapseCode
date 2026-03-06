@@ -7,6 +7,23 @@ import { getRoleDefaultPermissions } from '../../helpers/roomParticipations.help
 export const createRoom = async (req, res) => {
     try {
         const payload = { ...req.body };
+        const hostIdFromToken = req.user?.userId;
+
+        if (!hostIdFromToken) {
+            return res.status(401).json({
+                message: 'Token invalido: no contiene userId',
+            });
+        }
+
+        // El host siempre se toma del token para evitar suplantacion por body
+        payload.hostId = hostIdFromToken;
+        payload.connectedUsers = [
+            {
+                userId: hostIdFromToken,
+                username: req.user?.username || hostIdFromToken,
+                subRole: 'HOST_ROLE',
+            },
+        ];
 
         if (!payload.roomCode) {
             payload.roomCode = await generateUniqueRoomCode();
@@ -20,6 +37,7 @@ export const createRoom = async (req, res) => {
         await RoomParticipation.create({
             roomId: room._id,
             userId: room.hostId,
+            username: req.user?.username || null,
             role: 'ANFITRION',
             permissions: getRoleDefaultPermissions('ANFITRION'),
         });

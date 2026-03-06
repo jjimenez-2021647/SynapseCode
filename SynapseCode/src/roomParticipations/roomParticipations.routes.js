@@ -1,5 +1,6 @@
 'use strict'
 import { Router } from 'express';
+import { validateJWT } from '../../middlewares/validate-JWT.js';
 import {
     createRoomParticipation,
     updateRoomParticipation,
@@ -12,7 +13,7 @@ import {
 
 const router = Router();
 
-router.post('/', createRoomParticipation);
+router.post('/', validateJWT, createRoomParticipation);
 router.put('/:id', updateRoomParticipation);
 router.get('/', getRoomParticipations);
 router.get('/room/:roomId', getRoomParticipationsByRoom);

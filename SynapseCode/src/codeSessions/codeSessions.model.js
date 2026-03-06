@@ -28,7 +28,7 @@ const CodeSessionSchema = new Schema(
             type: String,
             required: [true, 'El lenguaje es obligatorio'],
             enum: {
-                values: EXECUTION_LANGUAGES,
+                values: SESSION_LANGUAGES,
                 message: 'Lenguaje invalido',
             },
             uppercase: true,
@@ -134,7 +134,7 @@ CodeSessionSchema.index({ savedByUserId: 1 });
 CodeSessionSchema.index({ savedAt: -1 });
 
 // Validación: si wasExecuted es true, executionResult debe tener datos
-CodeSessionSchema.pre('save', function (next) {
+CodeSessionSchema.pre('save', function () {
     if (this.wasExecuted) {
         const hasExecutionData =
             this.executionResult.output        !== null ||
@@ -143,10 +143,9 @@ CodeSessionSchema.pre('save', function (next) {
             this.executionResult.memoryUsedKb   !== null;
 
         if (!hasExecutionData) {
-            return next(new Error('Si el codigo fue ejecutado, debe tener resultado de ejecucion'));
+            throw new Error('Si el codigo fue ejecutado, debe tener resultado de ejecucion');
         }
     }
-    next();
 });
 
 export default model('CodeSession', CodeSessionSchema);

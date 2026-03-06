@@ -1,29 +1,63 @@
 'use strict'
 import CodeSession from './codeSessions.model.js';
+import Room from '../rooms/rooms.model.js';
+import File from '../files/files.model.js';
 import {
     determineSaveType,
     wasCodeExecuted,
     getNextVersionByFile,
 } from '../../helpers/code-sessions.helpers.js';
+import { normalizeCodeContent } from '../../helpers/code-normalizer.js';
+
+const enrichCodeSessions = async (sessions) => {
+    const list = sessions.map((session) => (typeof session.toObject === 'function' ? session.toObject() : session));
+    if (!list.length) return list;
+
+    const roomIds = [...new Set(list.map((s) => String(s.roomId)).filter(Boolean))];
+    const fileIds = [...new Set(list.map((s) => String(s.fileId)).filter(Boolean))];
+
+    const [rooms, files] = await Promise.all([
+        Room.find({ _id: { $in: roomIds } }).select('roomName roomCode').lean(),
+        File.find({ _id: { $in: fileIds } }).select('fileName fileExtension').lean(),
+    ]);
+
+    const roomsById = new Map(rooms.map((room) => [String(room._id), room]));
+    const filesById = new Map(files.map((file) => [String(file._id), file]));
+
+    return list.map((session) => {
+        const room = roomsById.get(String(session.roomId));
+        const file = filesById.get(String(session.fileId));
+
+        return {
+            ...session,
+            roomName: room?.roomName || null,
+            roomCode: room?.roomCode || null,
+            fileName: file?.fileName || null,
+            fileExtension: file?.fileExtension || null,
+            fullFileName: file ? `${file.fileName}.${file.fileExtension}` : null,
+        };
+    });
+};
 
 //Crear nueva sesión de código
 /**
- * Crear nueva sesión de código
- * Body requerido : fileId, roomId, language, code
- * Body opcional  : isAutoSave, isBeforeExecution
- * savedByUserId  → se extrae del token (req.user.userId)
- * version        → auto-incremental por fileId
- * saveType       → determinado automáticamente
- * wasExecuted    → siempre false al crear
+    Crear nueva sesión de código
+    Body requerido : fileId, code
+    Body opcional  : isAutoSave, isBeforeExecution
+    savedByUserId  : se extrae del token (req.user.userId)
+    version        : auto-incremental por fileId
+    saveType       : determinado automáticamente
+    wasExecuted    : siempre false al crear
  */
 export const createCodeSession = async (req, res) => {
     try {
-        const { fileId, roomId, language, code, isAutoSave, isBeforeExecution } = req.body;
+        const { fileId, code, isAutoSave, isBeforeExecution } = req.body;
+        const normalizedCode = normalizeCodeContent(code);
 
-        if (!fileId || !roomId || !language || code === undefined) {
+        if (!fileId || normalizedCode === undefined) {
             return res.status(400).json({
                 success: false,
-                message: 'fileId, roomId, language y code son obligatorios',
+                message: 'fileId y code son obligatorios',
                 error: 'MISSING_REQUIRED_FIELDS',
             });
         }
@@ -42,22 +76,41 @@ export const createCodeSession = async (req, res) => {
         const version  = await getNextVersionByFile(fileId);
         const saveType = determineSaveType(req.body.saveType, isAutoSave, isBeforeExecution);
 
+        const file = await File.findById(fileId).select('roomId language').lean();
+        if (!file) {
+            return res.status(404).json({
+                success: false,
+                message: 'El archivo no existe',
+                error: 'FILE_NOT_FOUND',
+            });
+        }
+
+        const room = await Room.findById(file.roomId).select('_id').lean();
+        if (!room) {
+            return res.status(404).json({
+                success: false,
+                message: 'La sala asociada al archivo no existe',
+                error: 'ROOM_NOT_FOUND',
+            });
+        }
+
         const codeSession = await CodeSession.create({
             fileId,
-            roomId,
-            language: language.toUpperCase(),
-            code,
+            roomId: file.roomId,
+            language: file.language,
+            code: normalizedCode,
             savedByUserId,
             version,
             saveType,
             wasExecuted: false,
             savedAt: new Date(),
         });
+        const [enrichedSession] = await enrichCodeSessions([codeSession]);
 
         return res.status(201).json({
             success: true,
             message: 'Sesion de codigo creada exitosamente',
-            data: codeSession,
+            data: enrichedSession,
         });
     } catch (error) {
         console.error('createCodeSession error:', error);
@@ -71,17 +124,18 @@ export const createCodeSession = async (req, res) => {
 
 //Actualizar sesión de código existente
 /**
- * Actualizar sesión de código existente
- * Campos editables : language, code
- * executionResult  → solo cuando el backend llama tras ejecutar con Judge0
- * wasExecuted      → se determina lógicamente según si viene executionResult
- * savedByUserId    → se renueva del token
- * saveType         → se redetermina
+    Actualizar sesión de código existente
+    Campos editables : language, code
+    executionResult  → solo cuando el backend llama tras ejecutar con Judge0
+    wasExecuted      → se determina lógicamente según si viene executionResult
+    savedByUserId    → se renueva del token
+    saveType         → se redetermina
  */
 export const updateCodeSession = async (req, res) => {
     try {
         const { id } = req.params;
         const { language, code, executionResult, isAutoSave, isBeforeExecution } = req.body;
+        const normalizedCode = normalizeCodeContent(code);
 
         const existingSession = await CodeSession.findById(id);
         if (!existingSession) {
@@ -108,7 +162,7 @@ export const updateCodeSession = async (req, res) => {
         };
 
         if (language)         updateData.language = language.toUpperCase();
-        if (code !== undefined) updateData.code    = code;
+        if (normalizedCode !== undefined) updateData.code = normalizedCode;
 
         if (executionResult) {
             updateData.wasExecuted      = true;
@@ -126,11 +180,12 @@ export const updateCodeSession = async (req, res) => {
             new: true,
             runValidators: true,
         });
+        const [enrichedSession] = await enrichCodeSessions([codeSession]);
 
         return res.status(200).json({
             success: true,
             message: 'Sesion de codigo actualizada exitosamente',
-            data: codeSession,
+            data: enrichedSession,
         });
     } catch (error) {
         console.error('updateCodeSession error:', error);
@@ -143,7 +198,7 @@ export const updateCodeSession = async (req, res) => {
 };
 
 //Consultas
-/** Obtener todas las sesiones con filtros opcionales */
+// Obtener todas las sesiones con filtros opcionales
 export const getCodeSessions = async (req, res) => {
     try {
         const { fileId, roomId, savedByUserId, wasExecuted } = req.query;
@@ -154,13 +209,14 @@ export const getCodeSessions = async (req, res) => {
         if (savedByUserId) filters.savedByUserId = savedByUserId;
         if (wasExecuted !== undefined) filters.wasExecuted = wasExecuted === 'true';
 
-        const codeSessions = await CodeSession.find(filters).sort({ savedAt: -1 });
+        const codeSessions = await CodeSession.find(filters).sort({ savedAt: -1 }).lean();
+        const data = await enrichCodeSessions(codeSessions);
 
         return res.status(200).json({
             success: true,
             message: 'Sesiones obtenidas exitosamente',
-            count: codeSessions.length,
-            data: codeSessions,
+            count: data.length,
+            data,
         });
     } catch (error) {
         console.error('getCodeSessions error:', error);
@@ -172,11 +228,11 @@ export const getCodeSessions = async (req, res) => {
     }
 };
 
-/** Obtener sesión por ID */
+// Obtener sesion por id
 export const getCodeSessionById = async (req, res) => {
     try {
         const { id } = req.params;
-        const codeSession = await CodeSession.findById(id);
+        const codeSession = await CodeSession.findById(id).lean();
 
         if (!codeSession) {
             return res.status(404).json({
@@ -186,10 +242,12 @@ export const getCodeSessionById = async (req, res) => {
             });
         }
 
+        const [enrichedSession] = await enrichCodeSessions([codeSession]);
+
         return res.status(200).json({
             success: true,
             message: 'Sesion obtenida exitosamente',
-            data: codeSession,
+            data: enrichedSession,
         });
     } catch (error) {
         console.error('getCodeSessionById error:', error);
@@ -201,17 +259,18 @@ export const getCodeSessionById = async (req, res) => {
     }
 };
 
-/** Obtener todas las sesiones de un archivo (historial) */
+// Obtener todas las sesiones de un archivo (historial)
 export const getCodeSessionsByFile = async (req, res) => {
     try {
         const { fileId } = req.params;
-        const codeSessions = await CodeSession.find({ fileId }).sort({ version: -1 });
+        const codeSessions = await CodeSession.find({ fileId }).sort({ version: -1 }).lean();
+        const data = await enrichCodeSessions(codeSessions);
 
         return res.status(200).json({
             success: true,
             message: 'Sesiones del archivo obtenidas exitosamente',
-            count: codeSessions.length,
-            data: codeSessions,
+            count: data.length,
+            data,
         });
     } catch (error) {
         console.error('getCodeSessionsByFile error:', error);
@@ -223,17 +282,18 @@ export const getCodeSessionsByFile = async (req, res) => {
     }
 };
 
-/** Obtener todas las sesiones de una sala (todos sus archivos) */
+// Obtener todas las sesiones de una sala (todos sus archivos)
 export const getCodeSessionsByRoom = async (req, res) => {
     try {
         const { roomId } = req.params;
-        const codeSessions = await CodeSession.find({ roomId }).sort({ savedAt: -1 });
+        const codeSessions = await CodeSession.find({ roomId }).sort({ savedAt: -1 }).lean();
+        const data = await enrichCodeSessions(codeSessions);
 
         return res.status(200).json({
             success: true,
             message: 'Sesiones de la sala obtenidas exitosamente',
-            count: codeSessions.length,
-            data: codeSessions,
+            count: data.length,
+            data,
         });
     } catch (error) {
         console.error('getCodeSessionsByRoom error:', error);
@@ -245,11 +305,11 @@ export const getCodeSessionsByRoom = async (req, res) => {
     }
 };
 
-/** Obtener la última versión de un archivo */
+// Obtener la última versión de un archivo
 export const getLatestCodeSession = async (req, res) => {
     try {
         const { fileId } = req.params;
-        const latestSession = await CodeSession.findOne({ fileId }).sort({ version: -1 }).limit(1);
+        const latestSession = await CodeSession.findOne({ fileId }).sort({ version: -1 }).limit(1).lean();
 
         if (!latestSession) {
             return res.status(404).json({
@@ -259,10 +319,12 @@ export const getLatestCodeSession = async (req, res) => {
             });
         }
 
+        const [enrichedSession] = await enrichCodeSessions([latestSession]);
+
         return res.status(200).json({
             success: true,
             message: 'Ultima sesion obtenida exitosamente',
-            data: latestSession,
+            data: enrichedSession,
         });
     } catch (error) {
         console.error('getLatestCodeSession error:', error);
@@ -274,14 +336,14 @@ export const getLatestCodeSession = async (req, res) => {
     }
 };
 
-/** Obtener una versión específica de un archivo */
+// Obtener una versión específica de un archivo
 export const getCodeSessionByVersion = async (req, res) => {
     try {
         const { fileId, version } = req.params;
         const codeSession = await CodeSession.findOne({
             fileId,
             version: parseInt(version, 10),
-        });
+        }).lean();
 
         if (!codeSession) {
             return res.status(404).json({
@@ -291,10 +353,12 @@ export const getCodeSessionByVersion = async (req, res) => {
             });
         }
 
+        const [enrichedSession] = await enrichCodeSessions([codeSession]);
+
         return res.status(200).json({
             success: true,
             message: 'Sesion obtenida exitosamente',
-            data: codeSession,
+            data: enrichedSession,
         });
     } catch (error) {
         console.error('getCodeSessionByVersion error:', error);
@@ -307,7 +371,7 @@ export const getCodeSessionByVersion = async (req, res) => {
 };
 
 //Eliminar sesiones
-/** Eliminar sesión por ID */
+// Eliminar sesión por ID
 export const deleteCodeSession = async (req, res) => {
     try {
         const { id } = req.params;
@@ -336,7 +400,7 @@ export const deleteCodeSession = async (req, res) => {
     }
 };
 
-/** Eliminar todas las sesiones de un archivo */
+// Eliminar todas las sesiones de un archivo 
 export const deleteCodeSessionsByFile = async (req, res) => {
     try {
         const { fileId } = req.params;
@@ -357,7 +421,7 @@ export const deleteCodeSessionsByFile = async (req, res) => {
     }
 };
 
-/** Eliminar todas las sesiones de una sala */
+// Eliminar todas las sesiones de una sala 
 export const deleteCodeSessionsByRoom = async (req, res) => {
     try {
         const { roomId } = req.params;

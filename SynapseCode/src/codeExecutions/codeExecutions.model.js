@@ -3,7 +3,7 @@
 import { Schema, model } from 'mongoose';
 
 const EXECUTION_LANGUAGES = ['JAVA', 'PYTHON', 'JAVASCRIPT', 'HTML_CSS', 'CSHARP'];
-const EXECUTION_STATUS = ['EXITOSO', 'ERROR_COMPILACION', 'ERROR_RUNTIME', 'TIMEOUT', 'MEMORIA_EXECEDIDA'];
+const EXECUTION_STATUS = ['EXITOSO', 'ERROR_COMPILACION', 'ERROR_RUNTIME', 'TIMEOUT', 'MEMORIA_EXCEDIDA'];
 
 const CodeExecutionSchema = new Schema(
     {

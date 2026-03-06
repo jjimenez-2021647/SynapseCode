@@ -40,7 +40,8 @@ const RoomSchema = new Schema(
         // lenguaje de progra que se va a usar en la sala
         roomLanguage: {
             type: String,
-            required: [true, 'El lenguaje por defecto es obligatorio'],
+            required: false,
+            default: null,
             enum: {
                 values: ROOM_LANGUAGES,
                 message: 'Lenguaje por defecto invalido',

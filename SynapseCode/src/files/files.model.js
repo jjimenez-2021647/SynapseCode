@@ -18,7 +18,7 @@ const FileSchema = new Schema(
             immutable: true,
         },
 
-        // Nombre del archivo sin extensión (ej: "main", "utils", "config")
+        // Nombre del archivo sin extensión 
         fileName: {
             type: String,
             required: [true, 'El nombre del archivo es obligatorio'],
@@ -54,7 +54,7 @@ const FileSchema = new Schema(
         // Contenido actual del archivo
         currentCode: {
             type: String,
-            required: true,
+            required: false,
             default: '',
             maxlength: [500000, 'El codigo no puede exceder 500,000 caracteres'],
         },
@@ -134,15 +134,13 @@ FileSchema.index({ createdByUserId: 1 });
 FileSchema.index({ roomId: 1, displayOrder: 1 });
 
 // Pre-save: calcular tamaño del archivo automáticamente
-FileSchema.pre('save', function (next) {
+FileSchema.pre('save', function () {
     this.fileSize = Buffer.byteLength(this.currentCode, 'utf8');
-    next();
 });
 
 // Pre-update: actualizar lastModifiedAt automáticamente
-FileSchema.pre('findOneAndUpdate', function (next) {
+FileSchema.pre('findOneAndUpdate', function () {
     this.set({ lastModifiedAt: new Date() });
-    next();
 });
 
 // Virtual: nombre completo del archivo (ej: "main.py")

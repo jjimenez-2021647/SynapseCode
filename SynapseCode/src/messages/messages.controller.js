@@ -3,10 +3,26 @@ import Message from './messages.model.js';
 import { uploadToCloudinary } from '../../helpers/cloudinary-service.js';
 import Room from '../rooms/rooms.model.js';
 
+const enrichMessagesWithRoomContext = (messages, room) => {
+    const usernamesByUserId = new Map(
+        (room?.connectedUsers || []).map((user) => [user.userId, user.username])
+    );
+
+    return messages.map((message) => ({
+        ...message,
+        roomName: room?.roomName || null,
+        roomCode: room?.roomCode || null,
+        username:
+            message.userId === 'SYSTEM'
+                ? 'SYSTEM'
+                : usernamesByUserId.get(message.userId) || null,
+    }));
+};
+
 /**
- * Crear un nuevo mensaje
- * Valida que el tipo de mensaje sea coherente con el contenido
- * Si es IMAGEN, AUDIO o ARCHIVO, maneja la subida a Cloudinary
+    Crear un nuevo mensaje
+    Valida que el tipo de mensaje sea coherente con el contenido
+    Si es IMAGEN, AUDIO o ARCHIVO, maneja la subida a Cloudinary
  */
 export const createMessage = async (req, res) => {
     try {
@@ -20,7 +36,7 @@ export const createMessage = async (req, res) => {
         }
 
         // Validar que la sala exista
-        const room = await Room.findById(roomId);
+        const room = await Room.findById(roomId).lean();
         if (!room) {
             return res.status(404).json({
                 message: 'Sala no encontrada',
@@ -88,9 +104,9 @@ export const createMessage = async (req, res) => {
 };
 
 /**
- * Obtener todos los mensajes de una sala
- * Ordenados por sentAt en orden ascendente
- * Excluye mensajes eliminados (soft delete)
+    Obtener todos los mensajes de una sala
+    Ordenados por sentAt en orden ascendente
+    Excluye mensajes eliminados (soft delete)
  */
 export const getRoomMessages = async (req, res) => {
     try {
@@ -113,7 +129,10 @@ export const getRoomMessages = async (req, res) => {
         })
             .sort({ sentAt: 1 })
             .skip(skipAmount)
-            .limit(parseInt(limit));
+            .limit(parseInt(limit))
+            .lean();
+
+        const enrichedMessages = enrichMessagesWithRoomContext(messages, room);
 
         const totalMessages = await Message.countDocuments({
             roomId,
@@ -121,7 +140,7 @@ export const getRoomMessages = async (req, res) => {
         });
 
         return res.status(200).json({
-            messages,
+            messages: enrichedMessages,
             pagination: {
                 currentPage: parseInt(page),
                 totalPages: Math.ceil(totalMessages / limit),
@@ -137,9 +156,7 @@ export const getRoomMessages = async (req, res) => {
     }
 };
 
-/**
- * Obtener un mensaje específico por ID
- */
+// Obtener un mensaje especifico por id
 export const getMessageById = async (req, res) => {
     try {
         const { messageId } = req.params;
@@ -168,9 +185,9 @@ export const getMessageById = async (req, res) => {
 };
 
 /**
- * Editar un mensaje existente
- * Solo permite edición dentro de 30 minutos desde su creación
- * Solo el autor del mensaje puede editarlo
+    Editar un mensaje existente
+    Solo permite edición dentro de 30 minutos desde su creación
+    Solo el autor del mensaje puede editarlo
  */
 export const editMessage = async (req, res) => {
     try {
@@ -245,10 +262,10 @@ export const editMessage = async (req, res) => {
 };
 
 /**
- * Eliminar un mensaje (soft delete)
- * Solo permite eliminación dentro de 30 minutos desde su creación
- * Solo el autor del mensaje puede eliminarlo
- * Cambia el estado a ELIMINADO en lugar de eliminar físicamente
+    Eliminar un mensaje (soft delete)
+    Solo permite eliminación dentro de 30 minutos desde su creación
+    Solo el autor del mensaje puede eliminarlo
+    Cambia el estado a ELIMINADO en lugar de eliminar físicamente
  */
 export const deleteMessage = async (req, res) => {
     try {
@@ -302,13 +319,13 @@ export const deleteMessage = async (req, res) => {
 };
 
 /**
- * Obtener mensajes del sistema de una sala
+    Obtener mensajes del sistema de una sala
  */
 export const getSystemMessages = async (req, res) => {
     try {
         const { roomId } = req.params;
 
-        const room = await Room.findById(roomId);
+        const room = await Room.findById(roomId).lean();
         if (!room) {
             return res.status(404).json({
                 message: 'Sala no encontrada',
@@ -319,9 +336,13 @@ export const getSystemMessages = async (req, res) => {
             roomId,
             typeMessage: 'SISTEMA',
             messageStatus: { $ne: 'ELIMINADO' },
-        }).sort({ sentAt: -1 });
+        })
+            .sort({ sentAt: -1 })
+            .lean();
 
-        return res.status(200).json(messages);
+        const enrichedMessages = enrichMessagesWithRoomContext(messages, room);
+
+        return res.status(200).json(enrichedMessages);
     } catch (error) {
         console.error('getSystemMessages error:', error);
         return res.status(500).json({
@@ -331,8 +352,8 @@ export const getSystemMessages = async (req, res) => {
 };
 
 /**
- * Crear un mensaje del sistema automáticamente
- * Utiliza templates predefinidos
+    Crear un mensaje del sistema automáticamente
+    Utiliza templates predefinidos
  */
 export const createSystemMessage = async (req, res) => {
     try {
