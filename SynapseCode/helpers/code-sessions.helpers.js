@@ -1,5 +1,5 @@
 'use strict'
-import CodeSession from '../codeSessions/codeSessions.model.js'; 
+import CodeSession from '../src/codeSessions/codeSessions.model.js'; 
 
 /**
  * Determina el tipo de guardado basado en el contexto

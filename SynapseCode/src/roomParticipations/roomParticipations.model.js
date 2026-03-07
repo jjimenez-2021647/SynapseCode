@@ -47,6 +47,13 @@ const RoomParticipationSchema = new Schema(
             trim: true,
         },
 
+        // Nombre de usuario para mostrar en listados sin depender de otro servicio
+        username: {
+            type: String,
+            default: null,
+            trim: true,
+        },
+
         // Rol del usuario dentro de la sala
         role: {
             type: String,

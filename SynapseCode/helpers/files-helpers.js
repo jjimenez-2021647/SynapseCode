@@ -161,3 +161,51 @@ export const validateCodeSize = (code) => {
 
     return { valid: true, message: 'Tamaño valido', size };
 };
+const toClassName = (fileName = '') => {
+    const cleaned = String(fileName)
+        .replace(/[^a-zA-Z0-9]+/g, ' ')
+        .trim();
+
+    const words = cleaned.length ? cleaned.split(/\s+/) : ['Main'];
+    const pascal = words
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join('');
+
+    const normalized = pascal || 'Main';
+    return /^[0-9]/.test(normalized) ? `Class${normalized}` : normalized;
+};
+
+export const buildDefaultCodeTemplate = ({ language, fileName, fileExtension }) => {
+    const normalizedLanguage = String(language || '').toUpperCase();
+    const normalizedExtension = String(fileExtension || '').toLowerCase();
+    const className = toClassName(fileName);
+    const greeting = 'Hola usuarios de SynapseCode';
+
+    switch (normalizedLanguage) {
+        case 'JAVA':
+            if (className === 'Main') {
+                return `public class Main {\n    public static void main(String[] args) {\n        System.out.println("${greeting}");\n    }\n}\n`;
+            }
+
+            return `public class Main {\n    public static void main(String[] args) {\n        ${className}.ejecutar();\n    }\n}\n\nclass ${className} {\n    static void ejecutar() {\n        System.out.println("${greeting}");\n    }\n}\n`;
+
+        case 'PYTHON':
+            return `class ${className}:\n    @staticmethod\n    def main():\n        print("${greeting}")\n\n\nif __name__ == "__main__":\n    ${className}.main()\n`;
+
+        case 'JAVASCRIPT':
+            return `class ${className} {\n    static main() {\n        console.log("${greeting}");\n    }\n}\n\n${className}.main();\n`;
+
+        case 'CSHARP':
+            return `using System;\n\npublic class ${className}\n{\n    public static void Main(string[] args)\n    {\n        Console.WriteLine("${greeting}");\n    }\n}\n`;
+
+        case 'HTML_CSS':
+            if (normalizedExtension === 'css') {
+                return `/* Estilos base */\nbody {\n    margin: 0;\n    font-family: Arial, sans-serif;\n}\n`;
+            }
+
+            return `<!doctype html>\n<html lang="es">\n<head>\n    <meta charset="UTF-8" />\n    <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n    <title>${greeting}</title>\n</head>\n<body>\n    <h1>${greeting}</h1>\n</body>\n</html>\n`;
+
+        default:
+            return '';
+    }
+};

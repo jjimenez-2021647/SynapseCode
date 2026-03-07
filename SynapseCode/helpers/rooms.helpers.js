@@ -44,5 +44,12 @@ export default async function generateUniqueRoomCode(attempts = 20) {
     //Error si no se pudo generar un codigo unico despues de 20 intentos por si las moscas
     throw new Error('No fue posible generar un roomCode único');
 }
+
+// Función para generar passwordRoom para salas privadas
+export function generatePasswordRoom() {
+    const randomPart = randomSegment(ALPHANUM, 8);
+    return `pass_${randomPart}`;
+}
+
 // exportamos la funcion randomSegment para poder usarla en otros archivos 
 export { randomSegment };

@@ -1,21 +1,47 @@
 'use strict'
 import File from './files.model.js';
+import Room from '../rooms/rooms.model.js';
+import CodeSession from '../codeSessions/codeSessions.model.js';
 import {
     detectLanguageFromExtension,
+    buildDefaultCodeTemplate,
     validateFileName,
     validateFileExtension,
     generateUniqueFileName,
     getNextDisplayOrder,
     validateCodeSize,
     formatFileSize,
-} from '../../helpers/files.helpers.js';
+} from '../../helpers/files-helpers.js';
+import { normalizeCodeContent } from '../../helpers/code-normalizer.js';
+
+const enrichFilesWithRoom = async (files) => {
+    const list = files.map((file) => (typeof file.toObject === 'function' ? file.toObject() : file));
+    if (!list.length) return list;
+
+    const roomIds = [...new Set(list.map((f) => String(f.roomId)).filter(Boolean))];
+    const rooms = await Room.find({ _id: { $in: roomIds } })
+        .select('roomName roomCode')
+        .lean();
+
+    const roomsById = new Map(rooms.map((room) => [String(room._id), room]));
+
+    return list.map((file) => {
+        const room = roomsById.get(String(file.roomId));
+        return {
+            ...file,
+            roomName: room?.roomName || null,
+            roomCode: room?.roomCode || null,
+            fullFileName: `${file.fileName}.${file.fileExtension}`,
+        };
+    });
+};
 
 /**
  * Crear nuevo archivo en una sala
  */
 export const createFile = async (req, res) => {
     try {
-        const { roomId, fileName, fileExtension, currentCode, displayOrder } = req.body;
+        const { roomId, fileName, fileExtension, displayOrder } = req.body;
 
         // Validaciones básicas
         if (!roomId || !fileName || !fileExtension) {
@@ -46,17 +72,6 @@ export const createFile = async (req, res) => {
             });
         }
 
-        // Validar tamaño del código
-        const code = currentCode || '';
-        const sizeValidation = validateCodeSize(code);
-        if (!sizeValidation.valid) {
-            return res.status(400).json({
-                success: false,
-                message: sizeValidation.message,
-                error: 'CODE_SIZE_EXCEEDED',
-            });
-        }
-
         // Verificar si ya existe un archivo con ese nombre y extensión
         const existingFile = await File.findOne({
             roomId,
@@ -84,19 +99,43 @@ export const createFile = async (req, res) => {
             ? displayOrder 
             : await getNextDisplayOrder(File, roomId);
 
+        const defaultCode = buildDefaultCodeTemplate({
+            language,
+            fileName: fileName.trim(),
+            fileExtension: fileExtension.toLowerCase(),
+        });
+
         // Crear archivo
         const file = await File.create({
             roomId,
             fileName: fileName.trim(),
             fileExtension: fileExtension.toLowerCase(),
             language,
-            currentCode: code,
+            // El contenido inicial se mantiene vacío; el código se guarda en codeSessions.
+            currentCode: defaultCode,
             createdByUserId,
             lastModifiedByUserId: createdByUserId,
             displayOrder: order,
             createdAt: new Date(),
             lastModifiedAt: new Date(),
         });
+
+        try {
+            await CodeSession.create({
+                fileId: file._id,
+                roomId,
+                language,
+                code: defaultCode,
+                savedByUserId: createdByUserId,
+                version: 1,
+                saveType: 'MANUAL',
+                wasExecuted: false,
+                savedAt: new Date(),
+            });
+        } catch (sessionError) {
+            await File.findByIdAndDelete(file._id);
+            throw sessionError;
+        }
 
         return res.status(201).json({
             success: true,
@@ -113,9 +152,7 @@ export const createFile = async (req, res) => {
     }
 };
 
-/**
- * Obtener todos los archivos de una sala
- */
+// Obtener todos los archivos de una sala
 export const getFilesByRoom = async (req, res) => {
     try {
         const { roomId } = req.params;
@@ -135,13 +172,14 @@ export const getFilesByRoom = async (req, res) => {
             filter.isActive = true;
         }
 
-        const files = await File.find(filter).sort({ displayOrder: 1, fileName: 1 });
+        const files = await File.find(filter).sort({ displayOrder: 1, fileName: 1 }).lean();
+        const data = await enrichFilesWithRoom(files);
 
         return res.status(200).json({
             success: true,
             message: 'Archivos obtenidos exitosamente',
-            count: files.length,
-            data: files,
+            count: data.length,
+            data,
         });
     } catch (error) {
         console.error('getFilesByRoom error:', error);
@@ -153,14 +191,12 @@ export const getFilesByRoom = async (req, res) => {
     }
 };
 
-/**
- * Obtener archivo por ID
- */
+// Obtener un archivo por ID
 export const getFileById = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const file = await File.findById(id);
+        const file = await File.findById(id).lean();
 
         if (!file) {
             return res.status(404).json({
@@ -170,10 +206,12 @@ export const getFileById = async (req, res) => {
             });
         }
 
+        const [enrichedFile] = await enrichFilesWithRoom([file]);
+
         return res.status(200).json({
             success: true,
             message: 'Archivo obtenido exitosamente',
-            data: file,
+            data: enrichedFile,
         });
     } catch (error) {
         console.error('getFileById error:', error);
@@ -185,15 +223,14 @@ export const getFileById = async (req, res) => {
     }
 };
 
-/**
- * Actualizar contenido del archivo
- */
+// Actualizar el contenido del archivo (crea una nueva sesión de código)
 export const updateFileContent = async (req, res) => {
     try {
         const { id } = req.params;
         const { currentCode } = req.body;
+        const normalizedCurrentCode = normalizeCodeContent(currentCode);
 
-        if (currentCode === undefined) {
+        if (normalizedCurrentCode === undefined) {
             return res.status(400).json({
                 success: false,
                 message: 'currentCode es obligatorio',
@@ -202,7 +239,7 @@ export const updateFileContent = async (req, res) => {
         }
 
         // Validar tamaño del código
-        const sizeValidation = validateCodeSize(currentCode);
+        const sizeValidation = validateCodeSize(normalizedCurrentCode);
         if (!sizeValidation.valid) {
             return res.status(400).json({
                 success: false,
@@ -217,7 +254,7 @@ export const updateFileContent = async (req, res) => {
         const file = await File.findByIdAndUpdate(
             id,
             {
-                currentCode,
+                currentCode: normalizedCurrentCode,
                 lastModifiedByUserId,
                 lastModifiedAt: new Date(),
             },
@@ -250,9 +287,7 @@ export const updateFileContent = async (req, res) => {
     }
 };
 
-/**
- * Renombrar archivo
- */
+// Renombrar archivo
 export const renameFile = async (req, res) => {
     try {
         const { id } = req.params;
@@ -336,9 +371,7 @@ export const renameFile = async (req, res) => {
     }
 };
 
-/**
- * Eliminar archivo (soft delete)
- */
+// Eliminar archivo
 export const deleteFile = async (req, res) => {
     try {
         const { id } = req.params;
@@ -376,9 +409,7 @@ export const deleteFile = async (req, res) => {
     }
 };
 
-/**
- * Restaurar archivo eliminado
- */
+// Restaurar archivo eliminado
 export const restoreFile = async (req, res) => {
     try {
         const { id } = req.params;
@@ -416,9 +447,7 @@ export const restoreFile = async (req, res) => {
     }
 };
 
-/**
- * Eliminar archivo permanentemente
- */
+// Eliminar archivo permanentemente
 export const deleteFilePermanently = async (req, res) => {
     try {
         const { id } = req.params;
@@ -448,9 +477,7 @@ export const deleteFilePermanently = async (req, res) => {
     }
 };
 
-/**
- * Reordenar archivos
- */
+// Renombrar archivos
 export const reorderFiles = async (req, res) => {
     try {
         const { fileOrders } = req.body;
@@ -489,9 +516,7 @@ export const reorderFiles = async (req, res) => {
     }
 };
 
-/**
- * Duplicar archivo
- */
+// Duplicar archivo
 export const duplicateFile = async (req, res) => {
     try {
         const { id } = req.params;
@@ -551,9 +576,7 @@ export const duplicateFile = async (req, res) => {
     }
 };
 
-/**
- * Marcar archivo como solo lectura
- */
+// Marcar archivo como solo lectura o editable
 export const toggleReadOnly = async (req, res) => {
     try {
         const { id } = req.params;

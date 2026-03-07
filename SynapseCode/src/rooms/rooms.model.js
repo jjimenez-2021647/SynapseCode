@@ -1,5 +1,7 @@
-'use strict'
+﻿'use strict'
 import { Schema, model } from 'mongoose';
+import { generateNumberChat } from '../../helpers/chat.helper.js';
+import { generatePasswordRoom } from '../../helpers/rooms.helpers.js';
 
 // Valores permitidos para enums del modelo Room
 const ROOM_TYPES = ['PUBLICA', 'PRIVADA'];
@@ -37,10 +39,17 @@ const RoomSchema = new Schema(
             },
         },
 
+        // contrasenaa de la sala, solo para salas privadas
+        passwordRoom: {
+            type: String,
+            default: null,
+        },
+
         // lenguaje de progra que se va a usar en la sala
         roomLanguage: {
             type: String,
-            required: [true, 'El lenguaje por defecto es obligatorio'],
+            required: false,
+            default: null,
             enum: {
                 values: ROOM_LANGUAGES,
                 message: 'Lenguaje por defecto invalido',
@@ -55,7 +64,7 @@ const RoomSchema = new Schema(
             type: String,
             required: [true, 'El anfitrion es obligatorio'],
             trim: true,
-            minlength: [1, 'El ID del anfitrion es inválido'],
+            minlength: [1, 'El ID del anfitrion es invÃ¡lido'],
         },
 
         // maximo de usuarios que estan permitidos dentro de la sala 2-12
@@ -118,7 +127,7 @@ const RoomSchema = new Schema(
             action: {
                 type: String,
                 trim: true,
-                default: '',
+                default: 'CreaciÃ³n de sala',
             },
             // quien realizo la accion dentro de la sala, se guarda el id y el username del usuario que realizo la accion
             performedBy: {
@@ -144,12 +153,57 @@ const RoomSchema = new Schema(
             },
             default: 'ACTIVA',
         },
+        // numero del chat asociado a la sala (usado para agrupar mensajes fuera/ademas de roomId)
+        numberChat: {
+            type: String,
+            required: true,
+            unique: true,
+            trim: true,
+            default: null,
+        },
+
+        // ID del chat asociado a la sala
+        idChat: {
+            type: Schema.Types.ObjectId,
+            ref: 'Chat',
+            required: false,
+            default: null,
+        },
     },
     {
         versionKey: false,
     }
 );
 
+// Antes de validar, generar numberChat unico si no viene provisto
+RoomSchema.pre('validate', async function () {
+    // Si ya tiene numberChat, nothing to do
+    if (this.numberChat) return;
+
+    const Room = model('Room');
+    for (let i = 0; i < 10; i++) {
+        const candidate = generateNumberChat();
+        // eslint-disable-next-line no-await-in-loop
+        const exists = await Room.countDocuments({ numberChat: candidate });
+        if (!exists) {
+            this.numberChat = candidate;
+            return;
+        }
+    }
+
+    // fallback
+    this.numberChat = `chat_${Date.now()}`;
+    return;
+});
+
+// Antes de guardar, generar passwordRoom si es privada y no tiene
+RoomSchema.pre('save', function () {
+    if (this.roomType === 'PRIVADA' && !this.passwordRoom) {
+        this.passwordRoom = generatePasswordRoom();
+    }
+});
+
 
 
 export default model('Room', RoomSchema);
+

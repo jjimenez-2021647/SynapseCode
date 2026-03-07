@@ -34,6 +34,11 @@ export const validateJWT = (req, res, next) => {
             audience: jwtConfig.audience
         })
 
+        // Compatibilidad de claims entre servicios/tokens antiguos
+        if (!decodedToken.userId && (decodedToken.id || decodedToken.sub)) {
+            decodedToken.userId = decodedToken.id || decodedToken.sub;
+        }
+
         req.user = decodedToken;
         next();
     } catch (error) {

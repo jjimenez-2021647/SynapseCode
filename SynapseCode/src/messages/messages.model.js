@@ -94,6 +94,22 @@ const MessageSchema = new Schema(
             },
             default: 'ENVIADO',
         },
+
+        // Numero del chat al que pertenece el mensaje (ej: chat_A&5)
+        numberChat: {
+            type: String,
+            required: false,
+            trim: true,
+            default: null,
+        },
+
+        // Referencia al Chat al que pertenece el mensaje
+        idChat: {
+            type: Schema.Types.ObjectId,
+            ref: 'Chat',
+            required: false,
+            default: null,
+        },
     },
     {
         timestamps: true,
@@ -104,13 +120,15 @@ const MessageSchema = new Schema(
 MessageSchema.index({ roomId: 1, sentAt: 1 });
 MessageSchema.index({ userId: 1 });
 MessageSchema.index({ messageStatus: 1 });
+MessageSchema.index({ numberChat: 1, sentAt: 1 });
+MessageSchema.index({ idChat: 1, sentAt: 1 });
 
 // Validación personalizada: si está editado, fechaEdicion es obligatoria
-MessageSchema.pre('save', function (next) {
+// Usar throw en lugar de callback next() para evitar incompatibilidades
+MessageSchema.pre('save', function () {
     if (this.isEdited && !this.editedAt) {
-        return next(new Error('Si el mensaje está editado, la fecha de edición es obligatoria'));
+        throw new Error('Si el mensaje está editado, la fecha de edición es obligatoria');
     }
-    next();
 });
 
 // Validación personalizada: no permitir edición ni eliminación después de 30 minutos
