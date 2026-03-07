@@ -7,6 +7,8 @@ export const generateJWT = (userId, extraClaims = {}, options = {}) => {
         // JWT payload with sub, jti, iat, and optional role
         const payload = {
         sub: String(userId), // Ensure sub is string to match .NET behavior
+        userId: String(userId), // Explicit claim for services expecting req.user.userId
+        id: String(userId), // Backward-friendly alias
         jti: crypto.randomUUID(), // Match .NET Guid.NewGuid()
         iat: Math.floor(Date.now() / 1000), // Match .NET DateTimeOffset.UtcNow.ToUnixTimeSeconds()
         ...extraClaims, // Include role and other claims
