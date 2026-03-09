@@ -5,18 +5,15 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { dbConnection } from './db.js';
-// Ensure models are registered before DB sync
 import '../src/users/user.model.js';
 import '../src/auth/role.model.js';
 import { requestLimit } from '../middlewares/request-limit.js';
 import { corsOptions } from './cors-configuration.js';
 import { helmetConfiguration } from './helmet-configuration.js';
-import {
-    errorHandler,
-    notFound,
-} from '../middlewares/server-genericError-handler.js';
+import { notFound } from '../middlewares/server-genericError-handler.js';
 import authRoutes from '../src/auth/auth.routes.js';
 import userRoutes from '../src/users/user.routes.js';
+import { setupSwagger } from './swagger-setup.js';
 
 const BASE_PATH = '/api/v1';
 
@@ -40,19 +37,18 @@ const routes = (app) => {
             service: 'Synapse Code Authentication Service Running',
         });
     });
-    // 404 handler (standardized)
+
     app.use(notFound);
 };
 
 export const initServer = async () => {
     const app = express();
     const PORT = process.env.PORT;
-    app.set('trust proxy', 1); // Corregido el typo 'trus'
+    app.set('trust proxy', 1);
 
     try {
         await dbConnection();
 
-        // Seed de roles y admin
         const { seedRoles } = await import('../helpers/role-seed.js');
         await seedRoles();
 
@@ -60,15 +56,16 @@ export const initServer = async () => {
         await seedDefaultAdmin();
 
         middlewares(app);
-        routes(app);
+        setupSwagger(app, BASE_PATH); // ✅ Antes de routes()
+        routes(app);                   // ✅ notFound va al final
 
         app.listen(PORT, () => {
             console.log(`Synapse Code Admin Server running on port ${PORT}`);
             console.log(`Health check: http://localhost:${PORT}${BASE_PATH}/health`);
-        })
+            console.log(`Swagger docs: http://localhost:${PORT}${BASE_PATH}/docs`); // 👈
+        });
     } catch (error) {
         console.error(`Error starting Admin Server: ${error.message}`);
         process.exit(1);
     }
-}
-
+};
