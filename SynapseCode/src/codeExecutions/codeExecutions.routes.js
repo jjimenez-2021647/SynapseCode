@@ -36,18 +36,18 @@ const formDataParser = multer();
 // JUDGE0
 router.get('/languages', getSupportedLanguages); // Publica, sin JWT
 router.get('/audit/executors', validateJWT, requireRole('ADMIN_ROLE'), getCodeExecutionsAudit);
-router.post('/run', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByBodyFileId, formDataParser.none(), runCode);
-router.post('/submit', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByBodyFileId, formDataParser.none(), submitCodeAsync);
-router.get('/result/:token', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByResultQuery, getResultByToken);
+router.post('/run', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByBodyFileId, formDataParser.none(), runCode); // Ejecucion sincrona (recomendada)
+router.post('/submit', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByBodyFileId, formDataParser.none(), submitCodeAsync); // Ejecucion asincrona
+router.get('/result/:token', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByResultQuery, getResultByToken); // Polling resultado por token
 
 // RATE LIMIT
 router.get('/rate-limit', validateJWT, requireRole('USER_ROLE'), checkRateLimit);
 
 // CONSULTAS
-router.get('/', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByQueryScope, getCodeExecutions);
-router.get('/file/:fileId', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByFileIdParam, getCodeExecutionsByFile);
-router.get('/room/:roomId', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByRoomIdParam, getCodeExecutionsByRoom);
-router.get('/:id', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByExecutionIdParam, getCodeExecutionById);
+router.get('/', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByQueryScope, getCodeExecutions); // Todas (filtros: ?roomId= &fileId= &userId= &executionStatus= &language=)
+router.get('/file/:fileId', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByFileIdParam, getCodeExecutionsByFile); // Historial de un archivo
+router.get('/room/:roomId', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByRoomIdParam, getCodeExecutionsByRoom); // Todas las de una sala
+router.get('/:id', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByExecutionIdParam, getCodeExecutionById); // Por ID
 
 // CREAR
 router.post('/', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByBodyFileId, formDataParser.none(), createCodeExecution);
