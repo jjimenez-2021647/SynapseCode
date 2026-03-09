@@ -19,39 +19,11 @@ export const createRoomParticipation = async (req, res) => {
         const username = req.user?.username || null;
 
         if (!roomName || !roomCode) {
-        const { roomName, roomCode } = req.body;
-        const userId = req.user?.userId;
-        const username = req.user?.username || null;
-
-        if (!roomName || !roomCode) {
             return res.status(400).json({
                 message: 'roomName y roomCode son obligatorios',
-                message: 'roomName y roomCode son obligatorios',
             });
         }
 
-        if (!userId) {
-            return res.status(401).json({
-                message: 'Token invalido: no contiene userId',
-            });
-        }
-
-        const room = await Room.findOne({
-            roomName: String(roomName).trim(),
-            roomCode: String(roomCode).toUpperCase(),
-        }).lean();
-
-        if (!room) {
-            return res.status(404).json({ message: 'Sala no encontrada con roomName y roomCode' });
-        }
-
-        const payload = {
-            roomId: room._id,
-            userId,
-            username,
-            role: 'MIEMBRO',
-            permissions: getRoleDefaultPermissions('MIEMBRO'),
-        };
         if (!userId) {
             return res.status(401).json({
                 message: 'Token invalido: no contiene userId',
@@ -116,12 +88,10 @@ export const createRoomParticipation = async (req, res) => {
         if (error.code === 11000) {
             return res.status(400).json({
                 message: 'El usuario ya tiene una participacion registrada en esta sala',
-                message: 'El usuario ya tiene una participacion registrada en esta sala',
             });
         }
 
         return res.status(400).json({
-            message: error.message || 'Error creando la participacion en sala',
             message: error.message || 'Error creando la participacion en sala',
         });
     }
@@ -133,7 +103,6 @@ export const updateRoomParticipation = async (req, res) => {
         const updates = { ...req.body };
 
         // Las fechas de entrada y salida son registro unico: ni anfitrion ni miembro pueden modificarlas
-        // Las fechas de entrada y salida son registro unico: ni anfitrion ni miembro pueden modificarlas
         delete updates.joinedAt;
         delete updates.leftAt;
         delete updates.totalMinutes;
@@ -142,7 +111,6 @@ export const updateRoomParticipation = async (req, res) => {
 
         if (!existing) {
             return res.status(404).json({ message: 'Participacion no encontrada' });
-            return res.status(404).json({ message: 'Participacion no encontrada' });
         }
 
         const requesterUserId = req.user?.userId;
@@ -156,20 +124,6 @@ export const updateRoomParticipation = async (req, res) => {
                 message: 'Solo el HOST_ROLE (ANFITRION) puede editar participaciones',
             });
         }
-
-
-        const requesterUserId = req.user?.userId;
-        const requesterParticipation = await RoomParticipation.findOne({
-            roomId: existing.roomId,
-            userId: requesterUserId,
-        });
-
-        if (!requesterParticipation || requesterParticipation.role !== 'ANFITRION') {
-            return res.status(403).json({
-                message: 'Solo el HOST_ROLE (ANFITRION) puede editar participaciones',
-            });
-        }
-
 
         let newRole = existing.role;
 
@@ -184,7 +138,6 @@ export const updateRoomParticipation = async (req, res) => {
         }
 
         // Validacion manual de anfitrion unico si cambia a ANFITRION
-        // Validacion manual de anfitrion unico si cambia a ANFITRION
         if (newRole === 'ANFITRION' && existing.role !== 'ANFITRION') {
             const existingHost = await RoomParticipation.findOne({
                 roomId: existing.roomId,
@@ -194,7 +147,6 @@ export const updateRoomParticipation = async (req, res) => {
 
             if (existingHost) {
                 return res.status(400).json({
-                    message: 'Ya existe un anfitrion para esta sala',
                     message: 'Ya existe un anfitrion para esta sala',
                 });
             }
@@ -216,22 +168,11 @@ export const updateRoomParticipation = async (req, res) => {
                 }
             );
         }
-        if (updated) {
-            await Room.findOneAndUpdate(
-                { _id: updated.roomId, 'connectedUsers.userId': updated.userId },
-                {
-                    $set: {
-                        'connectedUsers.$.username': updated.username || existing.username || updated.userId,
-                        'connectedUsers.$.subRole': mapParticipationRoleToSubRole(updated.role),
-                    },
-                }
-            );
-        }
+
         return res.status(200).json(updated);
     } catch (error) {
         console.error('updateRoomParticipation error:', error);
         return res.status(400).json({
-            message: error.message || 'Error actualizando la participacion en sala',
             message: error.message || 'Error actualizando la participacion en sala',
         });
     }
@@ -260,7 +201,7 @@ export const getRoomParticipationsByRoom = async (req, res) => {
             const isMember = await RoomParticipation.exists({
                 roomId,
                 userId: requesterUserId,
-                connectionStatus: { $ne: 'DESCONECTADO' } // O opcionalmente solo verificar que existen
+                connectionStatus: { $ne: 'DESCONECTADO' },
             });
 
             if (!isMember) {
@@ -305,7 +246,6 @@ export const getRoomParticipationsByUser = async (req, res) => {
 };
 
 // Marca la salida del usuario de la sala: registra leftAt, recalcula tiempo total y cambia estado de conexion
-// Marca la salida del usuario de la sala: registra leftAt, recalcula tiempo total y cambia estado de conexion
 export const leaveRoomParticipation = async (req, res) => {
     try {
         const { id } = req.params;
@@ -314,13 +254,11 @@ export const leaveRoomParticipation = async (req, res) => {
 
         if (!participation) {
             return res.status(404).json({ message: 'Participacion no encontrada' });
-            return res.status(404).json({ message: 'Participacion no encontrada' });
         }
 
         if (participation.leftAt) {
             return res.status(400).json({
                 message: 'La salida ya fue registrada para esta participacion',
-                message: 'La salida ya fue registrada para esta participacion',
             });
         }
 
@@ -329,22 +267,7 @@ export const leaveRoomParticipation = async (req, res) => {
                 roomId: participation.roomId,
                 role: 'ANFITRION',
                 connectionStatus: 'CONECTADO',
-                _id: { $ne: participation._id }
-            });
-
-            if (otherHosts === 0) {
-                return res.status(400).json({
-                    message: 'Tienes que asignar otro HOST_ROLE antes de salir',
-                });
-            }
-        }
-
-        if (participation.role === 'ANFITRION') {
-            const otherHosts = await RoomParticipation.countDocuments({
-                roomId: participation.roomId,
-                role: 'ANFITRION',
-                connectionStatus: 'CONECTADO',
-                _id: { $ne: participation._id }
+                _id: { $ne: participation._id },
             });
 
             if (otherHosts === 0) {
@@ -368,9 +291,7 @@ export const leaveRoomParticipation = async (req, res) => {
         await Room.findByIdAndUpdate(participation.roomId, {
             $pull: { connectedUsers: { userId: participation.userId } },
         });
-        await Room.findByIdAndUpdate(participation.roomId, {
-            $pull: { connectedUsers: { userId: participation.userId } },
-        });
+
         return res.status(200).json(participation);
     } catch (error) {
         console.error('leaveRoomParticipation error:', error);
@@ -385,32 +306,11 @@ export const deleteRoomParticipation = async (req, res) => {
         const { id } = req.params;
 
         const participation = await RoomParticipation.findById(id);
-        const participation = await RoomParticipation.findById(id);
 
         if (!participation) {
             return res.status(404).json({ message: 'Participacion no encontrada' });
-            return res.status(404).json({ message: 'Participacion no encontrada' });
         }
 
-        const requesterUserId = req.user?.userId;
-        const requesterParticipation = await RoomParticipation.findOne({
-            roomId: participation.roomId,
-            userId: requesterUserId,
-        });
-
-        if (!requesterParticipation || requesterParticipation.role !== 'ANFITRION') {
-            return res.status(403).json({
-                message: 'Solo el HOST_ROLE (ANFITRION) de la sala puede eliminar usuarios',
-            });
-        }
-
-        await RoomParticipation.findByIdAndDelete(id);
-
-        await Room.findByIdAndUpdate(participation.roomId, {
-            $pull: { connectedUsers: { userId: participation.userId } },
-        });
-
-        return res.status(200).json({ message: 'Participacion eliminada correctamente' });
         const requesterUserId = req.user?.userId;
         const requesterParticipation = await RoomParticipation.findOne({
             roomId: participation.roomId,
@@ -433,7 +333,6 @@ export const deleteRoomParticipation = async (req, res) => {
     } catch (error) {
         console.error('deleteRoomParticipation error:', error);
         return res.status(400).json({
-            message: error.message || 'Error eliminando la participacion en sala',
             message: error.message || 'Error eliminando la participacion en sala',
         });
     }

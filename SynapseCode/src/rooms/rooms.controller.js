@@ -242,7 +242,6 @@ export const getRoomByCode = async (req, res) => {
 
         const { code } = req.params;
         const room = await Room.findOne({ roomCode: String(code).toUpperCase() }).lean();
-        const room = await Room.findOne({ roomCode: String(code).toUpperCase() }).lean();
 
         if (!room) {
             return res.status(404).json({ message: 'Sala no encontrada' });
@@ -297,12 +296,6 @@ export const deleteRoom = async (req, res) => {
         const requesterUserId = getRequesterUserId(req);
         const requesterIsAdmin = isAdminRole(req);
         const { code } = req.params;
-
-        if (!requesterUserId) {
-            return res.status(401).json({ message: 'Token invalido: no contiene userId' });
-        }
-
-        const room = await Room.findOne({ roomCode: String(code).toUpperCase() });
 
         if (!requesterUserId) {
             return res.status(401).json({ message: 'Token invalido: no contiene userId' });
