@@ -5,11 +5,6 @@ import Message from '../messages/messages.model.js';
 import File from '../files/files.model.js';
 import CodeSession from '../codeSessions/codeSessions.model.js';
 import CodeExecution from '../codeExecutions/codeExecutions.model.js';
-import Chat from '../chats/chats.model.js';
-import Message from '../messages/messages.model.js';
-import File from '../files/files.model.js';
-import CodeSession from '../codeSessions/codeSessions.model.js';
-import CodeExecution from '../codeExecutions/codeExecutions.model.js';
 import RoomParticipation from '../roomParticipations/roomParticipations.model.js';
 import generateUniqueRoomCode from '../../helpers/rooms.helpers.js';
 import { getRoleDefaultPermissions, calculateTotalMinutes } from '../../helpers/roomParticipations.helpers.js';
@@ -101,7 +96,6 @@ export const createRoom = async (req, res) => {
         await RoomParticipation.create({
             roomId: room._id,
             userId: room.hostId,
-            username: req.user?.username || null,
             username: req.user?.username || null,
             role: 'ANFITRION',
             permissions: getRoleDefaultPermissions('ANFITRION'),

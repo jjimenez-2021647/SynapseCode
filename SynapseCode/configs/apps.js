@@ -3,6 +3,8 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { dbConnection } from './db.js';
 import { corsOptions } from './cors-configuration.js';
 import { helmetConfiguration } from './helmet-configuration.js';
@@ -12,6 +14,11 @@ import filesRoutes from '../src/files/files.routes.js';
 import codeSessionsRoutes from '../src/codeSessions/codeSessions.routes.js';
 import codeExecutionsRoutes from '../src/codeExecutions/codeExecutions.routes.js';
 import roomParticipationsRoutes from '../src/roomParticipations/roomParticipations.routes.js';
+import swaggerJSDoc from 'swagger-jsdoc';
+import swaggerUi from 'swagger-ui-express';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const BASE_PATH = '/api/v1';
 
@@ -55,14 +62,38 @@ export const initServer = async () => {
     try {
         await dbConnection();
         middlewares(app);
+
+        // Configuración de Swagger
+        const swaggerDefinition = {
+            openapi: '3.0.0',
+            info: {
+                title: 'SynapseCode API',
+                version: '1.0.0',
+                description: 'Documentación de la API de SynapseCode',
+            },
+            servers: [
+                {
+                    url: `http://localhost:${PORT}`,
+                },
+            ],
+        };
+
+        const options = {
+            swaggerDefinition,
+            apis: [join(process.cwd(), 'src/**/*.routes.js')],
+        };
+
+        const swaggerSpec = swaggerJSDoc(options);
+        app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
         routes(app);
 
         app.listen(PORT, () => {
             console.log(`SynapseCode Admin Server running on port ${PORT}`);
-            console.log(`Health check: http://localhost:${PORT}${BASE_PATH}/health`);
-        })
+            console.log(`API Docs: http://localhost:${PORT}/api-docs`);
+        });
     } catch (error) {
         console.error(`Error starting Admin Server: ${error.message}`);
         process.exit(1);
     }
-}
+};
