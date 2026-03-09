@@ -5,7 +5,8 @@ import { initServer} from './configs/apps.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.resolve(__dirname, '.env'), override: true });
+dotenv.config({ override: true });
+console.log('GROQ_API_KEY loaded:', !!process.env.GROQ_API_KEY);
 
 process.on('uncaughtException', (err) =>{
     console.error('Excepción no capturada en el servidor SynapseCode Admin', err);
