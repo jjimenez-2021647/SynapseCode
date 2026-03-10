@@ -114,7 +114,6 @@ const appendMessageToChat = async (chatId, messageId) => {
 export const createMessage = async (req, res) => {
     try {
         let {
-            roomId,
             idChat,
             numberChat,
             typeMessage,
@@ -128,21 +127,34 @@ export const createMessage = async (req, res) => {
             return res.status(401).json({ message: 'Token invalido: no contiene userId' });
         }
 
-        if (!typeMessage || (!content && !req.file)) {
+        if (!numberChat || !typeMessage) {
             return res.status(400).json({
-                message: 'typeMessage y content son obligatorios',
+                message: 'numberChat y typeMessage son obligatorios',
+            });
+        }
+
+        // Para mensajes con archivo (IMAGEN, AUDIO, ARCHIVO), content es opcional
+        // Para TEXTO, content es requerido
+        const isFileType = ['IMAGEN', 'AUDIO', 'ARCHIVO'].includes(String(typeMessage).toUpperCase());
+        if (!isFileType && !content) {
+            return res.status(400).json({
+                message: 'content es obligatorio para mensajes de tipo TEXTO',
             });
         }
 
         typeMessage = String(typeMessage).toUpperCase();
 
-        const resolved = await resolveChatAndRoom({ idChat, numberChat, roomId });
+        const resolved = await resolveChatAndRoom({ idChat, numberChat });
         const room = resolved.room;
         const chat = resolved.chat;
-        roomId = resolved.roomId;
+        const roomId = resolved.roomId;
 
         if (!chat) {
             return res.status(404).json({ message: 'Chat no encontrado' });
+        }
+
+        if (!roomId || roomId === 'null' || roomId === 'undefined') {
+            return res.status(400).json({ message: 'Chat sin sala valida' });
         }
 
         if (!room) {
@@ -167,6 +179,7 @@ export const createMessage = async (req, res) => {
 
         let messageContent = content;
         if (['IMAGEN', 'AUDIO', 'ARCHIVO'].includes(typeMessage)) {
+            console.log('Archivo recibido:', req.file);
             if (!req.file) {
                 return res.status(400).json({
                     message: `Se requiere un archivo para mensajes de tipo ${typeMessage}`,
@@ -174,14 +187,16 @@ export const createMessage = async (req, res) => {
             }
 
             try {
+                console.log('Subiendo archivo a Cloudinary...');
                 const uploadResult = await uploadToCloudinary(req.file, {
                     folder: `synapse-code/messages/${roomId}`,
-                    resource_type: 'auto',
                 });
+                console.log('Upload result:', uploadResult);
                 messageContent = uploadResult.secure_url;
             } catch (uploadError) {
                 console.error('Error uploading to Cloudinary:', uploadError);
-                return res.status(500).json({ message: 'Error al subir el archivo' });
+                const errorMessage = uploadError?.message || uploadError?.toString() || 'Error desconocido al subir archivo';
+                return res.status(500).json({ message: `Error al subir el archivo: ${errorMessage}` });
             }
         }
 
@@ -298,15 +313,16 @@ export const createMessage = async (req, res) => {
         });
     } catch (error) {
         console.error('createMessage error:', error);
+        const errorMessage = error?.message || error?.toString() || 'Error creando el mensaje';
         return res.status(400).json({
-            message: error.message || 'Error creando el mensaje',
+            message: errorMessage,
         });
     }
 };
 
 export const getRoomMessages = async (req, res) => {
     try {
-        const { roomId } = req.params;
+        const { roomId, numberChat } = req.params;
         const { page = 1, limit = 50 } = req.query;
 
         const room = await Room.findById(roomId);
@@ -316,11 +332,28 @@ export const getRoomMessages = async (req, res) => {
             });
         }
 
+        const chat = await Chat.findOne({ numberChat, roomId }).lean();
+        if (!chat) {
+            return res.status(404).json({
+                message: 'Chat no encontrado en la sala',
+            });
+        }
+
+        // membership / admin check
+        const userId = getRequesterUserId(req);
+        const requesterIsAdmin = isAdminRole(req);
+        const belongs = await ensureUserBelongsToRoom({ roomId, userId });
+        if (!belongs && !requesterIsAdmin) {
+            return res.status(403).json({ message: 'No tienes permiso para ver los mensajes de esta sala' });
+        }
+
         const skipAmount = (page - 1) * limit;
 
         const messages = await Message.find({
             roomId,
+            numberChat,
             messageStatus: { $ne: 'ELIMINADO' },
+            typeMessage: { $ne: 'SISTEMA' },
         })
             .sort({ sentAt: 1 })
             .skip(skipAmount)
@@ -331,7 +364,9 @@ export const getRoomMessages = async (req, res) => {
 
         const totalMessages = await Message.countDocuments({
             roomId,
+            numberChat,
             messageStatus: { $ne: 'ELIMINADO' },
+            typeMessage: { $ne: 'SISTEMA' },
         });
 
         return res.status(200).json({
@@ -363,13 +398,32 @@ export const getMessageById = async (req, res) => {
             });
         }
 
+        // membership check: only participants or admins can read
+        const userId = getRequesterUserId(req);
+        const requesterIsAdmin = isAdminRole(req);
+        const belongs = await ensureUserBelongsToRoom({ roomId: message.roomId, userId });
+        if (!belongs && !requesterIsAdmin) {
+            return res.status(403).json({
+                message: 'No tienes permiso para ver este mensaje',
+            });
+        }
+
         if (message.messageStatus === 'ELIMINADO') {
             return res.status(404).json({
                 message: 'Este mensaje ha sido eliminado',
             });
         }
 
-        return res.status(200).json(message);
+        // Build response object, filtering modifyCodeSessions for non-CHAT_IA messages
+        const messageResponse = message;
+        const chatType = message.chatType || 'CHAT_SALA'; // default to CHAT_SALA
+        
+        // Only include modifyCodeSessions if chat is CHAT_IA
+        if (chatType !== 'CHAT_IA') {
+            delete messageResponse.modifyCodeSessions;
+        }
+
+        return res.status(200).json(messageResponse);
     } catch (error) {
         console.error('getMessageById error:', error);
         return res.status(400).json({
@@ -398,15 +452,37 @@ export const editMessage = async (req, res) => {
             });
         }
 
+        // must be the author and still belong to room
         if (message.userId !== userId) {
             return res.status(403).json({
                 message: 'No tienes permiso para editar este mensaje',
+            });
+        }
+        const stillInRoom = await ensureUserBelongsToRoom({ roomId: message.roomId, userId });
+        if (!stillInRoom) {
+            return res.status(403).json({
+                message: 'Ya no perteneces a la sala asociada a este mensaje',
             });
         }
 
         if (message.messageStatus === 'ELIMINADO') {
             return res.status(400).json({
                 message: 'No se puede editar un mensaje eliminado',
+            });
+        }
+
+        // Only TEXTO messages can be edited
+        if (message.typeMessage !== 'TEXTO') {
+            return res.status(400).json({
+                message: `Los mensajes de tipo ${message.typeMessage} no pueden ser editados, solo eliminados`,
+            });
+        }
+
+        // Only CHAT_SALA messages can be edited, not CHAT_IA
+        const chatType = message.chatType || 'CHAT_SALA';
+        if (chatType === 'CHAT_IA') {
+            return res.status(400).json({
+                message: 'Los mensajes de CHAT_IA no pueden ser editados, solo eliminados',
             });
         }
 
@@ -463,6 +539,14 @@ export const deleteMessage = async (req, res) => {
             return res.status(403).json({
                 message: 'No tienes permiso para eliminar este mensaje',
             });
+        }
+        if (!requesterIsAdmin) {
+            const stillInRoom = await ensureUserBelongsToRoom({ roomId: message.roomId, userId });
+            if (!stillInRoom) {
+                return res.status(403).json({
+                    message: 'Ya no perteneces a la sala asociada a este mensaje',
+                });
+            }
         }
 
         if (message.messageStatus === 'ELIMINADO') {

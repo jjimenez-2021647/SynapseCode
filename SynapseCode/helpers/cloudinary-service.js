@@ -24,22 +24,24 @@ cloudinary.config({
     api_secret: config.cloudinary.apiSecret,
 });
 
-export const uploadImage = async (filePath, fileName) => {
+export const uploadImage = async (filePath, fileName, options = {}) => {
     try {
-        const folder = config.cloudinary.folder;
+        const folder = options.folder || config.cloudinary.folder;
         const publicId = fileName.split('.').slice(0, -1).join('.') || fileName;
 
-        const options = {
+        const uploadOptions = {
             public_id: publicId,
             folder,
-            resource_type: 'image',
+            access_type: 'public',
             transformation: [
                 { width: 800, height: 800, crop: 'limit' },
                 { quality: 'auto', fetch_format: 'auto' },
             ],
+            ...options,
+            resource_type: 'image',
         };
 
-        const result = await cloudinary.uploader.upload(filePath, options);
+        const result = await cloudinary.uploader.upload(filePath, uploadOptions);
 
         try {
             await fs.unlink(filePath);
@@ -62,6 +64,84 @@ export const uploadImage = async (filePath, fileName) => {
         }
 
         throw new Error(`Failed to upload image to Cloudinary: ${error?.message || ''}`);
+    }
+};
+
+export const uploadAudio = async (filePath, fileName, options = {}) => {
+    try {
+        const folder = options.folder || config.cloudinary.folder;
+        const publicId = fileName.split('.').slice(0, -1).join('.') || fileName;
+
+        const uploadOptions = {
+            public_id: publicId,
+            folder,
+            access_type: 'public',
+            ...options,
+            resource_type: 'auto',
+        };
+
+        const result = await cloudinary.uploader.upload(filePath, uploadOptions);
+
+        try {
+            await fs.unlink(filePath);
+        } catch {
+            console.warn('Warning: Could not delete local file:', filePath);
+        }
+
+        if (result.error) {
+            throw new Error(`Error uploading audio: ${result.error.message}`);
+        }
+
+        return result.secure_url;
+    } catch (error) {
+        console.error('Error uploading audio to Cloudinary:', error?.message || error);
+
+        try {
+            await fs.unlink(filePath);
+        } catch {
+            console.warn('Warning: Could not delete local file after upload error');
+        }
+
+        throw new Error(`Failed to upload audio to Cloudinary: ${error?.message || ''}`);
+    }
+};
+
+export const uploadRaw = async (filePath, fileName, options = {}) => {
+    try {
+        const folder = options.folder || config.cloudinary.folder;
+        const publicId = fileName.split('.').slice(0, -1).join('.') || fileName;
+
+        const uploadOptions = {
+            public_id: publicId,
+            folder,
+            access_type: 'public',
+            ...options,
+            resource_type: 'raw',
+        };
+
+        const result = await cloudinary.uploader.upload(filePath, uploadOptions);
+
+        try {
+            await fs.unlink(filePath);
+        } catch {
+            console.warn('Warning: Could not delete local file:', filePath);
+        }
+
+        if (result.error) {
+            throw new Error(`Error uploading file: ${result.error.message}`);
+        }
+
+        return result.secure_url;
+    } catch (error) {
+        console.error('Error uploading raw file to Cloudinary:', error?.message || error);
+
+        try {
+            await fs.unlink(filePath);
+        } catch {
+            console.warn('Warning: Could not delete local file after upload error');
+        }
+
+        throw new Error(`Failed to upload file to Cloudinary: ${error?.message || ''}`);
     }
 };
 
@@ -118,13 +198,32 @@ export const uploadToCloudinary = async (file, options = {}) => {
         throw new Error('No se proporciono un archivo valido para subir a Cloudinary');
     }
 
+    // Si el path ya es una URL de Cloudinary, devolver directamente
+    if (file.path.startsWith('https://')) {
+        return { secure_url: file.path, ...options };
+    }
+
     const fileName = file.originalname || file.filename || `file_${Date.now()}`;
-    const secureUrl = await uploadImage(file.path, fileName);
+    const fileExtension = fileName.split('.').pop().toLowerCase();
+    const audioFormats = ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac', 'wma'];
+    const imageFormats = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'svg'];
+    
+    let secureUrl;
+    if (audioFormats.includes(fileExtension)) {
+        secureUrl = await uploadAudio(file.path, fileName, options);
+    } else if (imageFormats.includes(fileExtension)) {
+        secureUrl = await uploadImage(file.path, fileName, options);
+    } else {
+        secureUrl = await uploadRaw(file.path, fileName, options);
+    }
+    
     return { secure_url: secureUrl, ...options };
 };
 
 export default {
     uploadImage,
+    uploadAudio,
+    uploadRaw,
     deleteImage,
     getFullImageUrl,
     getDefaultAvatarUrl,

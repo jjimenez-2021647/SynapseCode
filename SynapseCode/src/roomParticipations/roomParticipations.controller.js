@@ -39,6 +39,21 @@ export const createRoomParticipation = async (req, res) => {
             return res.status(404).json({ message: 'Sala no encontrada con roomName y roomCode' });
         }
 
+        // Validación: Solo se puede unir a salas activas
+        if (room.roomStatus !== 'ACTIVA') {
+            return res.status(403).json({ message: 'No se puede unir a la sala porque no está activa' });
+        }
+
+        // Validación: Si la sala es privada, requiere contraseña
+        if (room.roomType === 'PRIVADA') {
+            if (!req.body.passwordRoom) {
+                return res.status(400).json({ message: 'Contraseña requerida para unirse a salas privadas' });
+            }
+            if (req.body.passwordRoom !== room.passwordRoom) {
+                return res.status(403).json({ message: 'Contraseña incorrecta' });
+            }
+        }
+
         const payload = {
             roomId: room._id,
             userId,
@@ -137,17 +152,12 @@ export const updateRoomParticipation = async (req, res) => {
             updates.permissions = mergePermissions(newRole, partialPermissions);
         }
 
-        // Validacion manual de anfitrion unico si cambia a ANFITRION
-        if (newRole === 'ANFITRION' && existing.role !== 'ANFITRION') {
-            const existingHost = await RoomParticipation.findOne({
-                roomId: existing.roomId,
-                role: 'ANFITRION',
-                _id: { $ne: existing._id },
-            });
+        // Permitir múltiples anfitriones: removida validación de anfitrión único
 
-            if (existingHost) {
+        if (newRole === 'ANFITRION' && existing.role !== 'ANFITRION') {
+            if (existing.connectionStatus !== 'CONECTADO') {
                 return res.status(400).json({
-                    message: 'Ya existe un anfitrion para esta sala',
+                    message: 'Solo usuarios conectados pueden ser asignados como anfitriones',
                 });
             }
         }
@@ -178,8 +188,14 @@ export const updateRoomParticipation = async (req, res) => {
     }
 };
 
-export const getRoomParticipations = async (_req, res) => {
+export const getRoomParticipations = async (req, res) => {
     try {
+        if (!isAdminRole(req)) {
+            return res.status(403).json({
+                message: 'Solo ADMIN_ROLE puede listar todas las participaciones',
+            });
+        }
+
         const participations = await RoomParticipation.find();
         return res.status(200).json(participations);
     } catch (error) {
@@ -262,18 +278,33 @@ export const leaveRoomParticipation = async (req, res) => {
             });
         }
 
+        let newHostInfo = null;
+
         if (participation.role === 'ANFITRION') {
-            const otherHosts = await RoomParticipation.countDocuments({
+            const anotherMember = await RoomParticipation.findOne({
                 roomId: participation.roomId,
-                role: 'ANFITRION',
+                role: 'MIEMBRO',
                 connectionStatus: 'CONECTADO',
                 _id: { $ne: participation._id },
             });
 
-            if (otherHosts === 0) {
-                return res.status(400).json({
-                    message: 'Tienes que asignar otro HOST_ROLE antes de salir',
-                });
+            if (anotherMember) {
+                // findByIdAndUpdate NO dispara pre('save'), evita el error de anfitrión único
+                await RoomParticipation.findByIdAndUpdate(
+                    anotherMember._id,
+                    { $set: { role: 'ANFITRION', permissions: getRoleDefaultPermissions('ANFITRION') } },
+                    { runValidators: false }
+                );
+
+                await Room.findOneAndUpdate(
+                    { _id: participation.roomId, 'connectedUsers.userId': anotherMember.userId },
+                    { $set: { 'connectedUsers.$.subRole': 'HOST_ROLE' } }
+                );
+
+                newHostInfo = {
+                    userId: anotherMember.userId,
+                    username: anotherMember.username || anotherMember.userId,
+                };
             }
         }
 
@@ -292,7 +323,67 @@ export const leaveRoomParticipation = async (req, res) => {
             $pull: { connectedUsers: { userId: participation.userId } },
         });
 
-        return res.status(200).json(participation);
+        // Mensaje de sistema automático al salir de la sala
+        try {
+            const displayName = participation.username || participation.userId;
+            await Message.create({
+                roomId: participation.roomId,
+                userId: 'SYSTEM',
+                typeMessage: 'SISTEMA',
+                content: `${displayName} abandonó la sala`,
+                messageStatus: 'ENVIADO',
+                sentAt: new Date(),
+                numberChat: null,
+                modifyCodeSessions: 'NO_MODIFICAR',
+            });
+        } catch (systemMessageError) {
+            console.error('leaveRoomParticipation system message error:', systemMessageError);
+        }
+
+        // Verificar si quedan usuarios conectados
+        const remainingConnected = await RoomParticipation.countDocuments({
+            roomId: participation.roomId,
+            connectionStatus: 'CONECTADO',
+        });
+
+        if (remainingConnected === 0) {
+            // Cerrar la sala automáticamente
+            const room = await Room.findById(participation.roomId);
+            if (room && room.roomStatus === 'ACTIVA') {
+                room.roomStatus = 'CERRADA';
+                room.connectedUsers = [];
+                room.lastActivity = {
+                    date: new Date(),
+                    action: 'Sala cerrada automáticamente al salir el último usuario conectado',
+                    performedBy: {
+                        userId: participation.userId,
+                        username: participation.username || null,
+                    },
+                };
+                await room.save();
+
+                // Desconectar todas las participaciones activas restantes (aunque no debería haber)
+                const activeParticipations = await RoomParticipation.find({
+                    roomId: participation.roomId,
+                    connectionStatus: 'CONECTADO',
+                });
+
+                const now = new Date();
+                const updatePromises = activeParticipations.map(async (part) => {
+                    part.leftAt = now;
+                    part.connectionStatus = 'DESCONECTADO';
+                    part.totalMinutes = calculateTotalMinutes(part.joinedAt, now, part.totalMinutes);
+                    return part.save();
+                });
+
+                await Promise.all(updatePromises);
+            }
+        }
+
+        return res.status(200).json({
+            participation,
+            newHost: newHostInfo,
+        });
     } catch (error) {
         console.error('leaveRoomParticipation error:', error);
         return res.status(400).json({
@@ -312,15 +403,49 @@ export const deleteRoomParticipation = async (req, res) => {
         }
 
         const requesterUserId = req.user?.userId;
-        const requesterParticipation = await RoomParticipation.findOne({
-            roomId: participation.roomId,
-            userId: requesterUserId,
-        });
+        const requesterIsAdmin = isAdminRole(req);
 
-        if (!requesterParticipation || requesterParticipation.role !== 'ANFITRION') {
-            return res.status(403).json({
-                message: 'Solo el HOST_ROLE (ANFITRION) de la sala puede eliminar usuarios',
+        if (!requesterIsAdmin) {
+            const requesterParticipation = await RoomParticipation.findOne({
+                roomId: participation.roomId,
+                userId: requesterUserId,
             });
+
+            if (!requesterParticipation || requesterParticipation.role !== 'ANFITRION') {
+                return res.status(403).json({
+                    message: 'Solo el HOST_ROLE (ANFITRION) de la sala puede eliminar usuarios',
+                });
+            }
+        }
+
+        let newHostInfo = null;
+
+        if (participation.role === 'ANFITRION') {
+            // Asignar automáticamente a un miembro conectado como nuevo anfitrión
+            const anotherMember = await RoomParticipation.findOne({
+                roomId: participation.roomId,
+                role: 'MIEMBRO',
+                connectionStatus: 'CONECTADO',
+                _id: { $ne: participation._id },
+            });
+
+            if (anotherMember) {
+                await RoomParticipation.findByIdAndUpdate(
+                    anotherMember._id,
+                    { $set: { role: 'ANFITRION', permissions: getRoleDefaultPermissions('ANFITRION') } },
+                    { runValidators: false }
+                );
+
+                await Room.findOneAndUpdate(
+                    { _id: participation.roomId, 'connectedUsers.userId': anotherMember.userId },
+                    { $set: { 'connectedUsers.$.subRole': 'HOST_ROLE' } }
+                );
+
+                newHostInfo = {
+                    userId: anotherMember.userId,
+                    username: anotherMember.username || anotherMember.userId,
+                };
+            }
         }
 
         await RoomParticipation.findByIdAndDelete(id);
@@ -329,7 +454,27 @@ export const deleteRoomParticipation = async (req, res) => {
             $pull: { connectedUsers: { userId: participation.userId } },
         });
 
-        return res.status(200).json({ message: 'Participacion eliminada correctamente' });
+        // Mensaje de sistema automático cuando un usuario es expulsado
+        try {
+            const displayName = participation.username || participation.userId;
+            await Message.create({
+                roomId: participation.roomId,
+                userId: 'SYSTEM',
+                typeMessage: 'SISTEMA',
+                content: `${displayName} fue expulsado de la sala`,
+                messageStatus: 'ENVIADO',
+                sentAt: new Date(),
+                numberChat: null,
+                modifyCodeSessions: 'NO_MODIFICAR',
+            });
+        } catch (systemMessageError) {
+            console.error('deleteRoomParticipation system message error:', systemMessageError);
+        }
+
+        return res.status(200).json({
+            message: 'Participacion eliminada correctamente',
+            newHost: newHostInfo,
+        });
     } catch (error) {
         console.error('deleteRoomParticipation error:', error);
         return res.status(400).json({

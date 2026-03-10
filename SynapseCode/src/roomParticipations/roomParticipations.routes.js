@@ -137,7 +137,7 @@ router.get('/user/:userId', validateJWT, requireRole('USER_ROLE', 'ADMIN_ROLE'),
  */
 router.patch('/:id/leave', validateJWT, requireRole('USER_ROLE'), leaveRoomParticipation);
 
-// Solo USER_ROLE puede eliminar (el controller filtra si es HOST_ROLE de esa sala)
+// USER_ROLE y ADMIN_ROLE pueden eliminar (el controller filtra permisos)
  /**
  * @swagger
  * /api/v1/room-participations/{id}:
@@ -155,7 +155,7 @@ router.patch('/:id/leave', validateJWT, requireRole('USER_ROLE'), leaveRoomParti
  *       200: { description: Participación eliminada }
  *       404: { description: Participación no encontrada }
  */
-router.delete('/:id', validateJWT, requireRole('USER_ROLE'), deleteRoomParticipation);
+router.delete('/:id', validateJWT, requireRole('USER_ROLE', 'ADMIN_ROLE'), deleteRoomParticipation);
 
 export default router;
 

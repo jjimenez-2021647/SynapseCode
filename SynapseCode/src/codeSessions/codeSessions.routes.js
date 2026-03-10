@@ -42,7 +42,8 @@ const router = Router();
  *             type: object
  *             properties:
  *               fileId: { type: string, description: "ID del archivo" }
- *               code: { type: string, description: "Código de la sesión" }
+ *               // `code` opcional: si se omite, se utiliza el contenido actual del archivo
+ *               code: { type: string, description: "Código de la sesión (opcional)" }
  *     responses:
  *       201: { description: Sesión creada }
  *       400: { description: Datos inválidos }

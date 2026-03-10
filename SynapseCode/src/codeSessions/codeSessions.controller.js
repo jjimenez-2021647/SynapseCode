@@ -51,13 +51,37 @@ const enrichCodeSessions = async (sessions) => {
 export const createCodeSession = async (req, res) => {
     try {
         const { fileId, code, isAutoSave, isBeforeExecution } = req.body;
-        const normalizedCode = normalizeCodeContent(code);
 
-        if (!fileId || normalizedCode === undefined) {
+        if (!fileId) {
             return res.status(400).json({
                 success: false,
-                message: 'fileId y code son obligatorios',
+                message: 'fileId es obligatorio',
                 error: 'MISSING_REQUIRED_FIELDS',
+            });
+        }
+
+        // si no se envía código, lo tomamos del archivo existente más reciente
+        let normalizedCode;
+        if (code === undefined) {
+            const fileForCode = await File.findById(fileId).select('currentCode').lean();
+            if (!fileForCode) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'El archivo no existe',
+                    error: 'FILE_NOT_FOUND',
+                });
+            }
+            normalizedCode = normalizeCodeContent(fileForCode.currentCode || '');
+        } else {
+            normalizedCode = normalizeCodeContent(code);
+        }
+
+        // el código puede ser cadena vacía, permitimos pero normalizado no debe ser undefined
+        if (normalizedCode === undefined) {
+            return res.status(400).json({
+                success: false,
+                message: 'code invalido',
+                error: 'INVALID_CODE',
             });
         }
 

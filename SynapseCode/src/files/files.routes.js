@@ -16,6 +16,7 @@ import {
 import {
     createFile,
     getFilesByRoom,
+    getFilesByUser,
     getFileById,
     updateFileContent,
     renameFile,
@@ -26,8 +27,25 @@ import {
     duplicateFile,
     toggleReadOnly,
 } from './files.controller.js';
+import {
+    requireFileRoomAccessByParamRoomIdOrAdmin,
+    requireFileRoomAccessByFileIdParamOrAdmin,
+} from '../../middlewares/validate-file-room-access.js';
 
 const router = Router();
+
+/**
+ * @swagger
+ * /api/v1/files:
+ *   get:
+ *     summary: Obtener archivos creados por el usuario autenticado
+ *     tags: [Files]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200: { description: Lista de archivos del usuario }
+ */
+router.get('/', validateJWT, requireRole('USER_ROLE'), getFilesByUser);
 
 /**
  * @swagger
@@ -44,9 +62,9 @@ const router = Router();
  *           schema:
  *             type: object
  *             properties:
- *               name: { type: string, description: "Nombre del archivo" }
  *               roomId: { type: string, description: "ID de la sala" }
- *               extension: { type: string, description: "Extensión del archivo" }
+ *               fileName: { type: string, description: "Nombre del archivo" }
+ *               fileExtension: { type: string, description: "Extensión del archivo" }
  *     responses:
  *       201: { description: Archivo creado }
  *       400: { description: Datos inválidos }
@@ -79,7 +97,7 @@ router.post(
  *       200: { description: Lista de archivos }
  *       404: { description: Sala no encontrada }
  */
-router.get('/room/:roomId', validateJWT, requireFileRoomAccessByParamRoomId, getFilesByRoom);
+router.get('/room/:roomId', validateJWT, requireRole('USER_ROLE','ADMIN_ROLE'), requireFileRoomAccessByParamRoomIdOrAdmin, getFilesByRoom);
 
 /**
  * @swagger
@@ -104,7 +122,7 @@ router.get('/:id', validateJWT, requireFileRoomAccessByFileIdParam, getFileById)
  * @swagger
  * /api/v1/files/{id}/content:
  *   put:
- *     summary: Actualizar contenido del archivo
+ *     summary: Actualizar nombre y extensión del archivo
  *     tags: [Files]
  *     security:
  *       - bearerAuth: []
@@ -120,9 +138,10 @@ router.get('/:id', validateJWT, requireFileRoomAccessByFileIdParam, getFileById)
  *           schema:
  *             type: object
  *             properties:
- *               content: { type: string, description: "Nuevo contenido" }
+ *               fileName: { type: string, description: "Nuevo nombre del archivo" }
+ *               fileExtension: { type: string, description: "Nueva extensión del archivo" }
  *     responses:
- *       200: { description: Contenido actualizado }
+ *       200: { description: Archivo actualizado }
  *       404: { description: Archivo no encontrado }
  */
 router.put('/:id/content', validateJWT, requireRole('USER_ROLE'), requireFileRoomAccessByFileIdParam, updateFileContent);
@@ -198,7 +217,7 @@ router.patch('/:id/readonly', validateJWT, requireRole('USER_ROLE'), requireFile
  *       200: { description: Archivo eliminado }
  *       404: { description: Archivo no encontrado }
  */
-router.delete('/:id', validateJWT, requireRole('USER_ROLE', 'ADMIN_ROLE'), requireFileRoomAccessByFileIdParam, deleteFile);
+router.delete('/:id', validateJWT, requireRole('USER_ROLE','ADMIN_ROLE'), requireFileRoomAccessByFileIdParam, deleteFile);
 
 /**
  * @swagger
@@ -236,7 +255,7 @@ router.patch('/:id/restore', validateJWT, requireRole('USER_ROLE'), requireFileR
  *       200: { description: Archivo eliminado permanentemente }
  *       404: { description: Archivo no encontrado }
  */
-router.delete('/:id/permanent', validateJWT, requireRole('USER_ROLE'), requireFileRoomAccessByFileIdParam, deleteFilePermanently);
+router.delete('/:id/permanent', validateJWT, requireRole('USER_ROLE','ADMIN_ROLE'), requireFileRoomAccessByFileIdParamOrAdmin, deleteFilePermanently);
 
 /**
  * @swagger

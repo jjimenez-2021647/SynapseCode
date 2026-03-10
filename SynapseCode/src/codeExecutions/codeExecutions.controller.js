@@ -9,11 +9,16 @@ import { executeCode, submitCode, getSubmissionResult } from '../../helpers/Judg
 const HOURLY_LIMIT = 50;
 
 const checkUserRateLimit = async (userId) => {
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    // Ventana fija por hora: reinicia a las horas exactas (00:00, 01:00, 02:00, etc.)
+    const now = new Date();
+    const currentHourStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), 0, 0, 0);
+    const nextHourStart = new Date(currentHourStart.getTime() + 60 * 60 * 1000);
+    
     const count = await CodeExecution.countDocuments({
         userId,
-        executedAt: { $gte: oneHourAgo },
+        executedAt: { $gte: currentHourStart, $lt: nextHourStart },
     });
+    
     return { count, limitReached: count >= HOURLY_LIMIT };
 };
 

@@ -9,7 +9,8 @@ import {
     getRoomByCode,
     getRoomCreatorsAudit,
     deleteRoom,
-    deactivateRoom
+    deactivateRoom,
+    getRoomFileChanges
 } from './rooms.controller.js';
 
 const router = Router();
@@ -180,5 +181,28 @@ router.get('/code/:code', validateJWT, requireRole('USER_ROLE', 'ADMIN_ROLE'), g
  *       404: { description: Sala no encontrada }
  */
 router.delete('/code/:code', validateJWT, requireRole('USER_ROLE', 'ADMIN_ROLE'), deleteRoom);
+
+/**
+ * @swagger
+ * /api/v1/rooms/code/{code}/file/{fileId}:
+ *   get:
+ *     summary: Obtener cambios recientes en un archivo dentro de una sala
+ *     tags: [Rooms]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: code
+ *         required: true
+ *         schema: { type: string }
+ *       - in: path
+ *         name: fileId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: Cambios del archivo }
+ *       404: { description: Sala o archivo no encontrado }
+ */
+router.get('/code/:code/file/:fileId', validateJWT, requireRole('USER_ROLE', 'ADMIN_ROLE'), getRoomFileChanges);
 
 export default router;

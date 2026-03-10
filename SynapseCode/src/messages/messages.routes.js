@@ -7,7 +7,6 @@ import {
     editMessage,
     deleteMessage,
     getSystemMessages,
-    createSystemMessage,
 } from './messages.controller.js';
 import { validateJWT } from '../../middlewares/validate-JWT.js';
 import { requireRole } from '../../middlewares/validate-role.js';
@@ -30,9 +29,12 @@ const router = Router();
  *           schema:
  *             type: object
  *             properties:
+ *               numberChat: { type: string, description: "Número del chat (ya incluye la sala)" }
+ *               typeMessage: { type: string, description: "Tipo de mensaje (TEXTO, IMAGEN, AUDIO, ARCHIVO)" }
  *               content: { type: string, description: "Contenido del mensaje" }
- *               roomId: { type: string, description: "ID de la sala" }
+ *               modifyCodeSessions: { type: string, description: "Modo de modificación (NO_MODIFICAR o MODIFICAR)" }
  *               file: { type: string, format: binary, description: "Archivo adjunto" }
+ *             required: [numberChat, typeMessage, content]
  *     responses:
  *       201: { description: Mensaje creado }
  *       400: { description: Datos inválidos }
@@ -41,9 +43,9 @@ router.post('/', validateJWT, requireRole('USER_ROLE'), uploadMiddleware.single(
 
 /**
  * @swagger
- * /api/v1/messages/room/{roomId}:
+ * /api/v1/messages/room/{roomId}/chat/{numberChat}:
  *   get:
- *     summary: Obtener mensajes de una sala
+ *     summary: Obtener mensajes de un chat específico dentro de una sala
  *     tags: [Messages]
  *     security:
  *       - bearerAuth: []
@@ -52,11 +54,15 @@ router.post('/', validateJWT, requireRole('USER_ROLE'), uploadMiddleware.single(
  *         name: roomId
  *         required: true
  *         schema: { type: string }
+ *       - in: path
+ *         name: numberChat
+ *         required: true
+ *         schema: { type: string }
  *     responses:
- *       200: { description: Lista de mensajes }
- *       404: { description: Sala no encontrada }
+ *       200: { description: Lista de mensajes del chat }
+ *       404: { description: Sala o chat no encontrado }
  */
-router.get('/room/:roomId', validateJWT, requireRole('USER_ROLE'), getRoomMessages);
+router.get('/room/:roomId/chat/:numberChat', validateJWT, requireRole('USER_ROLE'), getRoomMessages);
 
 /**
  * @swagger
@@ -140,27 +146,5 @@ router.delete('/:messageId', validateJWT, requireRole('USER_ROLE', 'ADMIN_ROLE')
  *       200: { description: Lista de mensajes del sistema }
  */
 router.get('/system/list/:roomId', validateJWT, requireRole('USER_ROLE'), getSystemMessages);
-
-/**
- * @swagger
- * /api/v1/messages/system/create:
- *   post:
- *     summary: Crear mensaje del sistema
- *     tags: [Messages]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               content: { type: string }
- *               roomId: { type: string }
- *     responses:
- *       201: { description: Mensaje del sistema creado }
- */
-router.post('/system/create', validateJWT, requireRole('USER_ROLE'), createSystemMessage);
 
 export default router;

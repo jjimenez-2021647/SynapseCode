@@ -71,48 +71,11 @@ router.get('/audit/executors', validateJWT, requireRole('ADMIN_ROLE'), getCodeEx
  */
 router.post('/run', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByBodyFileId, formDataParser.none(), runCode); // Ejecucion sincrona (recomendada)
 
-/**
- * @swagger
- * /api/v1/codeExecutions/submit:
- *   post:
- *     summary: Enviar código para ejecución asíncrona
- *     tags: [CodeExecutions]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               language: { type: string }
- *               code: { type: string }
- *               input: { type: string }
- *               fileId: { type: string }
- *     responses:
- *       200: { description: Token para consultar resultado }
- */
-router.post('/submit', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByBodyFileId, formDataParser.none(), submitCodeAsync); // Ejecucion asincrona
+// Ejecucion asincrona (sin documentar en Swagger)
+router.post('/submit', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByBodyFileId, formDataParser.none(), submitCodeAsync);
 
-/**
- * @swagger
- * /api/v1/codeExecutions/result/{token}:
- *   get:
- *     summary: Obtener resultado de ejecución por token
- *     tags: [CodeExecutions]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: token
- *         required: true
- *         schema: { type: string }
- *     responses:
- *       200: { description: Resultado de la ejecución }
- *       404: { description: Token no encontrado }
- */
-router.get('/result/:token', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByResultQuery, getResultByToken); // Polling resultado por token
+// Polling resultado por token (sin documentar en Swagger)
+router.get('/result/:token', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByResultQuery, getResultByToken);
 
 // RATE LIMIT
 router.get('/rate-limit', validateJWT, requireRole('USER_ROLE'), checkRateLimit);

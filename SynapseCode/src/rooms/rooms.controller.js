@@ -392,12 +392,99 @@ export const deactivateRoom = async (req, res) => {
         await Promise.all(updatePromises);
 
         return res.status(200).json({
-            message: 'Sala finalizar y desactivada correctamente. Todos los miembros han sido desconectados.',
+            message: 'Sala finalizada y desactivada correctamente. Todos los miembros han sido desconectados.',
             roomId: room._id,
             roomStatus: room.roomStatus,
         });
     } catch (error) {
         console.error('deactivateRoom error:', error);
         return res.status(400).json({ message: error.message || 'Error desactivando la sala' });
+    }
+};
+
+export const getRoomFileChanges = async (req, res) => {
+    try {
+        const { code: roomCode, fileId } = req.params;
+        const requesterUserId = getRequesterUserId(req);
+
+        if (!requesterUserId) {
+            return res.status(401).json({ message: 'Token invalido: no contiene userId' });
+        }
+
+        if (!isUserOrAdminRole(req)) {
+            return res.status(403).json({
+                message: 'Solo USER_ROLE o ADMIN_ROLE puede acceder',
+            });
+        }
+
+        // Obtener sala por código
+        const room = await Room.findOne({ roomCode: String(roomCode).toUpperCase() });
+        if (!room) {
+            return res.status(404).json({ message: 'Sala no encontrada' });
+        }
+
+        // Obtener archivo
+        const file = await File.findById(fileId);
+        if (!file || String(file.roomId) !== String(room._id)) {
+            return res.status(404).json({ message: 'Archivo no encontrado en esta sala' });
+        }
+
+        // Verificar que el usuario pertenece a la sala (excepto admins)
+        if (!isAdminRole(req)) {
+            const participation = await RoomParticipation.findOne({
+                roomId: room._id,
+                userId: requesterUserId,
+            });
+            if (!participation) {
+                return res.status(403).json({
+                    message: 'Debes pertenecer a la sala para ver los cambios',
+                });
+            }
+        }
+
+        // Obtener últimas code sessions del archivo (máximo 20)
+        const codeSessions = await CodeSession.find({ fileId })
+            .sort({ savedAt: -1 })
+            .limit(20)
+            .lean();
+
+        // Obtener información de los usuarios que guardaron
+        const userIds = [...new Set(codeSessions.map((cs) => cs.savedByUserId))];
+        const participants = await RoomParticipation.find({
+            roomId: room._id,
+            userId: { $in: userIds },
+        }).select('userId username').lean();
+
+        const usernamesMap = new Map(participants.map((p) => [p.userId, p.username]));
+
+        // Enriquecer las sesiones
+        const enrichedSessions = codeSessions.map((session) => ({
+            sessionId: session._id,
+            version: session.version,
+            language: session.language,
+            saveType: session.saveType,
+            wasExecuted: session.wasExecuted,
+            savedByUserId: session.savedByUserId,
+            savedByUsername: usernamesMap.get(session.savedByUserId) || session.savedByUserId,
+            savedAt: session.savedAt,
+            codePreview: session.code ? session.code.substring(0, 100) + (session.code.length > 100 ? '...' : '') : '',
+            codeLength: session.code?.length || 0,
+        }));
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                roomCode: room.roomCode,
+                roomName: room.roomName,
+                fileName: file.fileName,
+                fileExtension: file.fileExtension,
+                language: file.language,
+                changes: enrichedSessions,
+                totalChanges: enrichedSessions.length,
+            },
+        });
+    } catch (error) {
+        console.error('getRoomFileChanges error:', error);
+        return res.status(400).json({ message: error.message || 'Error obteniendo cambios del archivo' });
     }
 };
