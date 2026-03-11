@@ -14,6 +14,7 @@ import filesRoutes from '../src/files/files.routes.js';
 import codeSessionsRoutes from '../src/codeSessions/codeSessions.routes.js';
 import codeExecutionsRoutes from '../src/codeExecutions/codeExecutions.routes.js';
 import roomParticipationsRoutes from '../src/roomParticipations/roomParticipations.routes.js';
+import explicationRoutes from '../src/explication/explication.routes.js';
 import swaggerJSDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 
@@ -36,6 +37,7 @@ const routes = (app) => {
     app.use(`${BASE_PATH}/room-participations`, roomParticipationsRoutes);
     app.use(`${BASE_PATH}/messages`, messagesRoutes);
     app.use(`${BASE_PATH}/files`, filesRoutes);
+    app.use(`${BASE_PATH}/explication`, explicationRoutes);
     app.use(`${BASE_PATH}/codeSessions`, codeSessionsRoutes);
     app.use(`${BASE_PATH}/codeExecutions`, codeExecutionsRoutes);
     app.get(`${BASE_PATH}/Health`, (request, response) => {
