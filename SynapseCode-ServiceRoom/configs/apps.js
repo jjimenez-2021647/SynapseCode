@@ -9,12 +9,8 @@ import { dbConnection } from './db.js';
 import { corsOptions } from './cors-configuration.js';
 import { helmetConfiguration } from './helmet-configuration.js';
 import roomsRoutes from '../src/rooms/rooms.routes.js';
-import messagesRoutes from '../src/messages/messages.routes.js';
-import filesRoutes from '../src/files/files.routes.js';
-import codeSessionsRoutes from '../src/codeSessions/codeSessions.routes.js';
-import codeExecutionsRoutes from '../src/codeExecutions/codeExecutions.routes.js';
 import roomParticipationsRoutes from '../src/roomParticipations/roomParticipations.routes.js';
-import explicationRoutes from '../src/explication/explication.routes.js';
+import filesRoutes from '../src/files/files.routes.js';
 import swaggerJSDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 
@@ -31,20 +27,15 @@ const middlewares = (app) => {
     app.use(morgan('dev'));
 }
 
-//rutas para conectar los enpoint
 const routes = (app) => {
     app.use(`${BASE_PATH}/rooms`, roomsRoutes);
     app.use(`${BASE_PATH}/room-participations`, roomParticipationsRoutes);
-    app.use(`${BASE_PATH}/messages`, messagesRoutes);
     app.use(`${BASE_PATH}/files`, filesRoutes);
-    app.use(`${BASE_PATH}/explication`, explicationRoutes);
-    app.use(`${BASE_PATH}/codeSessions`, codeSessionsRoutes);
-    app.use(`${BASE_PATH}/codeExecutions`, codeExecutionsRoutes);
     app.get(`${BASE_PATH}/Health`, (request, response) => {
         response.status(200).json({
             status: 'Healthy',
             timestamp: new Date().toISOString(),
-            service: 'SynapseCode API Running',
+            service: 'SynapseCode-ServiceRoom Running',
         })
     })
 
@@ -65,13 +56,12 @@ export const initServer = async () => {
         await dbConnection();
         middlewares(app);
 
-        // Configuración de Swagger
         const swaggerDefinition = {
             openapi: '3.0.0',
             info: {
-                title: 'SynapseCode API',
+                title: 'SynapseCode-ServiceRoom API',
                 version: '1.0.0',
-                description: 'Documentación de la API de SynapseCode',
+                description: 'Microservicio de Salas - SynapseCode',
             },
             servers: [
                 {
@@ -82,7 +72,10 @@ export const initServer = async () => {
 
         const options = {
             swaggerDefinition,
-            apis: [join(process.cwd(), 'src/**/*.routes.js')],
+            apis: [
+                join(process.cwd(), 'configs/swagger-endpoints.js'),
+                join(process.cwd(), 'src/**/*.routes.js')
+            ],
         };
 
         const swaggerSpec = swaggerJSDoc(options);
@@ -91,11 +84,11 @@ export const initServer = async () => {
         routes(app);
 
         app.listen(PORT, () => {
-            console.log(`SynapseCode Admin Server running on port ${PORT}`);
+            console.log(`SynapseCode-ServiceRoom running on port ${PORT}`);
             console.log(`API Docs: http://localhost:${PORT}/api-docs`);
         });
     } catch (error) {
-        console.error(`Error starting Admin Server: ${error.message}`);
+        console.error(`Error starting ServiceRoom: ${error.message}`);
         process.exit(1);
     }
-};
+}
