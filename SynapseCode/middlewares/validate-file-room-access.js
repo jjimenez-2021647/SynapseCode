@@ -173,6 +173,7 @@ export const requireFileRoomAccessByFileIdParam = async (req, res, next) => {
     try {
         const userId = normalizeUserId(req);
         if (!userId) {
+            console.warn('requireFileRoomAccessByFileIdParam: missing userId');
             return res.status(401).json({
                 success: false,
                 message: 'Token invalido: no contiene userId',
@@ -182,6 +183,7 @@ export const requireFileRoomAccessByFileIdParam = async (req, res, next) => {
 
         const fileId = req.params?.id;
         if (!fileId) {
+            console.warn('requireFileRoomAccessByFileIdParam: missing file id');
             return res.status(400).json({
                 success: false,
                 message: 'id de archivo es obligatorio',
@@ -189,8 +191,18 @@ export const requireFileRoomAccessByFileIdParam = async (req, res, next) => {
             });
         }
 
+        if (!isValidObjectId(fileId)) {
+            console.warn('requireFileRoomAccessByFileIdParam: invalid ObjectId', fileId);
+            return res.status(400).json({
+                success: false,
+                message: 'id de archivo invalido',
+                error: 'INVALID_FILE_ID',
+            });
+        }
+
         const roomId = await resolveRoomIdByFileId(fileId);
         if (!roomId) {
+            console.warn('requireFileRoomAccessByFileIdParam: file not found', fileId);
             return res.status(404).json({
                 success: false,
                 message: 'Archivo no encontrado',
