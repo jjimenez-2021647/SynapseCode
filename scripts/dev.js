@@ -1,5 +1,5 @@
-const { spawn } = require('child_process');
-const path = require('path');
+const { spawn } = require('node:child_process');
+const path = require('node:path');
 
 const services = [
   { name: 'AuthService', path: 'AuthService', port: 3006, color: '\x1b[31m' },
