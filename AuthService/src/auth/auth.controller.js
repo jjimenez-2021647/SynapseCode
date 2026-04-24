@@ -27,7 +27,7 @@ export const register = asyncHandler(async (req, res) => {
         // Agregar la imagen de perfil si fue subida
         const userData = {
             ...req.body,
-            profilePicture: req.file ? req.file.path.replace(/\\/g, '/') : null,
+            profilePicture: req.file ? req.file.path.replaceAll('\\', '/') : null,
         };
 
         const result = await registerUserHelper(userData);
@@ -396,7 +396,7 @@ export const changeImage = asyncHandler(async (req, res) => {
             });
         }
 
-        const filePath = req.file.path.replace(/\\/g, '/');
+        const filePath = req.file.path.replaceAll('\\', '/');
         const result = await changeImageHelper(userId, filePath);
         res.status(200).json(result);
     } catch (error) {

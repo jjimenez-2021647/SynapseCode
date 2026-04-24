@@ -16,8 +16,8 @@ import { generatePasswordResetToken } from '../utils/auth-helpers.js';
 import { uploadImage, deleteImage } from './cloudinary-service.js';
 import { sendUsernameChangeEmail, sendPhoneChangeEmail, sendDeactivateAccountEmail, sendUsernameChangedEmail,
     sendPhoneChangedEmail, sendAccountDeactivatedEmail, sendActivateAccountEmail, sendAccountActivatedEmail } from './email-service.js';
-import crypto from 'crypto';
-import path from 'path';
+import crypto from 'node:crypto';
+import path from 'node:path';
 
 export const getUserProfileHelper = async (userId) => {
     const user = await findUserById(userId);

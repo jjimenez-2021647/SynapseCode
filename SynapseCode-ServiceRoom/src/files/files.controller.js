@@ -17,10 +17,10 @@ const LANGUAGE_EXTENSIONS = {
 const isExtensionAllowed = (fileExtension, roomLanguage) => {
     // Si roomLanguage es null (multilenguaje), permite todas
     if (!roomLanguage) return true;
-    
+
     const allowedExtensions = LANGUAGE_EXTENSIONS[roomLanguage];
-    return allowedExtensions && allowedExtensions.includes(fileExtension.toLowerCase());
-};
+    return allowedExtensions?.includes(fileExtension.toLowerCase());
+    };
 
 /**
  * Crear nuevo archivo
@@ -58,10 +58,10 @@ export const createFile = async (req, res) => {
 
         // Validar que la extensión sea compatible con el tipo de sala
         if (!isExtensionAllowed(fileExtension, room.roomLanguage)) {
-            const allowedExts = room.roomLanguage 
+            const allowedExts = room.roomLanguage
                 ? LANGUAGE_EXTENSIONS[room.roomLanguage].join(', ')
                 : 'java, py, js, jsx, html, css, cs';
-            
+
             return res.status(400).json({
                 success: false,
                 message: `Esta sala requiere archivos con extensión: ${allowedExts}`,
