@@ -260,16 +260,24 @@ export const changePassword = asyncHandler(async (req, res) => {
 export const updateProfile = asyncHandler(async (req, res) => {
     try {
         const userId = req.userId;
-        const { name, surname } = req.body;
+        const { name, surname, planType } = req.body;
 
-        if (!name && !surname) {
+        if (!name && !surname && !planType) {
             return res.status(400).json({
                 success: false,
                 message: 'Debes proporcionar al menos un campo para actualizar',
             });
         }
 
-        const result = await updateProfileHelper(userId, { name, surname });
+        // Validar planType si se proporciona
+        if (planType && !['FREE', 'PRO', 'ORG'].includes(planType)) {
+            return res.status(400).json({
+                success: false,
+                message: 'planType debe ser uno de: FREE, PRO, ORG',
+            });
+        }
+
+        const result = await updateProfileHelper(userId, { name, surname, planType });
         res.status(200).json(result);
     } catch (error) {
         console.error('Error in updateProfile controller:', error);

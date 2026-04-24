@@ -29,8 +29,8 @@ export const getUserProfileHelper = async (userId) => {
     return buildUserResponse(user);
 };
 
-// Update profile (name, surname)
-export const updateProfileHelper = async (userId, { name, surname }) => {
+// Update profile (name, surname, planType)
+export const updateProfileHelper = async (userId, { name, surname, planType }) => {
     const user = await findUserById(userId);
     if (!user) {
         const err = new Error('Usuario no encontrado');
@@ -41,6 +41,7 @@ export const updateProfileHelper = async (userId, { name, surname }) => {
     await updateUserProfile(userId, {
         name: name || user.Name,
         surname: surname || user.Surname,
+        planType: planType ?? user.UserProfile?.PlanType,
     });
 
     const updatedUser = await findUserById(userId);

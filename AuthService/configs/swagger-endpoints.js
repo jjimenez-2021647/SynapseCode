@@ -189,6 +189,107 @@
  *         description: Logout successful
  *       401:
  *         description: Unauthorized
+ *
+ * /auth/profile:
+ *   get:
+ *     summary: Get user profile
+ *     description: Retrieves the current authenticated user's profile information
+ *     tags:
+ *       - Profile
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 name:
+ *                   type: string
+ *                 surname:
+ *                   type: string
+ *                 username:
+ *                   type: string
+ *                 email:
+ *                   type: string
+ *                 phone:
+ *                   type: string
+ *                 profilePicture:
+ *                   type: string
+ *                 role:
+ *                   type: string
+ *                 planType:
+ *                   type: string
+ *                   enum: ['FREE', 'PRO', 'ORG']
+ *                   nullable: true
+ *                 status:
+ *                   type: boolean
+ *                 isEmailVerified:
+ *                   type: boolean
+ *       401:
+ *         description: Unauthorized
+ *   put:
+ *     summary: Update user profile
+ *     description: Updates the authenticated user's profile information (name, surname, and/or planType). Each user can only update their own profile. Admin users cannot modify planType for other users.
+ *     tags:
+ *       - Profile
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 maxLength: 25
+ *               surname:
+ *                 type: string
+ *                 maxLength: 25
+ *               planType:
+ *                 type: string
+ *                 enum: ['FREE', 'PRO', 'ORG']
+ *                 description: User subscription plan type (only the authenticated user can set their own plan)
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *       400:
+ *         description: Validation error or invalid planType
+ *       401:
+ *         description: Unauthorized
+ *
+ * /auth/profile/by-id:
+ *   post:
+ *     summary: Get user profile by ID
+ *     description: Retrieves a specific user's profile information by user ID
+ *     tags:
+ *       - Profile
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *             properties:
+ *               userId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Profile retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
  */
 
 /**

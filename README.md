@@ -31,12 +31,13 @@
 - **Ejecución de código** - Soporte para 20+ lenguajes via Judge0
 - **Explicaciones con IA** - Análisis de código con Groq
 - **Gestión de usuarios** - Autenticación y autorización JWT
+- **Feedback comunitario** - Comentarios y sugerencias de usuarios
 
 ### De Monolito a Microservicios
 - **Original:** Un único servidor Node.js (3005)
-- **Actual:** 5 servicios independientes comunicados vía HTTP
+- **Actual:** 6 servicios independientes comunicados vía HTTP
 - **Beneficios:** Escalabilidad, independencia de deployment, resiliencia
-- **Total Endpoints:** 102 endpoints distribuidos
+- **Total Endpoints:** 113 endpoints distribuidos
 
 ---
 
@@ -45,16 +46,16 @@
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                      Cliente / Frontend                         │
-└──────────┬──────────────┬──────────────┬────────────────────────┘
-           │              │              │
-    ┌──────▼──────┐  ┌───▼───────┐  ┌──▼──────────┐
-    │AuthService  │  │ServiceRoom │  │ServiceChat  │
-    │(Porto 3006) │  │(Porto 3007)│  │(Porto 3008) │
-    │             │  │            │  │             │
-    │- Auth       │  │- Rooms     │  │- Chats      │
-    │- Users      │  │- Files     │  │- Messages   │
-    │- Roles      │  │- Particip. │  │- Explications
-    └─────────────┘  └──────┬─────┘  └─────────────┘
+└──────────┬──────────────┬──────────────┬────────────┬───────────┘
+           │              │              │            │
+    ┌──────▼──────┐  ┌───▼───────┐  ┌──▼──────────┐ ┌─▼──────────┐
+    │AuthService  │  │ServiceRoom │  │ServiceChat  │ │ServiceFB   │
+    │(Porto 3006) │  │(Porto 3007)│  │(Porto 3008) │ │(Porto 3011)│
+    │             │  │            │  │             │ │            │
+    │- Auth       │  │- Rooms     │  │- Chats      │ │- Comments  │
+    │- Users      │  │- Files     │  │- Messages   │ │- Votes     │
+    │- Roles      │  │- Particip. │  │- Explications│ │- Feedback  │
+    └─────────────┘  └──────┬─────┘  └─────────────┘ └────────────┘
                              │
                 ┌────────────┴────────────┐
                 │                         │
@@ -90,7 +91,8 @@
 | **ServiceChat** | 3008 | MongoDB | Chats, mensajes, explicaciones | 17 |
 | **ServiceCodeSessions** | 3009 | MongoDB | Versiones de código | 11 |
 | **ServiceExecutionCode** | 3010 | MongoDB | Ejecución de código | 15 |
-| **TOTAL** | | | | **102** |
+| **ServiceFeedback** | 3011 | MongoDB | Comentarios y votos comunitarios | 11 |
+| **TOTAL** | | | | **113** |
 
 ### AuthService (Puerto 3006)
 ```
@@ -184,6 +186,25 @@ Explicaciones IA (5 endpoints):
   [+ 9 endpoints más]
 ```
 
+### ServiceFeedback (Puerto 3011)
+```
+11 endpoints para:
+  GET    /api/v1/feedback/comments              - Listar comentarios (público)
+  GET    /api/v1/feedback/comments/:commentId   - Obtener comentario (público)
+  POST   /api/v1/feedback/comments              - Crear comentario
+  PUT    /api/v1/feedback/comments/:commentId   - Editar comentario (solo autor, < 30 min)
+  DELETE /api/v1/feedback/comments/:commentId   - Eliminar comentario (autor/admin)
+  POST   /api/v1/feedback/comments/:commentId/vote - Votar/desvotar (toggle)
+  
+  Características:
+  - Sistema de comentarios y sugerencias de la comunidad
+  - Búsqueda de texto en comentarios
+  - Votos positivos (un voto por usuario/comentario)
+  - Paginación en listados
+  - Ordenamiento por popularidad (voteCount)
+  [+ 5 endpoints relacionados]
+```
+
 ---
 
 ## Instalación
@@ -255,6 +276,9 @@ cp SynapseCode-ServiceCodeSessions/.env.example SynapseCode-ServiceCodeSessions/
 
 # ServiceExecutionCode
 cp SynapseCode-ServiceExecutionCode/.env.example SynapseCode-ServiceExecutionCode/.env
+
+# ServiceFeedback
+cp SynapseCode-ServiceFeedback/.env.example SynapseCode-ServiceFeedback/.env
 ```
 
 **Variables Críticas:**
@@ -298,6 +322,7 @@ Levantando todos los microservicios SynapseCode...
 [ServiceChat] iniciando en puerto 3008...
 [ServiceCodeSessions] iniciando en puerto 3009...
 [ServiceExecutionCode] iniciando en puerto 3010...
+[ServiceFeedback] iniciando en puerto 3011...
 
 Todos los servicios listos:
    ● AuthService: http://localhost:3006/api-docs
@@ -305,6 +330,7 @@ Todos los servicios listos:
    ● ServiceChat: http://localhost:3008/api-docs
    ● ServiceCodeSessions: http://localhost:3009/api-docs
    ● ServiceExecutionCode: http://localhost:3010/api-docs
+   ● ServiceFeedback: http://localhost:3011/api-docs
 
 CTRL+C para detener todos
 ```
@@ -363,6 +389,7 @@ Cada servicio tiene documentación completa en **Swagger/OpenAPI**.
 - **ServiceChat:** http://localhost:3008/api-docs
 - **ServiceCodeSessions:** http://localhost:3009/api-docs
 - **ServiceExecutionCode:** http://localhost:3010/api-docs
+- **ServiceFeedback:** http://localhost:3011/api-docs
 
 ### Funciones Principales en Swagger
 - Ver todos los endpoints
@@ -776,7 +803,7 @@ Cada servicio imprime logs en consola:
 
 | Feature | Monolito | Microservicios | Cambio |
 |---------|----------|----------------|--------|
-| Arquitectura | Único servidor | 5 servicios | Mejor escalabilidad |
+| Arquitectura | Único servidor | 6 servicios | Mejor escalabilidad |
 | Chats en rooms | No incluidos | Incluidos | Mejor UX |
 | Resiliencia | N/A | Fallback si ServiceChat cae | Más robusto |
 | Swagger | Local | Uno por servicio | Mejor documentación |

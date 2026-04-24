@@ -5,6 +5,23 @@ import Room from '../rooms/rooms.model.js';
 const getRequesterUserId = (req) =>
     req.user?.userId || req.user?.id || req.user?.sub || null;
 
+// Mapeo de roomLanguage a extensiones permitidas
+const LANGUAGE_EXTENSIONS = {
+    JAVA: ['java'],
+    PYTHON: ['py'],
+    JAVASCRIPT: ['js', 'jsx'],
+    HTML_CSS: ['html', 'css'],
+    CSHARP: ['cs'],
+};
+
+const isExtensionAllowed = (fileExtension, roomLanguage) => {
+    // Si roomLanguage es null (multilenguaje), permite todas
+    if (!roomLanguage) return true;
+    
+    const allowedExtensions = LANGUAGE_EXTENSIONS[roomLanguage];
+    return allowedExtensions && allowedExtensions.includes(fileExtension.toLowerCase());
+};
+
 /**
  * Crear nuevo archivo
  */
@@ -36,6 +53,19 @@ export const createFile = async (req, res) => {
                 success: false,
                 message: 'Sala no encontrada',
                 error: 'ROOM_NOT_FOUND',
+            });
+        }
+
+        // Validar que la extensión sea compatible con el tipo de sala
+        if (!isExtensionAllowed(fileExtension, room.roomLanguage)) {
+            const allowedExts = room.roomLanguage 
+                ? LANGUAGE_EXTENSIONS[room.roomLanguage].join(', ')
+                : 'java, py, js, jsx, html, css, cs';
+            
+            return res.status(400).json({
+                success: false,
+                message: `Esta sala requiere archivos con extensión: ${allowedExts}`,
+                error: 'INVALID_FILE_EXTENSION_FOR_ROOM',
             });
         }
 

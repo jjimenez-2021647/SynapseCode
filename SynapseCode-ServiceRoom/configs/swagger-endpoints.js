@@ -130,12 +130,45 @@
  * /api/v1/files:
  *   post:
  *     summary: Crear archivo
+ *     description: Crea un nuevo archivo en una sala. La extensión debe ser compatible con el tipo de sala (si roomLanguage está definido).
  *     tags: [Files]
  *     security:
  *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - roomId
+ *               - fileName
+ *               - fileExtension
+ *             properties:
+ *               roomId:
+ *                 type: string
+ *                 description: ID de la sala donde crear el archivo
+ *               fileName:
+ *                 type: string
+ *                 description: Nombre del archivo (sin extensión)
+ *               fileExtension:
+ *                 type: string
+ *                 enum: [java, py, js, jsx, html, css, cs]
+ *                 description: Extensión del archivo. Si la sala tiene roomLanguage=JAVA solo permite .java; PYTHON solo .py; JAVASCRIPT permite .js/.jsx; HTML_CSS permite .html/.css; CSHARP solo .cs. Si roomLanguage es null (multilenguaje) permite todas.
+ *               language:
+ *                 type: string
+ *                 enum: [JAVA, PYTHON, JAVASCRIPT, HTML_CSS, CSHARP]
+ *                 description: Lenguaje del archivo
+ *               currentCode:
+ *                 type: string
+ *                 description: Código inicial del archivo (opcional)
  *     responses:
  *       201:
- *         description: Archivo creado
+ *         description: Archivo creado exitosamente
+ *       400:
+ *         description: Datos inválidos o extensión no permitida para el tipo de sala
+ *       404:
+ *         description: Sala no encontrada
  *   get:
  *     summary: Listar archivos
  *     tags: [Files]
