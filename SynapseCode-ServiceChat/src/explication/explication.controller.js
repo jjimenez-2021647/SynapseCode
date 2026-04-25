@@ -1,57 +1,10 @@
 'use strict'
 import Explanation from './explication.model.js';
-import { generateCodeWithGroq } from '../../helpers/groq.service.js';
+import { generateTextWithGroq } from '../../helpers/groq.service.js';
+import { selectPrompt, detectCodeType } from '../../configs/prompts.config.js';
 
 const getRequesterUserId = (req) =>
     req.user?.userId || req.user?.id || req.user?.sub || null;
-
-/**
- * Helper: genera prompt para explicar código
- */
-const generateExplanationPrompt = (code) => {
-    return `Explica el siguiente código de forma clara y paso a paso para un estudiante.` +
-        `
-
-ATENCIÓN: Debes **mencionar fragmentos específicos** (nombres de clases, métodos, variables) pero sin copiar bloques de código completos.` +
-        `
-
-Ejemplos de cómo hacer referencias:` +
-        `
-- "se crea la clase Main" (NO: "public class Main { }")` +
-        `
-- "el método main es el punto de entrada" (NO: "public static void main(...) { }")` +
-        `
-- "se llama a System.out.println para imprimir" (NO: "System.out.println(\"texto\");")` +
-        `
-- "se declara una variable String llamada nombre" (NO: "String nombre = ...;")` +
-        `
-
-Describe:` +
-        `
-- Qué hace el programa en general.` +
-        `
-- Cuáles son sus partes principales.` +
-        `
-- Cómo funciona el algoritmo o lógica utilizada.` +
-        `
-
-Organiza la explicación por secciones, con referencias específicas a elementos del código.` +
-        `
-
-Ejemplo de formato:` +
-        `
-
-1. Clase o estructura principal: Menciona el nombre de la clase y su función.
-2. Método o función principal: Menciona el nombre del método y qué hace.
-3. Variables o estructuras usadas: Menciona nombres de variables.
-4. Bucles o condiciones: Menciona tipos y qué controlan.
-5. Lógica del algoritmo: Explica paso a paso cómo funciona.
-
----
-
-Código a explicar:
-${code}`;
-};
 
 /**
  * Helper: limpia la respuesta de Groq removiendo código duplicado
@@ -80,6 +33,7 @@ const cleanExplanation = (explanation, code) => {
 /**
  * Genera una explicación del código usando Groq
  * Recibe el código en el body, lo genera con Groq y lo guarda
+ * Ahora usa prompts especializados basados en el tipo de código
  */
 export const explainCode = async (req, res) => {
     try {
@@ -109,12 +63,15 @@ export const explainCode = async (req, res) => {
             });
         }
 
-        const prompt = generateExplanationPrompt(code);
-        let explanation = await generateCodeWithGroq({
-            prompt,
-            languageHint: language || '',
-        });
+        // Detectar tipo de código automáticamente
+        const codeType = detectCodeType(code);
+        console.log(`Tipo de código detectado: ${codeType}`);
 
+        // Seleccionar prompt especializado
+        const prompt = selectPrompt(code, language, codeType);
+
+        // Generar explicación usando Groq
+        let explanation = await generateTextWithGroq(prompt);
         explanation = cleanExplanation(explanation, code);
 
         // registrar la explicación en la base de datos
@@ -127,6 +84,7 @@ export const explainCode = async (req, res) => {
                 language,
                 code,
                 explanation,
+                codeType,  // Guardar tipo de código para futuras referencias
             });
             explanationId = createdExplanation._id;
         } catch (saveError) {
@@ -136,7 +94,7 @@ export const explainCode = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            data: { code, explanation, explanationId },
+            data: { code, explanation, explanationId, codeType },
         });
     } catch (error) {
         console.error('explainCode error:', error);

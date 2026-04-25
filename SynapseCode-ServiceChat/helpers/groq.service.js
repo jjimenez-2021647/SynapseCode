@@ -25,6 +25,9 @@ const normalizeSingleLineQuotedCode = (text) => {
     return cleaned.trim();
 };
 
+/**
+ * Genera código utilizando Groq (mantiene compatibilidad con lo existente)
+ */
 export const generateCodeWithGroq = async ({ prompt, languageHint = '' }) => {
     const apiKey = resolveGroqApiKey();
     if (!apiKey) {
@@ -70,4 +73,130 @@ export const generateCodeWithGroq = async ({ prompt, languageHint = '' }) => {
     return normalizeSingleLineQuotedCode(text);
 };
 
-export default { generateCodeWithGroq };
+/**
+ * Genera una explicación de texto completamente (sin streaming)
+ * Retorna toda la respuesta de una vez
+ */
+export const generateTextWithGroq = async (prompt) => {
+    const apiKey = resolveGroqApiKey();
+    if (!apiKey) {
+        throw new Error('No se encontro GROQ_API_KEY en variables de entorno');
+    }
+
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+            model: DEFAULT_GROQ_MODEL,
+            messages: [
+                {
+                    role: 'user',
+                    content: prompt,
+                },
+            ],
+            temperature: 0.7,
+            max_tokens: 2000,
+        }),
+    });
+
+    if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`Groq API error (${response.status}): ${errorBody}`);
+    }
+
+    const payload = await response.json();
+    const text = payload?.choices?.[0]?.message?.content?.trim();
+
+    if (!text) {
+        throw new Error('Groq no devolvio contenido util');
+    }
+
+    return text;
+};
+
+/**
+ * Genera respuesta con streaming usando Server-Sent Events (SSE)
+ * Devuelve un ReadableStream que el cliente puede leer en tiempo real
+ */
+export const generateStreamingResponseWithGroq = async (prompt) => {
+    const apiKey = resolveGroqApiKey();
+    if (!apiKey) {
+        throw new Error('No se encontro GROQ_API_KEY en variables de entorno');
+    }
+
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+            model: DEFAULT_GROQ_MODEL,
+            messages: [
+                {
+                    role: 'user',
+                    content: prompt,
+                },
+            ],
+            temperature: 0.7,
+            max_tokens: 2000,
+            stream: true,  // ← Activar streaming
+        }),
+    });
+
+    if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`Groq API error (${response.status}): ${errorBody}`);
+    }
+
+    return response;  // Retorna la respuesta stream directamente
+};
+
+/**
+ * Procesa un stream de Groq y extrae el contenido
+ * Útil para debugging o procesamiento de chunks
+ */
+export const processGroqStream = async (stream) => {
+    const reader = stream.body.getReader();
+    const decoder = new TextDecoder();
+    let fullText = '';
+
+    try {
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const data = line.slice(6);
+                    if (data === '[DONE]') continue;
+
+                    try {
+                        const json = JSON.parse(data);
+                        const content = json?.choices?.[0]?.delta?.content || '';
+                        fullText += content;
+                    } catch (e) {
+                        // Ignorar líneas que no sean JSON válido
+                    }
+                }
+            }
+        }
+    } finally {
+        reader.releaseLock();
+    }
+
+    return fullText;
+};
+
+export default {
+    generateCodeWithGroq,
+    generateTextWithGroq,
+    generateStreamingResponseWithGroq,
+    processGroqStream,
+};

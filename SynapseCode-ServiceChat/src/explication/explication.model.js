@@ -22,6 +22,12 @@ const ExplanationSchema = new Schema(
             required: [true, 'El lenguaje es obligatorio'],
             uppercase: true,
         },
+        codeType: {
+            type: String,
+            enum: ['ALGORITHM', 'DATASTRUCTURE', 'BASIC'],
+            default: 'BASIC',
+            description: 'Tipo de código detectado (algoritmo, estructura de datos, o básico)',
+        },
         code: {
             type: String,
             required: [true, 'El código explicado es obligatorio'],
@@ -44,5 +50,6 @@ const ExplanationSchema = new Schema(
 
 ExplanationSchema.index({ fileId: 1 });
 ExplanationSchema.index({ userId: 1 });
+ExplanationSchema.index({ codeType: 1 });
 
 export default model('Explanation', ExplanationSchema);
