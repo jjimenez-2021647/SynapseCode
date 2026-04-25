@@ -14,11 +14,42 @@ const JUDGE0_HOST = process.env.JUDGE0_API_HOST || 'judge0-ce.p.rapidapi.com';
 // Mapeo de lenguajes del sistema → ID de lenguaje en Judge0
 // IDs oficiales: https://ce.judge0.com/languages
 const LANGUAGE_IDS = {
-    JAVASCRIPT: 63,  // Node.js 12.14.0
-    PYTHON:     71,  // Python 3.8.1
-    JAVA:       62,  // Java OpenJDK 13.0.1
-    CSHARP:     51,  // C# Mono 6.6.0
-    HTML_CSS:   63,  // Se ejecuta como JS (solo lógica, no renderiza DOM)
+    // Lenguajes originales
+    JAVASCRIPT:   63,  // Node.js 12.14.0
+    PYTHON:       71,  // Python 3.8.1
+    JAVA:         62,  // Java OpenJDK 13.0.1
+    CSHARP:       51,  // C# Mono 6.6.0
+    HTML_CSS:     63,  // Se ejecuta como JS (solo lógica, no renderiza DOM)
+    
+    // Lenguajes adicionales
+    TYPESCRIPT:   74,  // TypeScript 3.7.4
+    GO:           60,  // Go 1.13.5
+    RUST:         73,  // Rustc 1.40.0
+    CPP:          34,  // C++ GCC 9.2.0
+    C:            1,   // C GCC 9.2.0
+    BASH:         81,  // Bash 4.4.20
+    SQL:          82,  // SQLite 3.27.2
+    PHP:          68,  // PHP 7.4.1
+    RUBY:         72,  // Ruby 2.7.0
+    KOTLIN:       75,  // Kotlin 1.3.70
+    SWIFT:        70,  // Swift 5.1.3
+    R:            77,  // R 3.6.1
+    HASKELL:      93,  // GHC 8.8.1
+    DART:         95,  // Dart 2.7.0
+    SCALA:        80,  // Scala 2.13.5
+    ELIXIR:       88,  // Elixir 1.9.4
+    CLOJURE:      90,  // Clojure 1.10.1
+    OBJECTIVEC:   79,  // Objective-C Clang 10.0.0
+    FSHARP:       89,  // F# Mono 6.6.0
+    GROOVY:       91,  // Groovy 2.5.8
+    ERLANG:       92,  // Erlang/OTP 22.2
+    PERL:         76,  // Perl 5.28.1
+    PASCAL:       83,  // Pascal FPC 3.0.4
+    LUA:          84,  // Lua 5.3.5
+    ASSEMBLY:     85,  // Assembly (x86) NASM 2.14.02
+    FORTRAN:      86,  // Fortran GFortran 9.2.0
+    PROLOG:       87,  // Prolog GNU Prolog 1.4.5
+    JULIA:        94,  // Julia 1.3.0
 };
 
 // Headers reutilizables para todas las peticiones a Judge0
