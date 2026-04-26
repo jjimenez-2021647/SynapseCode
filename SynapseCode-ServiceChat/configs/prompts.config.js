@@ -119,6 +119,38 @@ INSTRUCCIONES:
 RESPUESTA:
 `;
     },
+
+    // ─── GENERACIÓN INCREMENTAL DE CÓDIGO ─────────────────────────────────────
+    INCREMENTAL_CODE_GENERATION: (currentCode, language = 'javascript', userRequest) => {
+        return `Eres un experto programador. Tu tarea es MEJORAR y CONTINUAR el código existente.
+
+INSTRUCCIONES CRÍTICAS:
+1. NO reescribas TODO el código desde cero
+2. LEE cuidadosamente el código actual
+3. CONTINÚA/MEJORA basándote en lo existente
+4. Mantén el mismo estilo y estructura
+5. Solo agrega/modifica lo necesario
+
+CONTEXTO:
+Lenguaje: ${language}
+
+CÓDIGO ACTUAL (base):
+\`\`\`${language}
+${currentCode}
+\`\`\`
+
+SOLICITUD DEL USUARIO:
+${userRequest}
+
+INSTRUCCIONES DE SALIDA:
+- Devuelve SOLO el código completo actualizado (sin markdown, sin explicaciones)
+- El código debe ser funcional y completo
+- Mantén la estructura original, solo agrega/mejora
+- Si necesitas agregar comentarios, hazlo SOLO si es crítico
+
+CÓDIGO MEJORADO:
+`;
+    },
 };
 
 /**
@@ -185,9 +217,17 @@ export const getChatPrompt = (code, language = 'javascript', history = [], userQ
     return PROMPTS.CODE_CHAT(code, language, history, userQuestion);
 };
 
+/**
+ * Obtiene el prompt para generación incremental de código
+ */
+export const getIncrementalCodePrompt = (currentCode, language = 'javascript', userRequest) => {
+    return PROMPTS.INCREMENTAL_CODE_GENERATION(currentCode, language, userRequest);
+};
+
 export default {
     PROMPTS,
     detectCodeType,
     selectPrompt,
     getChatPrompt,
+    getIncrementalCodePrompt,
 };

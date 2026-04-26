@@ -15,6 +15,13 @@ import {
     listCodeChats,
     deleteCodeChat,
 } from './codeChat.controller.js';
+import {
+    generateCodeProposal,
+    getCodeProposal,
+    listCodeProposals,
+    approveCodeProposal,
+    rejectCodeProposal,
+} from './codeProposal.controller.js';
 
 const router = Router();
 

@@ -11,6 +11,7 @@ import { helmetConfiguration } from './helmet-configuration.js';
 import chatsRoutes from '../src/chats/chats.routes.js';
 import messagesRoutes from '../src/messages/messages.routes.js';
 import explicationRoutes from '../src/explication/explication.routes.js';
+import codeGenerationRoutes from '../src/codeGeneration/codeGeneration.routes.js';
 import swaggerJSDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 
@@ -31,6 +32,7 @@ const routes = (app) => {
     app.use(`${BASE_PATH}/chats`, chatsRoutes);
     app.use(`${BASE_PATH}/messages`, messagesRoutes);
     app.use(`${BASE_PATH}/explication`, explicationRoutes);
+    app.use(`${BASE_PATH}/code-generation`, codeGenerationRoutes);
     app.get(`${BASE_PATH}/Health`, (request, response) => {
         response.status(200).json({
             status: 'Healthy',
