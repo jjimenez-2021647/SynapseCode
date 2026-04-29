@@ -81,7 +81,7 @@ export const initServer = async () => {
                 },
                 {
                     name: 'Feedback Votes',
-                    description: 'Operaciones de votación de comentarios'
+                    description: 'Operaciones relacionadas con votacion'
                 }
             ]
         };
@@ -100,14 +100,13 @@ export const initServer = async () => {
 
         app.listen(PORT, () => {
             console.log(`
-╔══════════════════════════════════════════════════════════╗
-║ 🚀 SynapseCode-ServiceFeedback iniciado exitosamente     ║
-╠══════════════════════════════════════════════════════════╣
-║ Puerto: ${PORT}                                              ║
-║ Entorno: ${process.env.NODE_ENV || 'development'}                           ║
-║ Documentación: http://localhost:${PORT}/api-docs          ║
-║ Health Check: http://localhost:${PORT}/api/v1/Health     ║
-╚══════════════════════════════════════════════════════════╝
+------------------------------------------------------------
+SynapseCode-ServiceFeedback iniciado exitosamente
+Puerto: ${PORT}
+Entorno: ${process.env.NODE_ENV || 'development'}
+Documentacion: http://localhost:${PORT}/api-docs
+Health Check: http://localhost:${PORT}/api/v1/Health
+------------------------------------------------------------
             `);
         });
     } catch (error) {

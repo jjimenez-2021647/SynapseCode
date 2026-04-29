@@ -221,4 +221,299 @@
  *     responses:
  *       200:
  *         description: Archivo eliminado
+ *
+ * /api/v1/room-participations/{participationId}:
+ *   put:
+ *     summary: Actualizar participación en sala
+ *     tags: [RoomParticipations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: participationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Participación actualizada
+ *   delete:
+ *     summary: Eliminar participación
+ *     tags: [RoomParticipations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: participationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Participación eliminada
+ *
+ * /api/v1/room-participations/room/{roomId}:
+ *   get:
+ *     summary: Obtener participaciones por sala
+ *     tags: [RoomParticipations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: roomId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Lista de participaciones en la sala
+ *
+ * /api/v1/room-participations/user/{userId}:
+ *   get:
+ *     summary: Obtener participaciones por usuario
+ *     tags: [RoomParticipations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Lista de participaciones del usuario
+ *
+ * /api/v1/room-participations/{participationId}/status:
+ *   put:
+ *     summary: Actualizar estado de participación
+ *     tags: [RoomParticipations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: participationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [active, inactive]
+ *     responses:
+ *       200:
+ *         description: Estado de participación actualizado
+ *
+ * /api/v1/room-participations/{participationId}/leave:
+ *   post:
+ *     summary: Abandonar participación en sala
+ *     tags: [RoomParticipations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: participationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Participación abandonada
+ *
+ * /api/v1/files/user/files:
+ *   get:
+ *     summary: Obtener archivos del usuario
+ *     tags: [Files]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de archivos del usuario
+ *
+ * /api/v1/files/room/{roomId}:
+ *   get:
+ *     summary: Obtener archivos por sala
+ *     tags: [Files]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: roomId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Lista de archivos de la sala
+ *
+ * /api/v1/files/{fileId}/content:
+ *   put:
+ *     summary: Actualizar contenido del archivo
+ *     tags: [Files]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: fileId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               content:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Contenido del archivo actualizado
+ *
+ * /api/v1/files/{fileId}/rename:
+ *   put:
+ *     summary: Renombrar archivo
+ *     tags: [Files]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: fileId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               newName:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Archivo renombrado exitosamente
+ *
+ * /api/v1/files/{fileId}/read-only:
+ *   put:
+ *     summary: Alternar modo lectura del archivo
+ *     tags: [Files]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: fileId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               readOnly:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Modo lectura del archivo actualizado
+ *
+ * /api/v1/files/{fileId}/restore:
+ *   put:
+ *     summary: Restaurar archivo
+ *     tags: [Files]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: fileId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Archivo restaurado exitosamente
+ *
+ * /api/v1/files/{fileId}/duplicate:
+ *   post:
+ *     summary: Duplicar archivo
+ *     tags: [Files]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: fileId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       201:
+ *         description: Archivo duplicado exitosamente
+ *
+ * /api/v1/files/{fileId}/permanent:
+ *   delete:
+ *     summary: Eliminar archivo permanentemente
+ *     tags: [Files]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: fileId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Archivo eliminado permanentemente
+ *
+ * /api/v1/files/reorder:
+ *   post:
+ *     summary: Reordenar archivos
+ *     tags: [Files]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fileIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: Archivos reordenados exitosamente
+ *
+ * /api/v1/rooms/{code}/files/{fileId}/changes:
+ *   get:
+ *     summary: Obtener cambios de archivo en sala
+ *     tags: [Rooms, Files]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: code
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: fileId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Historial de cambios del archivo
  */

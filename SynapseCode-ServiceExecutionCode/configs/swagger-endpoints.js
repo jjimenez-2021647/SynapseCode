@@ -159,4 +159,58 @@
  *     responses:
  *       200:
  *         description: Auditoría de ejecuciones
+ *
+ * /api/v1/codeExecutions/audit/all:
+ *   get:
+ *     summary: Obtener todas las auditorías de ejecución
+ *     tags: [CodeExecutions, Audit]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Todas las auditorías de ejecución
+ *       403:
+ *         description: Acceso denegado (solo admin)
+ *
+ * /api/v1/codeExecutions/rate-limit/check:
+ *   get:
+ *     summary: Verificar límite de velocidad
+ *     tags: [CodeExecutions]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Estado del límite de velocidad
+ *
+ * /api/v1/codeExecutions/file/{fileId}/all:
+ *   delete:
+ *     summary: Eliminar todas las ejecuciones de un archivo
+ *     tags: [CodeExecutions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: fileId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Todas las ejecuciones del archivo eliminadas
+ *
+ * /api/v1/codeExecutions/room/{roomId}/all:
+ *   delete:
+ *     summary: Eliminar todas las ejecuciones de una sala
+ *     tags: [CodeExecutions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: roomId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Todas las ejecuciones de la sala eliminadas
  */

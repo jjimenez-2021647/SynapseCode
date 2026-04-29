@@ -548,6 +548,189 @@
  *         description: Forbidden - admin access required
  *       404:
  *         description: User not found
+ *
+ * /auth/change-password:
+ *   post:
+ *     summary: Change password
+ *     description: Changes the current user's password
+ *     tags:
+ *       - Authentication
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - currentPassword
+ *               - newPassword
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *                 format: password
+ *               newPassword:
+ *                 type: string
+ *                 format: password
+ *     responses:
+ *       200:
+ *         description: Password changed successfully
+ *       400:
+ *         description: Invalid current password
+ *       401:
+ *         description: Unauthorized
+ *
+ * /auth/profile/image:
+ *   put:
+ *     summary: Update profile picture
+ *     description: Updates the user's profile picture
+ *     tags:
+ *       - Profile
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               profilePicture:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Profile picture updated successfully
+ *       400:
+ *         description: Invalid file
+ *       401:
+ *         description: Unauthorized
+ *
+ * /auth/profile/username:
+ *   put:
+ *     summary: Update username
+ *     description: Updates the user's username
+ *     tags:
+ *       - Profile
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - newUsername
+ *             properties:
+ *               newUsername:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Username updated successfully
+ *       400:
+ *         description: Username already exists
+ *       401:
+ *         description: Unauthorized
+ *
+ * /auth/profile/phone:
+ *   put:
+ *     summary: Update phone number
+ *     description: Updates the user's phone number
+ *     tags:
+ *       - Profile
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - phone
+ *             properties:
+ *               phone:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Phone number updated successfully
+ *       400:
+ *         description: Invalid phone number
+ *       401:
+ *         description: Unauthorized
+ *
+ * /auth/deactivate:
+ *   post:
+ *     summary: Request account deactivation
+ *     description: Sends confirmation email to deactivate user account
+ *     tags:
+ *       - Authentication
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Deactivation confirmation email sent
+ *       401:
+ *         description: Unauthorized
+ *
+ * /auth/deactivate/confirm:
+ *   post:
+ *     summary: Confirm account deactivation
+ *     description: Confirms and completes account deactivation
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - confirmationToken
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               confirmationToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Account deactivated successfully
+ *       400:
+ *         description: Invalid or expired token
+ *
+ * /auth/activate:
+ *   post:
+ *     summary: Activate deactivated account
+ *     description: Reactivates a previously deactivated user account
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 format: password
+ *     responses:
+ *       200:
+ *         description: Account activated successfully
+ *       400:
+ *         description: Invalid credentials or account not deactivated
+ *       404:
+ *         description: User not found
  */
 
 // This file is used for Swagger documentation only

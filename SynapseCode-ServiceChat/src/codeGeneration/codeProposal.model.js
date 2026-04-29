@@ -1,5 +1,5 @@
 'use strict'
-import { Schema, model } from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
 
 /**
  * Modelo para propuestas de cambios de código generadas por IA
@@ -164,4 +164,4 @@ CodeProposalSchema.methods.getDiffSummary = function() {
     };
 };
 
-export default model('CodeProposal', CodeProposalSchema);
+export default mongoose.models.CodeProposal || mongoose.model('CodeProposal', CodeProposalSchema);

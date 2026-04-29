@@ -56,13 +56,13 @@ export const initServer = async () => {
         await seedDefaultAdmin();
 
         middlewares(app);
-        setupSwagger(app, BASE_PATH); // ✅ Antes de routes()
-        routes(app);                   // ✅ notFound va al final
+        setupSwagger(app, BASE_PATH); // Antes de routes()
+        routes(app); // notFound va al final
 
         app.listen(PORT, () => {
             console.log(`Synapse Code Admin Server running on port ${PORT}`);
             console.log(`Health check: http://localhost:${PORT}${BASE_PATH}/health`);
-            console.log(`Swagger docs: http://localhost:${PORT}${BASE_PATH}/docs`); // 👈
+            console.log(`Swagger docs: http://localhost:${PORT}${BASE_PATH}/docs`);
         });
     } catch (error) {
         console.error(`Error starting Admin Server: ${error.message}`);

@@ -1,18 +1,18 @@
-# SynapseCode-ServiceFeedback 💬
+# SynapseCode-ServiceFeedback
 
 Microservicio de comentarios y sugerencias de la comunidad para la plataforma SynapseCode.
 
-## 📋 Descripción
+## Descripcion
 
 Sistema de feedback de la comunidad que permite a los usuarios:
-- 💭 Crear comentarios/sugerencias
-- ✏️ Editar sus propios comentarios (dentro de 30 minutos)
-- 🗑️ Eliminar comentarios (autor o admin)
-- 👍 Votar comentarios (toggle, un voto por usuario)
-- 🔍 Buscar comentarios por texto
-- 📊 Ver comentarios ordenados por popularidad
+- Crear comentarios/sugerencias
+- Editar sus propios comentarios (dentro de 30 minutos)
+- Eliminar comentarios (autor o admin)
+- Votar comentarios (toggle, un voto por usuario)
+- Buscar comentarios por texto
+- Ver comentarios ordenados por popularidad
 
-## 🏗️ Arquitectura
+## Arquitectura
 
 - **Framework:** Express.js (Node.js)
 - **Base de Datos:** MongoDB con Mongoose
@@ -20,7 +20,7 @@ Sistema de feedback de la comunidad que permite a los usuarios:
 - **Autenticación:** JWT (via middleware)
 - **Documentación:** Swagger/OpenAPI
 
-## 📦 Instalación
+## Instalacion
 
 ```bash
 # Instalar dependencias
@@ -30,7 +30,7 @@ pnpm install
 npm install
 ```
 
-## ⚙️ Configuración de Entorno
+## Configuracion de Entorno
 
 Crear archivo `.env` con las siguientes variables:
 
@@ -51,7 +51,7 @@ JWT_AUDIENCE=SynapseCode-Services
 AUTH_SERVICE_URL=http://localhost:3006
 ```
 
-## 🚀 Ejecución
+## Ejecucion
 
 ### Desarrollo (con hot-reload)
 ```bash
@@ -63,7 +63,7 @@ pnpm dev
 pnpm start
 ```
 
-## 📚 Documentación API
+## Documentacion API
 
 La documentación interactiva está disponible en:
 ```
@@ -82,7 +82,7 @@ http://localhost:3011/api-docs
 #### Votos
 - `POST /api/v1/feedback/comments/:commentId/vote` - Votar/Desvotar (toggle)
 
-## 🗄️ Base de Datos
+## Base de Datos
 
 ### Colecciones
 
@@ -119,7 +119,7 @@ http://localhost:3011/api-docs
 Índices:
 - `{ commentId: 1, userId: 1 }` - **UNIQUE** - Garantiza un voto por usuario/comentario
 
-## 🔐 Autenticación
+## Autenticacion
 
 El servicio valida JWT mediante el middleware `validateJWT`:
 
@@ -140,27 +140,27 @@ El payload del token debe contener:
 }
 ```
 
-## 📋 Reglas de Negocio
+## Reglas de Negocio
 
 ### Comentarios
-- ✅ Cualquier usuario autenticado puede crear comentarios
-- ✅ Solo el autor puede editar su comentario
-- ✅ La edición solo es posible dentro de **30 minutos** de la creación
-- ✅ El autor o un ADMIN_ROLE pueden eliminar
-- ✅ Después de eliminar, se eliminan todos sus votos asociados
+- Cualquier usuario autenticado puede crear comentarios
+- Solo el autor puede editar su comentario
+- La edicion solo es posible dentro de **30 minutos** de la creacion
+- El autor o un ADMIN_ROLE pueden eliminar
+- Despues de eliminar, se eliminan todos sus votos asociados
 
 ### Votos
-- ✅ Solo un voto positivo por usuario/comentario
-- ✅ Si el usuario vota de nuevo, se quita el voto (toggle)
-- ✅ El contador de votos se actualiza automáticamente
+- Solo un voto positivo por usuario/comentario
+- Si el usuario vota de nuevo, se quita el voto (toggle)
+- El contador de votos se actualiza automaticamente
 
 ### Listado
-- ✅ Público para todos los roles
-- ✅ Ordenado por `voteCount` descendente (más populares primero)
-- ✅ Soporta búsqueda por texto (full-text search)
-- ✅ Soporta paginación
+- Publico para todos los roles
+- Ordenado por `voteCount` descendente (mas populares primero)
+- Soporta busqueda por texto (full-text search)
+- Soporta paginacion
 
-## 🧪 Testing con Ejemplos
+## Testing con Ejemplos
 
 ### Crear comentario
 ```bash
@@ -193,7 +193,7 @@ curl -X PUT http://localhost:3011/api/v1/feedback/comments/[COMMENT_ID] \
   }'
 ```
 
-## 📊 Respuestas
+## Respuestas
 
 ### Éxito
 ```json
@@ -213,7 +213,7 @@ curl -X PUT http://localhost:3011/api/v1/feedback/comments/[COMMENT_ID] \
 }
 ```
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### MongoDB no conecta
 ```
@@ -233,20 +233,20 @@ Error: EDIT_TIME_EXPIRED
 ```
 **Solución:** Solo puedes editar comentarios dentro de 30 minutos de su creación
 
-## 🤝 Integración con la Arquitectura
+## Integracion con la Arquitectura
 
 Este servicio se comunica con:
 - **AuthService (3006)** - Validación de JWT
 - **MongoDB SynapseCodeDB** - Almacenamiento compartido
 
-## 📝 Notas
+## Notas
 
 - Los comentarios eliminados también eliminan sus votos asociados
 - La búsqueda de texto es case-insensitive
 - Los timestamps se generan automáticamente en MongoDB
 - El voteCount nunca puede ser negativo
 
-## 🔄 Variables de Entorno
+## Variables de Entorno
 
 | Variable | Descripción | Defecto |
 |----------|-------------|---------|
@@ -257,7 +257,7 @@ Este servicio se comunica con:
 | JWT_ISSUER | Emisor del JWT | SynapseCode |
 | JWT_AUDIENCE | Audiencia del JWT | SynapseCode-Services |
 
-## 📄 Licencia
+## Licencia
 
 MIT
 
