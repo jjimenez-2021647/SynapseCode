@@ -9,6 +9,7 @@ import { dbConnection } from './db.js';
 import { corsOptions } from './cors-configuration.js';
 import { helmetConfiguration } from './helmet-configuration.js';
 import codeSessionsRoutes from '../src/codeSessions/codeSessions.routes.js';
+import codeExecutionConsoleRoutes from '../src/codeSessions/codeExecutionConsole.routes.js';
 import swaggerJSDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 
@@ -24,6 +25,7 @@ const middlewares = (app) => {
 }
 const routes = (app) => {
     app.use(`${BASE_PATH}/codeSessions`, codeSessionsRoutes);
+    app.use(`${BASE_PATH}/console`, codeExecutionConsoleRoutes);
     app.get(`${BASE_PATH}/Health`, (request, response) => {
         response.status(200).json({
             status: 'Healthy',

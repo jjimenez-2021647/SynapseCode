@@ -1,637 +1,971 @@
-# SynapseCode - Arquitectura de Microservicios
+# SynapseCode
 
-> **Plataforma colaborativa de ejecución y explicación de código** refactorizada de un monolito a una arquitectura moderna de microservicios independientes.
+Plataforma colaborativa para programacion, explicacion de codigo con IA, ejecucion remota y trabajo en salas. El proyecto nacio como un monolito y hoy esta dividido en microservicios Node.js/Express.
 
-**Status:** PRODUCCIÓN | **Última actualización:** 6 de abril de 2026
+Este README esta pensado para ser la fuente unica de verdad del repo. Junta en un solo lugar:
 
----
+- que contiene la app
+- como esta dividida
+- que hace cada microservicio
+- endpoints reales
+- flujo de autenticacion
+- consolas compartidas
+- instalacion y ejecucion
+- documentacion Swagger
+- testing, troubleshooting y notas del estado actual
 
-## Tabla de Contenidos
+## Tabla de contenidos
 
-- [Visión General](#visión-general)
+- [Resumen](#resumen)
+- [Estructura del repo](#estructura-del-repo)
 - [Arquitectura](#arquitectura)
-- [Servicios](#servicios)
-- [Instalación](#instalación)
-- [Ejecución](#ejecución)
-- [Documentación API (Swagger)](#documentación-api-swagger)
-- [Flujos Principales](#flujos-principales)
-- [Autenticación](#autenticación)
-- [Base de Datos](#base-de-datos)
-- [Configuración de Entorno](#configuración-de-entorno)
-- [Testing con Postman](#testing-con-postman)
+- [Mapa de servicios](#mapa-de-servicios)
+- [Documentacion y health checks](#documentacion-y-health-checks)
+- [Servicios detallados](#servicios-detallados)
+- [AuthService](#authservice)
+- [SynapseCode-ServiceRoom](#synapsecode-serviceroom)
+- [SynapseCode-ServiceChat](#synapsecode-servicechat)
+- [SynapseCode-ServiceCodeSessions](#synapsecode-servicecodesessions)
+- [SynapseCode-ServiceExecutionCode](#synapsecode-serviceexecutioncode)
+- [SynapseCode-ServiceFeedback](#synapsecode-servicefeedback)
+- [Consola interactiva compartida](#consola-interactiva-compartida)
+- [Lenguajes soportados en ejecucion](#lenguajes-soportados-en-ejecucion)
+- [Instalacion](#instalacion)
+- [Configuracion de entorno](#configuracion-de-entorno)
+- [Ejecucion](#ejecucion)
+- [Swagger y uso de la API](#swagger-y-uso-de-la-api)
+- [Flujos principales](#flujos-principales)
+- [Autenticacion](#autenticacion)
+- [Base de datos](#base-de-datos)
+- [Testing](#testing)
 - [Troubleshooting](#troubleshooting)
+- [Diferencias importantes del estado actual](#diferencias-importantes-del-estado-actual)
+- [Notas de desarrollo](#notas-de-desarrollo)
 
----
+## Resumen
 
-## Visión General
+SynapseCode busca cubrir el ciclo completo de colaboracion tecnica:
 
-**SynapseCode** es una plataforma integral para:
-- **Colaboración en tiempo real** - Salas, participantes, chats
-- **Edición de código** - Múltiples archivos con control de versiones
-- **Ejecución de código** - Soporte para 20+ lenguajes via Judge0
-- **Explicaciones con IA** - Análisis de código con Groq
-- **Gestión de usuarios** - Autenticación y autorización JWT
-- **Feedback comunitario** - Comentarios y sugerencias de usuarios
+- autenticacion y gestion de usuarios
+- creacion de salas de trabajo
+- participacion multiusuario por sala
+- gestion de archivos dentro de cada sala
+- chat general y mensajes de sistema
+- explicaciones de codigo con IA
+- propuestas incrementales de mejora de codigo
+- historial de sesiones y versiones
+- ejecucion de codigo contra Judge0
+- comentarios y feedback comunitario
+- consola compartida para entradas y salidas de ejecucion
 
-### De Monolito a Microservicios
-- **Original:** Un único servidor Node.js (3005)
-- **Actual:** 6 servicios independientes comunicados vía HTTP
-- **Beneficios:** Escalabilidad, independencia de deployment, resiliencia
-- **Total Endpoints:** 113 endpoints distribuidos
+Arquitectura actual:
 
----
+- `AuthService` usa PostgreSQL
+- los demas servicios usan MongoDB
+- la comunicacion entre microservicios es por HTTP
+- el frontend no esta en este repo como aplicacion completa separada; aqui vive el backend refactorizado y una carpeta del monolito anterior de referencia
+
+## Estructura del repo
+
+```text
+AuthService/                         Autenticacion, usuarios, perfiles y roles
+Endpoints/                          Coleccion Postman y apoyos de endpoints
+scripts/                            Scripts raiz para levantar microservicios
+SynapseCode/                        Monolito anterior y archivos de referencia
+SynapseCode-ServiceChat/            Chats, mensajes, explicaciones y propuestas IA
+SynapseCode-ServiceCodeSessions/    Sesiones de codigo y consola compartida
+SynapseCode-ServiceExecutionCode/   Ejecucion de codigo y Judge0
+SynapseCode-ServiceFeedback/        Comentarios, votos y feedback comunitario
+SynapseCode-ServiceRoom/            Salas, participaciones y archivos
+README.md                           Documento principal
+package.json                        Orquestador raiz
+```
+
+Detalle util:
+
+- `SynapseCode/` conserva logica del monolito y sirve como referencia historica.
+- los microservicios activos son `AuthService` y los directorios `SynapseCode-Service*`.
+- `Endpoints/SynapseCode.postman_collection.json` existe en el repo.
+- `SynapseCode/ROOMS_POSTMAN_ENDPOINTS.md` tambien existe como apoyo.
 
 ## Arquitectura
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      Cliente / Frontend                         │
-└──────────┬──────────────┬──────────────┬────────────┬───────────┘
-           │              │              │            │
-    ┌──────▼──────┐  ┌───▼───────┐  ┌──▼──────────┐ ┌─▼──────────┐
-    │AuthService  │  │ServiceRoom │  │ServiceChat  │ │ServiceFB   │
-    │(Porto 3006) │  │(Porto 3007)│  │(Porto 3008) │ │(Porto 3011)│
-    │             │  │            │  │             │ │            │
-    │- Auth       │  │- Rooms     │  │- Chats      │ │- Comments  │
-    │- Users      │  │- Files     │  │- Messages   │ │- Votes     │
-    │- Roles      │  │- Particip. │  │- Explications│ │- Feedback  │
-    └─────────────┘  └──────┬─────┘  └─────────────┘ └────────────┘
-                             │
-                ┌────────────┴────────────┐
-                │                         │
-     ┌──────────▼──────────┐  ┌──────────▼──────────┐
-     │CodeSessions Service │  │ExecutionCode Service│
-     │(Porto 3009)         │  │(Porto 3010)         │
-     │                     │  │                     │
-     │- Code Versions      │  │- Code Executions   │
-     │- Session History    │  │- Judge0 Integration│
-     └─────────────────────┘  └────────────────────┘
-
-     ┌──────────────────────────────────────────────┐
-     │       Base de Datos - MongoDB                │
-     │     SynapseCodeDB (Compartida)               │
-     └──────────────────────────────────────────────┘
+```text
+Cliente / Frontend
+        |
+        +--> AuthService (3006) --------------------> PostgreSQL
+        |
+        +--> ServiceRoom (3007) --------------------> MongoDB
+        |       |
+        |       +--> ServiceChat (3008)
+        |       +--> ServiceCodeSessions (3009)
+        |       +--> ServiceExecutionCode (3010)
+        |
+        +--> ServiceChat (3008) --------------------> MongoDB + Groq
+        |
+        +--> ServiceCodeSessions (3009) -----------> MongoDB
+        |       |
+        |       +--> helper de ejecucion / Judge0
+        |
+        +--> ServiceExecutionCode (3010) ----------> MongoDB + Judge0
+        |
+        +--> ServiceFeedback (3011) ---------------> MongoDB
 ```
 
-### Comunicación Inter-Servicios
-- **ServiceRoom ↔ ServiceChat:** Creación automática de chats
-- **ServiceRoom ↔ ServiceCodeSessions:** Obtención de historial
-- **ServiceExecutionCode ↔ Judge0:** Ejecución de código
-- **ServiceChat ↔ Groq:** Explicaciones con IA
-- **Todos ↔ AuthService:** Validación de JWT
+Patrones de comunicacion que si se ven en el codigo:
 
----
+- `ServiceRoom` intenta crear chats en `ServiceChat` cuando se crea una sala.
+- `ServiceRoom` consulta `ServiceChat` para enriquecer datos de sala.
+- `ServiceRoom` tiene configuradas URLs hacia `ServiceCodeSessions` y `ServiceExecutionCode`.
+- `ServiceChat` usa Groq para explicaciones y propuestas.
+- `ServiceExecutionCode` usa Judge0.
+- `ServiceCodeSessions` usa un helper de ejecucion para su consola interactiva.
+- todos los servicios protegidos validan JWT.
 
-## Servicios
+## Mapa de servicios
 
-| Servicio | Puerto | BD | Responsabilidad | Endpoints |
-|----------|--------|----|-----------------|-----------| 
-| **AuthService** | 3006 | PostgreSQL | Autenticación, usuarios, roles | 28 |
-| **ServiceRoom** | 3007 | MongoDB | Salas, archivos, participantes | 31 |
-| **ServiceChat** | 3008 | MongoDB | Chats, mensajes, explicaciones | 17 |
-| **ServiceCodeSessions** | 3009 | MongoDB | Versiones de código | 11 |
-| **ServiceExecutionCode** | 3010 | MongoDB | Ejecución de código | 15 |
-| **ServiceFeedback** | 3011 | MongoDB | Comentarios y votos comunitarios | 11 |
-| **TOTAL** | | | | **113** |
+| Servicio | Puerto | Base de datos | Stack principal | Rol |
+|---|---:|---|---|---|
+| AuthService | 3006 | PostgreSQL | Express, Sequelize, JWT, Cloudinary, Nodemailer | Auth, usuarios y roles |
+| ServiceRoom | 3007 | MongoDB | Express, Mongoose, Axios | Salas, archivos, participaciones |
+| ServiceChat | 3008 | MongoDB | Express, Mongoose, Groq | Chat, mensajes, explicaciones, IA |
+| ServiceCodeSessions | 3009 | MongoDB | Express, Mongoose | Historial de codigo y consola compartida |
+| ServiceExecutionCode | 3010 | MongoDB | Express, Mongoose, Judge0 | Ejecucion de codigo |
+| ServiceFeedback | 3011 | MongoDB | Express, Mongoose | Comentarios y votos |
 
-### AuthService (Puerto 3006)
-```
-Autenticación:
-  POST   /api/v1/auth/register       - Registrar usuario
-  POST   /api/v1/auth/login          - Login y obtener JWT
-  POST   /api/v1/auth/refresh        - Refrescar token
-  POST   /api/v1/auth/logout         - Logout
-  [+ 16 endpoints más]
+## Documentacion y health checks
 
-Usuarios:
-  GET    /api/v1/users               - Listar usuarios
-  POST   /api/v1/users               - Crear usuario
-  GET    /api/v1/users/:id           - Obtener usuario
-  PUT    /api/v1/users/:id           - Actualizar usuario
-  DELETE /api/v1/users/:id           - Eliminar usuario
-  [+ 3 endpoints más]
-```
+| Servicio | Docs | Health |
+|---|---|---|
+| AuthService | `http://localhost:3006/api/v1/docs` | `http://localhost:3006/api/v1/health` |
+| ServiceRoom | `http://localhost:3007/api-docs` | `http://localhost:3007/api/v1/Health` |
+| ServiceChat | `http://localhost:3008/api-docs` | `http://localhost:3008/api/v1/Health` |
+| ServiceCodeSessions | `http://localhost:3009/api-docs` | `http://localhost:3009/api/v1/Health` |
+| ServiceExecutionCode | `http://localhost:3010/api-docs` | `http://localhost:3010/api/v1/Health` |
+| ServiceFeedback | `http://localhost:3011/api-docs` | `http://localhost:3011/api/v1/Health` |
 
-### ServiceRoom (Puerto 3007)
-```
-Salas (8 endpoints):
-  POST   /api/v1/rooms               - Crear sala
-  GET    /api/v1/rooms               - Listar salas
-  GET    /api/v1/rooms/code/:code    - Obtener por código
-  PUT    /api/v1/rooms/code/:code    - Actualizar sala
-  DELETE /api/v1/rooms/code/:code    - Eliminar sala
-  [+ 3 endpoints más]
+Nota importante:
 
-Participantes (8 endpoints):
-  POST   /api/v1/room-participations - Unirse a sala
-  GET    /api/v1/room-participations - Listar participaciones
-  GET    /api/v1/room-participations/room/:roomId - Por sala
-  PUT    /api/v1/room-participations/:id - Actualizar
-  [+ 4 endpoints más]
+- `AuthService` usa `/api/v1/docs` y `health` en minuscula.
+- los demas servicios usan `/api-docs` y `Health` con H mayuscula.
 
-Archivos (15 endpoints):
-  POST   /api/v1/files               - Crear archivo
-  GET    /api/v1/files               - Listar archivos
-  GET    /api/v1/files/:fileId       - Obtener archivo
-  PUT    /api/v1/files/:fileId       - Actualizar contenido
-  PUT    /api/v1/files/:fileId/rename - Renombrar
-  DELETE /api/v1/files/:fileId       - Eliminar archivo
-  [+ 9 endpoints más]
-```
+## Servicios detallados
 
-### ServiceChat (Puerto 3008)
-```
-Chats (4 endpoints):
-  POST   /api/v1/chats               - Crear chat
-  POST   /api/v1/chats/batch-create  - Crear múltiples (usado internamente)
-  GET    /api/v1/chats               - Listar chats
-  DELETE /api/v1/chats/room/:roomId  - Eliminar chats de sala
+Esta seccion aterriza lo mas importante por microservicio:
 
-Mensajes (8 endpoints):
-  POST   /api/v1/messages            - Crear mensaje
-  GET    /api/v1/messages            - Listar mensajes
-  GET    /api/v1/messages/:messageId - Obtener mensaje
-  PUT    /api/v1/messages/:messageId - Editar mensaje
-  DELETE /api/v1/messages/:messageId - Eliminar mensaje
-  [+ 3 endpoints más]
+- responsabilidad
+- stack
+- endpoints reales sacados de las rutas
+- dependencias externas
+- variables de entorno relevantes
+- observaciones de implementacion
 
-Explicaciones IA (5 endpoints):
-  GET    /api/v1/explication/file/:idFile  - Listar explicaciones
-  POST   /api/v1/explication/file/:idFile  - Crear (Groq IA)
-  GET    /api/v1/explication/:id           - Obtener explicación
-  DELETE /api/v1/explication/:id           - Eliminar
-  [+ 1 endpoint más]
-```
+## AuthService
 
-### ServiceCodeSessions (Puerto 3009)
-```
-11 endpoints para:
-  POST   /api/v1/codeSessions              - Guardar versión
-  GET    /api/v1/codeSessions              - Listar sesiones
-  GET    /api/v1/codeSessions/:sessionId   - Obtener sesión
-  GET    /api/v1/codeSessions/file/:fileId - Por archivo
-  GET    /api/v1/codeSessions/file/:fileId/latest - Última versión
-  [+ 6 endpoints más]
-```
+Ubicacion: `AuthService/`  
+Puerto: `3006`  
+Base de datos: `PostgreSQL`
 
-### ServiceExecutionCode (Puerto 3010)
-```
-15 endpoints para:
-  GET    /api/v1/codeExecutions/languages        - Lenguajes soportados
-  POST   /api/v1/codeExecutions/run              - Ejecutar código (síncrono)
-  POST   /api/v1/codeExecutions/submit           - Ejecución asincrónica
-  GET    /api/v1/codeExecutions/result/:token    - Obtener resultado
-  POST   /api/v1/codeExecutions                  - Crear ejecución
-  GET    /api/v1/codeExecutions/:executionId     - Obtener ejecución
-  [+ 9 endpoints más]
+### Que hace
+
+- registro de usuarios
+- login
+- verificacion de correo
+- reenvio de verificacion
+- solicitud y reseteo de password
+- consulta de perfil
+- cambio de password
+- cambio de datos de perfil
+- cambio de imagen de perfil
+- cambio de username
+- cambio de telefono
+- desactivacion y reactivacion de cuenta
+- CRUD administrativo de usuarios
+- asignacion de roles
+
+### Stack y dependencias
+
+- Express 5
+- Sequelize
+- PostgreSQL
+- JWT
+- Argon2
+- Multer
+- Cloudinary
+- Nodemailer
+- Swagger
+- rate limiting
+
+### Estructura interna relevante
+
+```text
+AuthService/
+├── configs/
+│   ├── app.js
+│   ├── config.js
+│   ├── cors-configuration.js
+│   ├── db.js
+│   ├── helmet-configuration.js
+│   ├── swagger-config.js
+│   ├── swagger-endpoints.js
+│   └── swagger-setup.js
+├── helpers/
+├── middlewares/
+├── src/
+│   ├── auth/
+│   │   ├── auth.controller.js
+│   │   └── auth.routes.js
+│   └── users/
+│       ├── user.controller.js
+│       └── user.routes.js
+└── index.js
 ```
 
-### ServiceFeedback (Puerto 3011)
-```
-11 endpoints para:
-  GET    /api/v1/feedback/comments              - Listar comentarios (público)
-  GET    /api/v1/feedback/comments/:commentId   - Obtener comentario (público)
-  POST   /api/v1/feedback/comments              - Crear comentario
-  PUT    /api/v1/feedback/comments/:commentId   - Editar comentario (solo autor, < 30 min)
-  DELETE /api/v1/feedback/comments/:commentId   - Eliminar comentario (autor/admin)
-  POST   /api/v1/feedback/comments/:commentId/vote - Votar/desvotar (toggle)
-  
-  Características:
-  - Sistema de comentarios y sugerencias de la comunidad
-  - Búsqueda de texto en comentarios
-  - Votos positivos (un voto por usuario/comentario)
-  - Paginación en listados
-  - Ordenamiento por popularidad (voteCount)
-  [+ 5 endpoints relacionados]
-```
+### Endpoints de autenticacion
 
----
-
-## Instalación
-
-### Requisitos Previos
-```
-- Node.js >= 16
-- MongoDB corriendo (puerto 27017)
-- PostgreSQL corriendo (puerto 5432 o 5436)
-- pnpm >= 10.29.2
-- Git
+```text
+POST /api/v1/auth/register
+POST /api/v1/auth/login
+POST /api/v1/auth/verify-email
+POST /api/v1/auth/resend-verification
+POST /api/v1/auth/forgot-password
+POST /api/v1/auth/reset-password
+GET  /api/v1/auth/profile
+POST /api/v1/auth/profile/by-id
+POST /api/v1/auth/logout
+PUT  /api/v1/auth/change-password
+PUT  /api/v1/auth/profile
+PUT  /api/v1/auth/profile/image
+PUT  /api/v1/auth/profile/username
+POST /api/v1/auth/profile/username/confirm
+PUT  /api/v1/auth/profile/phone
+POST /api/v1/auth/profile/phone/confirm
+POST /api/v1/auth/deactivate
+POST /api/v1/auth/deactivate/confirm
+POST /api/v1/auth/activate
+POST /api/v1/auth/activate/confirm
 ```
 
-### Paso 1: Instalar MongoDB
-```bash
-# En Windows (con Chocolatey):
-choco install mongodb
+### Endpoints de usuarios y roles
 
-# En Linux:
-sudo apt-get install mongodb
-
-# En Mac:
-brew tap mongodb/brew
-brew install mongodb-community
-
-# Iniciar MongoDB:
-mongod
+```text
+PUT   /api/v1/users/:userId/role
+GET   /api/v1/users/:userId/roles
+GET   /api/v1/users/by-role/:roleName
+GET   /api/v1/users
+POST  /api/v1/users
+PATCH /api/v1/users/deactivate/:userId
+PUT   /api/v1/users/:userId
+DELETE /api/v1/users/:userId
+GET   /api/v1/users/:userId
 ```
 
-### Paso 2: Instalar PostgreSQL (para AuthService)
-```bash
-# En Windows:
-# Descargar desde https://www.postgresql.org/download/windows/
+### Roles detectados en codigo
 
-# En Linux:
-sudo apt-get install postgresql postgresql-contrib
+- `ADMIN_ROLE`
+- `USER_ROLE`
 
-# En Mac:
-brew install postgresql
-```
+Nota:
 
-### Paso 3: Clonar/Navegar al Repositorio
-```bash
-cd c:\SynapseCode
-```
+- en algunos README viejos se hablaba de `ASSISTANT_ROLE`, pero en el codigo actual validado el set sembrado de roles es `ADMIN_ROLE` y `USER_ROLE`.
 
-### Paso 4: Instalar Dependencias
-```bash
-# Instalar dependencias de todos los servicios
-pnpm install
-```
+### Middleware y comportamiento notable
 
-### Paso 5: Configurar Variables de Entorno
+- `requestLimit` se aplica globalmente.
+- `authRateLimit` se usa en endpoints sensibles.
+- `validateJWT` protege perfil, logout, cambios de cuenta y varias operaciones.
+- al arrancar se ejecutan seeds de roles y admin por defecto.
+- soporta carga de imagen de perfil por multipart.
 
-Cada servicio tiene un archivo `.env.example`. Copiar y configurar:
+### Variables de entorno relevantes
 
-```bash
-# AuthService
-cp AuthService/.env.example AuthService/.env
-
-# ServiceRoom
-cp SynapseCode-ServiceRoom/.env.example SynapseCode-ServiceRoom/.env
-
-# ServiceChat
-cp SynapseCode-ServiceChat/.env.example SynapseCode-ServiceChat/.env
-
-# ServiceCodeSessions
-cp SynapseCode-ServiceCodeSessions/.env.example SynapseCode-ServiceCodeSessions/.env
-
-# ServiceExecutionCode
-cp SynapseCode-ServiceExecutionCode/.env.example SynapseCode-ServiceExecutionCode/.env
-
-# ServiceFeedback
-cp SynapseCode-ServiceFeedback/.env.example SynapseCode-ServiceFeedback/.env
-```
-
-**Variables Críticas:**
 ```env
-# Compartidas en todos los servicios
-MONGO_URI=mongodb://localhost:27017/SynapseCodeDB
-JWT_SECRET=AuthServiceSynapseCodeSecureJWTKeyWith256Bits!!!
-JWT_ISSUER=SynapseCodeService
-JWT_AUDIENCE=SynapseCodeService
+PORT=3006
+NODE_ENV=development
 
-# AuthService (PostgreSQL)
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=SynapseCodeDB
 DB_USER=postgres
-DB_PASSWORD=your_password
+DB_PASSWORD=...
 
-# ServiceChat (IA)
-GROQ_API_KEY=your_groq_api_key
+JWT_SECRET=...
+JWT_ISSUER=...
+JWT_AUDIENCE=...
+JWT_EXPIRES_IN=24h
+JWT_REFRESH_EXPIRES_IN=7d
 
-# ServiceExecutionCode (Código)
-JUDGE0_API_KEY=your_judge0_api_key
+SMTP_HOST=...
+SMTP_PORT=587
+SMTP_USER=...
+SMTP_PASSWORD=...
+
+CLOUDINARY_NAME=...
+CLOUDINARY_API_KEY=...
+CLOUDINARY_API_SECRET=...
 ```
 
----
+### Observaciones
 
-## Ejecución
+- es el unico servicio con PostgreSQL.
+- sus docs estan en `/api/v1/docs`, no en `/api-docs`.
+- su health check esta en `/api/v1/health`.
 
-### Opción 1: Ejecutar Todos (Recomendado)
-```bash
-cd c:\SynapseCode
-pnpm run dev
+## SynapseCode-ServiceRoom
+
+Ubicacion: `SynapseCode-ServiceRoom/`  
+Puerto: `3007`  
+Base de datos: `MongoDB`
+
+### Que hace
+
+- crea y administra salas colaborativas
+- administra participaciones de usuarios
+- administra archivos dentro de una sala
+- consulta cambios de archivo por sala
+- dispara integracion con chats al crear sala
+
+### Stack y dependencias
+
+- Express 5
+- Mongoose
+- Axios
+- Multer
+- Cloudinary
+- Nodemailer
+- Swagger
+
+### Estructura interna relevante
+
+```text
+SynapseCode-ServiceRoom/
+├── configs/
+├── helpers/
+│   └── service-communication.js
+├── middlewares/
+├── src/
+│   ├── rooms/
+│   │   ├── rooms.controller.js
+│   │   └── rooms.routes.js
+│   ├── roomParticipations/
+│   │   ├── roomParticipations.controller.js
+│   │   └── roomParticipations.routes.js
+│   └── files/
+│       ├── files.controller.js
+│       └── files.routes.js
+└── index.js
 ```
 
-**Output esperado:**
-```
-Levantando todos los microservicios SynapseCode...
+### Endpoints de salas
 
-[AuthService] iniciando en puerto 3006...
-[ServiceRoom] iniciando en puerto 3007...
-[ServiceChat] iniciando en puerto 3008...
-[ServiceCodeSessions] iniciando en puerto 3009...
-[ServiceExecutionCode] iniciando en puerto 3010...
-[ServiceFeedback] iniciando en puerto 3011...
-
-Todos los servicios listos:
-   ● AuthService: http://localhost:3006/api-docs
-   ● ServiceRoom: http://localhost:3007/api-docs
-   ● ServiceChat: http://localhost:3008/api-docs
-   ● ServiceCodeSessions: http://localhost:3009/api-docs
-   ● ServiceExecutionCode: http://localhost:3010/api-docs
-   ● ServiceFeedback: http://localhost:3011/api-docs
-
-CTRL+C para detener todos
+```text
+POST   /api/v1/rooms
+GET    /api/v1/rooms
+GET    /api/v1/rooms/code/:code
+PUT    /api/v1/rooms/code/:code
+DELETE /api/v1/rooms/code/:code
+POST   /api/v1/rooms/deactivate/:code
+GET    /api/v1/rooms/audit/creators
+GET    /api/v1/rooms/:code/files/:fileId/changes
 ```
 
-### Opción 2: Ejecutar Individualmente (Terminal Separadas)
+### Endpoints de participaciones
 
-**Terminal 1 - AuthService:**
-```bash
-cd AuthService
-pnpm dev
+```text
+POST   /api/v1/room-participations
+GET    /api/v1/room-participations
+PUT    /api/v1/room-participations/:id
+DELETE /api/v1/room-participations/:id
+GET    /api/v1/room-participations/room/:roomId
+GET    /api/v1/room-participations/user/:userId
+PUT    /api/v1/room-participations/:participationId/status
+POST   /api/v1/room-participations/:id/leave
 ```
 
-**Terminal 2 - ServiceRoom:**
-```bash
-cd SynapseCode-ServiceRoom
-pnpm dev
+### Endpoints de archivos
+
+```text
+POST   /api/v1/files
+GET    /api/v1/files
+PUT    /api/v1/files/:fileId
+DELETE /api/v1/files/:fileId
+GET    /api/v1/files/user/files
+GET    /api/v1/files/room/:roomId
+GET    /api/v1/files/:fileId
+PUT    /api/v1/files/:fileId/content
+PUT    /api/v1/files/:fileId/rename
+PUT    /api/v1/files/:fileId/read-only
+PUT    /api/v1/files/:fileId/restore
+POST   /api/v1/files/:fileId/duplicate
+DELETE /api/v1/files/:fileId/permanent
+POST   /api/v1/files/reorder
 ```
 
-**Terminal 3 - ServiceChat:**
-```bash
-cd SynapseCode-ServiceChat
-pnpm dev
-```
+### Comportamientos importantes
 
-**Terminal 4 - ServiceCodeSessions:**
-```bash
-cd SynapseCode-ServiceCodeSessions
-pnpm dev
-```
+- `POST /api/v1/rooms` exige `USER_ROLE`.
+- el host de la sala se deriva del token JWT.
+- al crear sala se crea la participacion inicial del host.
+- despues intenta crear dos chats en `ServiceChat`:
+  - `CHAT_SALA`
+  - `CHAT_IA`
+- si `ServiceChat` falla durante esa creacion, el controller revierte la sala y la participacion y responde error.
+- en varias operaciones consulta a `ServiceChat` para listar o borrar chats asociados.
+- la capa de archivos soporta restore, duplicate, reorder y read-only.
 
-**Terminal 5 - ServiceExecutionCode:**
-```bash
-cd SynapseCode-ServiceExecutionCode
-pnpm dev
-```
-
-### Verificar que Todo Funciona
-```bash
-# En otra terminal:
-curl http://localhost:3006/api-docs    # AuthService
-curl http://localhost:3007/api-docs    # ServiceRoom
-curl http://localhost:3008/api-docs    # ServiceChat
-curl http://localhost:3009/api-docs    # ServiceCodeSessions
-curl http://localhost:3010/api-docs    # ServiceExecutionCode
-```
-
----
-
-## Documentación API (Swagger)
-
-Cada servicio tiene documentación completa en **Swagger/OpenAPI**.
-
-### Acceder a Swagger
-- **AuthService:** http://localhost:3006/api/v1/docs
-- **ServiceRoom:** http://localhost:3007/api-docs
-- **ServiceChat:** http://localhost:3008/api-docs
-- **ServiceCodeSessions:** http://localhost:3009/api-docs
-- **ServiceExecutionCode:** http://localhost:3010/api-docs
-- **ServiceFeedback:** http://localhost:3011/api-docs
-
-### Funciones Principales en Swagger
-- Ver todos los endpoints
-- Probar endpoints directamente (Try it out)
-- Ver esquemas de request/response
-- Descargar OpenAPI JSON
-
-### Autenticar en Swagger
-1. En cualquier servicio, hacer un login en **AuthService**
-2. Copiar el token JWT obtenido
-3. Hacer click en el botón **Authorize** (arriba a la derecha)
-4. Pegar: `Bearer YOUR_TOKEN_HERE`
-5. Probar endpoints protegidos
-
----
-
-## Flujos Principales
-
-### 1. Crear una Sala (ServiceRoom → ServiceChat)
-
-```
-Cliente
-  │
-  ├─ POST /api/v1/auth/login (AuthService)
-  │   └─ Obtiene JWT token
-  │
-  └─ POST /api/v1/rooms (ServiceRoom)
-      ├─ Crea documento Room en MongoDB
-      ├─ Crea RoomParticipation del host
-      │
-      └─ HTTP POST → ServiceChat
-          └─ /api/v1/chats/batch-create
-             ├─ Crea 2 chats (CHAT_SALA, CHAT_IA)
-             └─ Retorna chats creados
-      
-      └─ Response al cliente
-         {
-           "_id": "ObjectId",
-           "roomCode": "ABC-A1B-22C",
-           "roomName": "Mi Sala",
-           "chatsCreated": true,
-           "chats": [...]
-         }
-```
-
-**Si ServiceChat está caído:**
-- La sala se crea igual (degradación graciosa)
-- Se retorna `chatsCreated: false`
-- Cliente informado del estado
-
-### 2. Enviar Mensaje (ServiceChat)
-
-```
-Cliente
-  │
-  └─ POST /api/v1/messages (ServiceChat)
-      ├─ Crea documento Message en MongoDB
-      ├─ Obtiene información del Chat asociado
-      │
-      └─ Response al cliente
-         {
-           "_id": "ObjectId",
-           "content": "Hola a todos",
-           "senderUserId": "usr_xxx",
-           "chartId": "cht_xxx",
-           "chat": { chatId, numberChat, chatType },
-           "createdAt": "2026-04-06T10:30:00Z"
-         }
-```
-
-### 3. Ejecutar Código (ServiceExecutionCode → Judge0)
-
-```
-Cliente
-  │
-  └─ POST /api/v1/codeExecutions/run (ServiceExecutionCode)
-      ├─ HTTP POST → Judge0 API
-      │   └─ `https://judge0-api.com/submissions`
-      │
-      ├─ Registra ejecución en MongoDB
-      │
-      └─ Response al cliente
-         {
-           "executionId": "exec_xxx",
-           "language": "python",
-           "output": "Hello World",
-           "stderr": null,
-           "executionTime": 125,
-           "statusId": 3 // Completed
-         }
-```
-
-### 4. Guardar Versión de Código (ServiceCodeSessions)
-
-```
-Cliente
-  │
-  └─ POST /api/v1/codeSessions (ServiceCodeSessions)
-      ├─ Crea documento CodeSession en MongoDB
-      ├─ Incrementa version counter
-      │
-      └─ Response al cliente
-         {
-           "_id": "ObjectId",
-           "fileId": "file_xxx",
-           "version": 5,
-           "code": "print('Hello')",
-           "language": "python",
-           "savedByUserId": "usr_xxx",
-           "savedAt": "2026-04-06T10:30:00Z"
-         }
-```
-
----
-
-## Autenticación
-
-### Flujo de JWT
-
-```javascript
-// 1. Cliente obtiene token
-POST /api/v1/auth/login (AuthService)
-{
-  "email": "user@example.com",
-  "password": "password123"
-}
-
-Response:
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "userId": "usr_abc123",
-    "username": "john_doe",
-    "email": "user@example.com",
-    "role": "USER_ROLE"
-  }
-}
-```
-
-```javascript
-// 2. Cliente incluye token en cada request
-GET /api/v1/rooms (ServiceRoom)
-Headers:
-  x-token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-  // O
-  Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
-
-```javascript
-// 3. Servicio valida JWT
-validateJWT middleware:
-  ├─ Verifica firma del token
-  ├─ Valida issuer y audience
-  ├─ Extrae datos del usuario → req.user
-  └─ next()
-```
-
-### Roles y Permisos
-
-```javascript
-// USER_ROLE - Usuario regular
-- Crear salas
-- Crear archivos
-- Enviar mensajes
-- Ejecutar código
-- Ver salas propias
-
-// ADMIN_ROLE - Administrador
-- Todas las acciones de USER_ROLE
-- Eliminar cualquier sala/archivo
-- Ver y auditar usuarios
-- Ver auditoría de ejecuciones
-
-// HOST_ROLE (sub-rol en sala)
-- Editar sala
-- Eliminar sala
-- Gestionar participantes
-- Finalizar sala
-```
-
----
-
-## Base de Datos
-
-### MongoDB - SynapseCodeDB (Compartida)
-
-Todas las colecciones en **un solo MongoDB**:
-
-```
-SynapseCodeDB/
-├── rooms              (ServiceRoom)
-├── roomparticipations (ServiceRoom)
-├── files              (ServiceRoom)
-├── chats              (ServiceChat)
-├── messages           (ServiceChat)
-├── explanations       (ServiceChat)
-├── codesessions       (ServiceCodeSessions)
-├── codeexecutions     (ServiceExecutionCode)
-└── sessions           (Sesiones)
-```
-
-**Ventajas:**
-- Transacciones ACID entre servicios
-- Único source of truth
-- Sin duplicación de datos
-- Relaciones directas sin join lógico
-
-### PostgreSQL - AuthService
-```
-Database: SynapseCodeDB
-Tables:
-  ├── users
-  ├── roles
-  ├── permissions
-  └── sessions
-```
-
----
-
-## Configuración de Entorno
-
-### Variables Globales (todos los servicios)
+### Variables de entorno relevantes
 
 ```env
-# Entorno
-NODE_ENV=development
-
-# Base de datos MongoDB
+PORT=3007
 MONGO_URI=mongodb://localhost:27017/SynapseCodeDB
+JWT_SECRET=...
 
-# JWT
-JWT_SECRET=AuthServiceSynapseCodeSecureJWTKeyWith256Bits!!!
-JWT_ISSUER=SynapseCodeService
-JWT_AUDIENCE=SynapseCodeService
-JWT_EXPIRES_IN=24h
-
-# URLs de servicios (para comunicación HTTP)
-AUTH_SERVICE_URL=http://localhost:3006
 CHAT_SERVICE_URL=http://localhost:3008
+CODE_SESSIONS_SERVICE_URL=http://localhost:3009
+EXECUTION_CODE_SERVICE_URL=http://localhost:3010
 ```
 
-### AuthService (.env)
+### Observaciones
+
+- este servicio es el mayor orquestador de negocio.
+- varios ejemplos viejos de README daban por hecho que la sala sobreviviria si fallaba chat; hoy el flujo validado en `createRoom` revierte y responde indisponibilidad del servicio de chats.
+
+## SynapseCode-ServiceChat
+
+Ubicacion: `SynapseCode-ServiceChat/`  
+Puerto: `3008`  
+Base de datos: `MongoDB`
+
+### Que hace
+
+- crea y lista chats
+- administra mensajes
+- crea mensajes de sistema
+- genera explicaciones de codigo
+- mantiene chat sobre codigo
+- genera propuestas incrementales de codigo
+
+### Stack y dependencias
+
+- Express 5
+- Mongoose
+- Axios
+- Groq SDK
+- Swagger
+
+### Estructura interna relevante
+
+```text
+SynapseCode-ServiceChat/
+├── configs/
+│   ├── apps.js
+│   ├── prompts.config.js
+│   └── swagger-endpoints.js
+├── helpers/
+│   └── groq.service.js
+├── src/
+│   ├── chats/
+│   │   ├── chats.controller.js
+│   │   └── chats.routes.js
+│   ├── messages/
+│   │   ├── messages.controller.js
+│   │   └── messages.routes.js
+│   ├── explication/
+│   │   ├── explication.controller.js
+│   │   ├── codeChat.controller.js
+│   │   ├── codeProposal.controller.js
+│   │   └── explication.routes.js
+│   └── codeGeneration/
+│       ├── codeGeneration.controller.js
+│       └── codeGeneration.routes.js
+└── index.js
+```
+
+### Endpoints de chats
+
+```text
+POST   /api/v1/chats/batch-create
+GET    /api/v1/chats
+GET    /api/v1/chats/room-type
+DELETE /api/v1/chats/room/:roomId
+```
+
+### Endpoints de mensajes
+
+```text
+POST   /api/v1/messages
+GET    /api/v1/messages
+GET    /api/v1/messages/:messageId
+PUT    /api/v1/messages/:messageId
+DELETE /api/v1/messages/:messageId
+GET    /api/v1/messages/room/:roomId
+GET    /api/v1/messages/system/all
+POST   /api/v1/messages/system/create
+```
+
+### Endpoints de explicacion
+
+```text
+POST   /api/v1/explication/explain
+POST   /api/v1/explication
+GET    /api/v1/explication
+GET    /api/v1/explication/:id
+DELETE /api/v1/explication/:id
+```
+
+### Endpoints de chat sobre codigo
+
+```text
+POST   /api/v1/explication/chat/start
+POST   /api/v1/explication/chat/:chatId/message
+GET    /api/v1/explication/chat/:chatId
+DELETE /api/v1/explication/chat/:chatId
+GET    /api/v1/explication/chat/file/:fileId
+```
+
+### Endpoints de propuestas incrementales
+
+```text
+POST /api/v1/code-generation/propose
+GET  /api/v1/code-generation/proposal/:proposalId
+POST /api/v1/code-generation/proposal/:proposalId/approve
+POST /api/v1/code-generation/proposal/:proposalId/reject
+GET  /api/v1/code-generation/proposals/file/:fileId
+```
+
+### Capacidades de IA y comportamiento
+
+- `explication/explain` genera una explicacion de codigo.
+- el servicio soporta chat de codigo con historial.
+- el endpoint `POST /api/v1/explication/chat/:chatId/message` esta documentado como streaming SSE.
+- las propuestas incrementales de codigo se aprueban o rechazan por endpoint dedicado.
+- el servicio usa `GROQ_MODEL` y por defecto cae a `llama-3.3-70b-versatile`.
+
+### Variables de entorno relevantes
+
+```env
+PORT=3008
+MONGO_URI=mongodb://localhost:27017/SynapseCodeDB
+JWT_SECRET=...
+GROQ_API_KEY=...
+GROQ_MODEL=llama-3.3-70b-versatile
+```
+
+### Observaciones
+
+- aqui vive la parte de IA mas visible de la plataforma.
+- es el servicio al que `ServiceRoom` le pega cuando crea una sala.
+
+## SynapseCode-ServiceCodeSessions
+
+Ubicacion: `SynapseCode-ServiceCodeSessions/`  
+Puerto: `3009`  
+Base de datos: `MongoDB`
+
+### Que hace
+
+- guarda sesiones de codigo
+- versiona codigo por archivo
+- consulta por archivo, sala y version
+- borra historiales por archivo y por sala
+- administra la consola interactiva compartida
+
+### Stack y dependencias
+
+- Express 5
+- Mongoose
+- Swagger
+
+### Estructura interna relevante
+
+```text
+SynapseCode-ServiceCodeSessions/
+├── configs/
+├── helpers/
+│   └── code-execution.helper.js
+├── src/
+│   └── codeSessions/
+│       ├── codeSessions.controller.js
+│       ├── codeSessions.routes.js
+│       ├── codeExecutionConsole.controller.js
+│       ├── codeExecutionConsole.routes.js
+│       └── codeExecutionConsole.model.js
+└── index.js
+```
+
+### Endpoints de sesiones
+
+```text
+POST   /api/v1/codeSessions
+GET    /api/v1/codeSessions
+GET    /api/v1/codeSessions/:sessionId
+PUT    /api/v1/codeSessions/:id
+DELETE /api/v1/codeSessions/:id
+GET    /api/v1/codeSessions/file/:fileId
+GET    /api/v1/codeSessions/file/:fileId/latest
+GET    /api/v1/codeSessions/file/:fileId/version/:version
+GET    /api/v1/codeSessions/room/:roomId
+DELETE /api/v1/codeSessions/file/:fileId/all
+DELETE /api/v1/codeSessions/room/:roomId/all
+```
+
+### Endpoints de consola interactiva
+
+```text
+POST /api/v1/console/start
+GET  /api/v1/console/:consoleId
+GET  /api/v1/console/:consoleId/output
+POST /api/v1/console/:consoleId/input
+POST /api/v1/console/:consoleId/stop
+POST /api/v1/console/:consoleId/connect
+POST /api/v1/console/:consoleId/disconnect
+```
+
+### Como funciona hoy la consola
+
+- la llave funcional es `sessionId + fileId + roomId`.
+- si ya existe una consola activa para esa combinacion, el usuario se conecta a la existente.
+- si no existe, se crea una nueva y se arranca la ejecucion.
+- se guarda:
+  - `consoleOutput`
+  - usuarios activos
+  - historial de input
+  - errores
+  - estadisticas de ejecucion
+- la ejecucion usa un helper hacia Judge0.
+- el controller incluye un `TODO` real: la validacion de pertenencia a sala todavia no consulta al servicio de rooms; hoy esa funcion regresa `true`.
+- el input actualmente se procesa de forma simple y el codigo deja clara la intencion de evolucionarlo a un flujo mas dinamico.
+
+### Variables de entorno relevantes
+
+```env
+PORT=3009
+MONGO_URI=mongodb://localhost:27017/SynapseCodeDB
+JWT_SECRET=...
+JUDGE0_API_URL=https://ce.judge0.com
+JUDGE0_API_KEY=
+JUDGE0_API_HOST=judge0-ce.p.rapidapi.com
+```
+
+### Observaciones
+
+- esta es una de las piezas mas nuevas o mas ampliadas de la arquitectura.
+- no reemplaza a `ServiceExecutionCode`; lo complementa con la experiencia colaborativa de consola.
+
+## SynapseCode-ServiceExecutionCode
+
+Ubicacion: `SynapseCode-ServiceExecutionCode/`  
+Puerto: `3010`  
+Base de datos: `MongoDB`
+
+### Que hace
+
+- lista lenguajes soportados
+- ejecuta codigo sincronicamente
+- ejecuta codigo asincronicamente
+- consulta resultado por token
+- guarda auditoria e historial de ejecuciones
+- filtra ejecuciones por archivo y por sala
+
+### Stack y dependencias
+
+- Express 5
+- Mongoose
+- Axios
+- Swagger
+
+### Estructura interna relevante
+
+```text
+SynapseCode-ServiceExecutionCode/
+├── configs/
+├── helpers/
+│   └── Judge0.service.js
+├── src/
+│   └── codeExecutions/
+│       ├── codeExecutions.controller.js
+│       └── codeExecutions.routes.js
+└── index.js
+```
+
+### Endpoints
+
+```text
+GET    /api/v1/codeExecutions/languages
+POST   /api/v1/codeExecutions/run
+POST   /api/v1/codeExecutions/submit-async
+GET    /api/v1/codeExecutions/result/:token
+POST   /api/v1/codeExecutions
+GET    /api/v1/codeExecutions
+GET    /api/v1/codeExecutions/audit/all
+GET    /api/v1/codeExecutions/rate-limit/check
+GET    /api/v1/codeExecutions/:executionId
+GET    /api/v1/codeExecutions/file/:fileId
+GET    /api/v1/codeExecutions/room/:roomId
+DELETE /api/v1/codeExecutions/:id
+DELETE /api/v1/codeExecutions/file/:fileId/all
+DELETE /api/v1/codeExecutions/room/:roomId/all
+```
+
+### Comportamiento notable
+
+- `/languages` es publico.
+- `run` ejecuta codigo y espera resultado.
+- `submit-async` entrega token para polling posterior.
+- si `JUDGE0_API_URL` no existe o apunta a RapidAPI, el helper cae a una estrategia compatible.
+- el helper normaliza estados de Judge0 a nombres internos como:
+  - `EXITOSO`
+  - `ERROR_RUNTIME`
+  - `ERROR_COMPILACION`
+  - `TIMEOUT`
+  - `MEMORIA_EXCEDIDA`
+
+### Variables de entorno relevantes
+
+```env
+PORT=3010
+MONGO_URI=mongodb://localhost:27017/SynapseCodeDB
+JWT_SECRET=...
+JUDGE0_API_URL=https://ce.judge0.com
+JUDGE0_API_KEY=
+JUDGE0_API_HOST=judge0-ce.p.rapidapi.com
+```
+
+### Observaciones
+
+- es el ejecutor puro de codigo.
+- el repo tambien tiene logica de ejecucion en `ServiceCodeSessions`, pero ahi el objetivo es la consola colaborativa, no la API principal de ejecucion.
+
+## SynapseCode-ServiceFeedback
+
+Ubicacion: `SynapseCode-ServiceFeedback/`  
+Puerto: `3011`  
+Base de datos: `MongoDB`
+
+### Que hace
+
+- crea comentarios o sugerencias de la comunidad
+- lista comentarios publicamente
+- consulta detalle de comentario
+- permite editar comentario
+- permite borrar comentario
+- permite votar o quitar voto
+- permite moderar estado del comentario
+
+### Stack y dependencias
+
+- Express 5
+- Mongoose
+- Axios
+- Swagger
+
+### Endpoints
+
+```text
+GET  /api/v1/feedback/comments
+GET  /api/v1/feedback/comments/:commentId
+POST /api/v1/feedback/comments
+PUT  /api/v1/feedback/comments/:commentId
+PUT  /api/v1/feedback/comments/:commentId/status
+DELETE /api/v1/feedback/comments/:commentId
+POST /api/v1/feedback/comments/:commentId/vote
+```
+
+### Reglas funcionales documentadas en el propio servicio
+
+- `listComments` y `getComment` son publicos.
+- crear, editar, borrar y votar requieren JWT.
+- moderar `status` requiere `ADMIN_ROLE`.
+- el servicio esta pensado para sugerencias, comentarios y ranking por votos.
+
+### Variables de entorno relevantes
+
+```env
+PORT=3011
+MONGO_URI=mongodb://localhost:27017/SynapseCodeDB
+JWT_SECRET=...
+AUTH_SERVICE_URL=http://localhost:3006
+```
+
+### Observaciones
+
+- este servicio tiene README propio adicional dentro de su carpeta.
+- hoy existe como microservicio independiente, pero el orquestador raiz no lo levanta.
+
+## Consola interactiva compartida
+
+La consola compartida merece seccion aparte porque es una de las piezas mas caracteristicas de este repo.
+
+### Donde vive
+
+En `SynapseCode-ServiceCodeSessions`.
+
+### Que problema resuelve
+
+- permitir que varios usuarios vean la misma ejecucion
+- compartir salida de consola
+- registrar input enviado por usuarios
+- mantener contexto comun sobre una sesion de codigo
+
+### Endpoints
+
+```text
+POST /api/v1/console/start
+GET  /api/v1/console/:consoleId
+GET  /api/v1/console/:consoleId/output
+POST /api/v1/console/:consoleId/input
+POST /api/v1/console/:consoleId/stop
+POST /api/v1/console/:consoleId/connect
+POST /api/v1/console/:consoleId/disconnect
+```
+
+### Estado actual
+
+- ya existe modelo, controller y rutas
+- guarda salida, usuarios activos, errores e historial
+- reutiliza helper de ejecucion
+- la validacion real de pertenencia a la sala esta pendiente
+- hay espacio natural para evolucion a WebSocket o polling mas fino
+
+### Diferencia frente a ServiceExecutionCode
+
+- `ServiceExecutionCode` es la API general de ejecucion
+- `ServiceCodeSessions` agrega experiencia colaborativa, presencia y manejo compartido de consola
+
+## Lenguajes soportados en ejecucion
+
+El helper de Judge0 mapeado en `SynapseCode-ServiceExecutionCode/helpers/Judge0.service.js` soporta estos identificadores del sistema:
+
+- `JAVASCRIPT`
+- `PYTHON`
+- `JAVA`
+- `CSHARP`
+- `HTML_CSS`
+- `TYPESCRIPT`
+- `GO`
+- `RUST`
+- `CPP`
+- `C`
+- `BASH`
+- `SQL`
+- `PHP`
+- `RUBY`
+- `KOTLIN`
+- `SWIFT`
+- `R`
+- `HASKELL`
+- `DART`
+- `SCALA`
+- `ELIXIR`
+- `CLOJURE`
+- `OBJECTIVEC`
+- `FSHARP`
+- `GROOVY`
+- `ERLANG`
+- `PERL`
+- `PASCAL`
+- `LUA`
+- `ASSEMBLY`
+- `FORTRAN`
+- `PROLOG`
+- `JULIA`
+
+Eso deja la plataforma en 30+ lenguajes soportados a nivel de mapeo actual.
+
+## Instalacion
+
+### Requisitos previos
+
+- Node.js 18 o superior recomendado
+- pnpm 10.x
+- MongoDB local o accesible
+- PostgreSQL local o accesible
+- Git
+- credenciales de Groq si se usara IA
+- configuracion de Judge0 si se necesita algo distinto al fallback publico
+
+### Dependencias externas
+
+MongoDB:
+
+- los servicios `ServiceRoom`, `ServiceChat`, `ServiceCodeSessions`, `ServiceExecutionCode` y `ServiceFeedback` dependen de MongoDB
+- en el codigo se usa principalmente `MONGO_URI`, y en algunos casos tambien `URI_MONGO` como respaldo
+
+PostgreSQL:
+
+- `AuthService` depende de PostgreSQL
+
+### Instalacion de dependencias Node
+
+Desde la raiz:
+
+```bash
+pnpm install
+```
+
+O por servicio si quieres hacerlo manual:
+
+```bash
+cd AuthService
+pnpm install
+
+cd ..\SynapseCode-ServiceRoom
+pnpm install
+
+cd ..\SynapseCode-ServiceChat
+pnpm install
+
+cd ..\SynapseCode-ServiceCodeSessions
+pnpm install
+
+cd ..\SynapseCode-ServiceExecutionCode
+pnpm install
+
+cd ..\SynapseCode-ServiceFeedback
+pnpm install
+```
+
+## Configuracion de entorno
+
+### Archivos .env detectados en el repo
+
+Se detectaron estos archivos presentes:
+
+- `AuthService/.env`
+- `SynapseCode-ServiceRoom/.env`
+- `SynapseCode-ServiceChat/.env`
+- `SynapseCode-ServiceCodeSessions/.env`
+- `SynapseCode-ServiceExecutionCode/.env`
+
+Importante:
+
+- no se detecto `.env` dentro de `SynapseCode-ServiceFeedback` en esta revision del workspace
+- tampoco vi `.env.example` para todos los servicios, asi que la forma segura es crear o revisar manualmente cada `.env`
+
+### Variables compartidas recomendadas
+
+```env
+NODE_ENV=development
+JWT_SECRET=...
+JWT_ISSUER=SynapseCodeService
+JWT_AUDIENCE=SynapseCodeService
+```
+
+### MongoDB
+
+Segun el codigo, conviene definir:
+
+```env
+MONGO_URI=mongodb://localhost:27017/SynapseCodeDB
+```
+
+Algunos servicios tambien aceptan:
+
+```env
+URI_MONGO=mongodb://localhost:27017/SynapseCodeDB
+```
+
+### AuthService
 
 ```env
 PORT=3006
@@ -639,199 +973,604 @@ DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=SynapseCodeDB
 DB_USER=postgres
-DB_PASSWORD=your_password
+DB_PASSWORD=...
+JWT_SECRET=...
+JWT_ISSUER=SynapseCodeService
+JWT_AUDIENCE=SynapseCodeService
+JWT_EXPIRES_IN=24h
 JWT_REFRESH_EXPIRES_IN=7d
+SMTP_HOST=...
+SMTP_PORT=587
+SMTP_USER=...
+SMTP_PASSWORD=...
+CLOUDINARY_NAME=...
+CLOUDINARY_API_KEY=...
+CLOUDINARY_API_SECRET=...
 ```
 
-### ServiceChat (.env)
+### ServiceRoom
+
+```env
+PORT=3007
+MONGO_URI=mongodb://localhost:27017/SynapseCodeDB
+JWT_SECRET=...
+CHAT_SERVICE_URL=http://localhost:3008
+CODE_SESSIONS_SERVICE_URL=http://localhost:3009
+EXECUTION_CODE_SERVICE_URL=http://localhost:3010
+```
+
+### ServiceChat
 
 ```env
 PORT=3008
-GROQ_API_KEY=gsk_your_api_key_here
-GROQ_MODEL=mixtral-8x7b-32768
+MONGO_URI=mongodb://localhost:27017/SynapseCodeDB
+JWT_SECRET=...
+GROQ_API_KEY=...
+GROQ_MODEL=llama-3.3-70b-versatile
 ```
 
-### ServiceExecutionCode (.env)
+### ServiceCodeSessions
+
+```env
+PORT=3009
+MONGO_URI=mongodb://localhost:27017/SynapseCodeDB
+JWT_SECRET=...
+JUDGE0_API_URL=https://ce.judge0.com
+JUDGE0_API_KEY=
+JUDGE0_API_HOST=judge0-ce.p.rapidapi.com
+```
+
+### ServiceExecutionCode
 
 ```env
 PORT=3010
-JUDGE0_API_KEY=your_judge0_key_here
-JUDGE0_BASE_URL=https://judge0-api.com
-JUDGE0_TIMEOUT=30000
+MONGO_URI=mongodb://localhost:27017/SynapseCodeDB
+JWT_SECRET=...
+JUDGE0_API_URL=https://ce.judge0.com
+JUDGE0_API_KEY=
+JUDGE0_API_HOST=judge0-ce.p.rapidapi.com
 ```
 
----
+### ServiceFeedback
 
-## Testing con Postman
+```env
+PORT=3011
+MONGO_URI=mongodb://localhost:27017/SynapseCodeDB
+JWT_SECRET=...
+AUTH_SERVICE_URL=http://localhost:3006
+```
 
-### Importar Colección
+## Ejecucion
 
-1. Descargar colección:
-   ```
-   Endpoints/SynapseCode.postman_collection.json
-   ```
+### Opcion 1. Levantar desde la raiz
 
-2. En Postman:
-   - `File` → `Import` → Seleccionar archivo
-   - Se crearán carpetas por servicio
+El `package.json` raiz expone:
 
-### Configurar Environment
-
-En Postman, crear environment con:
 ```json
 {
-  "base_url_auth": "http://localhost:3006",
-  "base_url_room": "http://localhost:3007",
-  "base_url_chat": "http://localhost:3008",
-  "base_url_sessions": "http://localhost:3009",
-  "base_url_execution": "http://localhost:3010",
-  "token": ""
+  "scripts": {
+    "dev": "node scripts/dev.js",
+    "start": "node scripts/start.js"
+  }
 }
 ```
 
-### Flujo de Testing Recomendado
+Para desarrollo:
 
-1. **AuthService:**
-   - POST /api/v1/auth/login (Obtener token)
-   - Guardar token en variable de environment
+```bash
+pnpm dev
+```
 
-2. **ServiceRoom:**
-   - POST /api/v1/rooms (Crear sala)
-   - Guardar roomId y roomCode
-   - GET /api/v1/rooms (Listar salas)
-   - GET /api/v1/rooms/code/:code (Obtener por código)
+Para produccion:
 
-3. **ServiceChat:**
-   - GET /api/v1/chats?roomId=... (Ver chats de sala)
-   - POST /api/v1/messages (Enviar mensaje)
-   - GET /api/v1/messages?roomId=... (Ver mensajes)
+```bash
+pnpm start
+```
 
-4. **ServiceCodeSessions:**
-   - POST /api/v1/codeSessions (Guardar versión)
-   - GET /api/v1/codeSessions/file/:fileId (Ver historial)
+### Que levanta realmente el orquestador raiz
 
-5. **ServiceExecutionCode:**
-   - POST /api/v1/codeExecutions/run (Ejecutar código)
-   - GET /api/v1/codeExecutions/:executionId (Ver resultado)
+`scripts/dev.js` y `scripts/start.js` levantan:
 
----
+- `AuthService`
+- `SynapseCode-ServiceRoom`
+- `SynapseCode-ServiceChat`
+- `SynapseCode-ServiceCodeSessions`
+- `SynapseCode-ServiceExecutionCode`
+
+No levantan:
+
+- `SynapseCode-ServiceFeedback`
+
+Asi que `ServiceFeedback` se debe correr aparte si lo necesitas:
+
+```bash
+cd SynapseCode-ServiceFeedback
+pnpm dev
+```
+
+### Opcion 2. Levantar servicio por servicio
+
+AuthService:
+
+```bash
+cd AuthService
+pnpm dev
+```
+
+ServiceRoom:
+
+```bash
+cd SynapseCode-ServiceRoom
+pnpm dev
+```
+
+ServiceChat:
+
+```bash
+cd SynapseCode-ServiceChat
+pnpm dev
+```
+
+ServiceCodeSessions:
+
+```bash
+cd SynapseCode-ServiceCodeSessions
+pnpm dev
+```
+
+ServiceExecutionCode:
+
+```bash
+cd SynapseCode-ServiceExecutionCode
+pnpm dev
+```
+
+ServiceFeedback:
+
+```bash
+cd SynapseCode-ServiceFeedback
+pnpm dev
+```
+
+### Verificacion minima
+
+```bash
+curl http://localhost:3006/api/v1/health
+curl http://localhost:3007/api/v1/Health
+curl http://localhost:3008/api/v1/Health
+curl http://localhost:3009/api/v1/Health
+curl http://localhost:3010/api/v1/Health
+curl http://localhost:3011/api/v1/Health
+```
+
+## Swagger y uso de la API
+
+Cada servicio tiene Swagger.
+
+### URLs
+
+- AuthService: `http://localhost:3006/api/v1/docs`
+- ServiceRoom: `http://localhost:3007/api-docs`
+- ServiceChat: `http://localhost:3008/api-docs`
+- ServiceCodeSessions: `http://localhost:3009/api-docs`
+- ServiceExecutionCode: `http://localhost:3010/api-docs`
+- ServiceFeedback: `http://localhost:3011/api-docs`
+
+### Que sirve Swagger aqui
+
+- inspeccionar endpoints
+- ver request bodies
+- ver responses
+- probar endpoints
+- entender auth requerida
+
+### Como autenticarse
+
+1. hacer login en `AuthService`
+2. copiar el JWT
+3. usar `Authorization: Bearer <token>` o `x-token: <token>`
+4. pegarlo en Swagger cuando corresponda
+
+## Flujos principales
+
+### Flujo 1. Registro e ingreso
+
+1. `POST /api/v1/auth/register`
+2. opcionalmente verificacion por correo
+3. `POST /api/v1/auth/login`
+4. el cliente recibe token JWT
+5. el token se reusa contra room, chat, sessions, execution y feedback
+
+### Flujo 2. Crear sala y preparar colaboracion
+
+1. usuario autenticado llama `POST /api/v1/rooms`
+2. `ServiceRoom` crea la sala
+3. `ServiceRoom` crea la participacion del host
+4. `ServiceRoom` llama `POST /api/v1/chats/batch-create` en `ServiceChat`
+5. si chat responde bien, la sala queda con referencia de chats
+6. si chat falla en creacion inicial, el flujo actual revierte y responde error
+
+### Flujo 3. Agregar participantes
+
+1. crear participacion con `POST /api/v1/room-participations`
+2. consultar por sala o usuario con endpoints dedicados
+3. actualizar estado o salir con `leave`
+4. el servicio tambien intenta emitir mensajes de sistema al chat en ciertos eventos
+
+### Flujo 4. Crear y editar archivos
+
+1. `POST /api/v1/files`
+2. actualizar contenido con `PUT /api/v1/files/:fileId/content`
+3. renombrar, duplicar, reordenar o restaurar segun necesidad
+4. consultar historial de cambios por sala y archivo desde el endpoint de rooms
+
+### Flujo 5. Guardar versiones
+
+1. `POST /api/v1/codeSessions`
+2. consultar:
+   - todas
+   - por archivo
+   - por sala
+   - ultima por archivo
+   - una version especifica
+
+### Flujo 6. Ejecutar codigo
+
+1. `POST /api/v1/codeExecutions/run` para modo sincronico
+2. o `POST /api/v1/codeExecutions/submit-async` para asincronico
+3. consultar token con `GET /api/v1/codeExecutions/result/:token`
+4. revisar auditoria o historial por archivo y por sala
+
+### Flujo 7. Consola compartida
+
+1. `POST /api/v1/console/start`
+2. si la consola ya existe para esa sesion, el usuario se une
+3. consultar estado con `GET /api/v1/console/:consoleId`
+4. enviar input con `POST /api/v1/console/:consoleId/input`
+5. detener con `POST /api/v1/console/:consoleId/stop`
+
+### Flujo 8. Explicar codigo con IA
+
+1. `POST /api/v1/explication/explain`
+2. o crear explicacion manual con `POST /api/v1/explication`
+3. si se quiere conversacion continua, `POST /api/v1/explication/chat/start`
+4. mandar mensajes con `POST /api/v1/explication/chat/:chatId/message`
+
+### Flujo 9. Proponer mejoras incrementales
+
+1. `POST /api/v1/code-generation/propose`
+2. leer propuesta con `GET /api/v1/code-generation/proposal/:proposalId`
+3. aprobar o rechazar
+
+### Flujo 10. Feedback comunitario
+
+1. `POST /api/v1/feedback/comments`
+2. listar publicamente con `GET /api/v1/feedback/comments`
+3. votar con `POST /api/v1/feedback/comments/:commentId/vote`
+4. moderar estado por admin
+
+## Autenticacion
+
+### Fuente de verdad
+
+`AuthService` es el servicio de autenticacion central.
+
+### Formas de enviar token
+
+Header Authorization:
+
+```http
+Authorization: Bearer <JWT>
+```
+
+Header x-token:
+
+```http
+x-token: <JWT>
+```
+
+### Payload esperado de forma general
+
+Inferido del uso en controladores y middlewares:
+
+```json
+{
+  "userId": "uuid-o-id",
+  "id": "uuid-o-id",
+  "sub": "uuid-o-id",
+  "role": "USER_ROLE",
+  "username": "usuario"
+}
+```
+
+No todos los servicios leen exactamente la misma llave, por eso en varios controladores se ve el patron:
+
+```js
+req.user?.userId || req.user?.id || req.user?.sub
+```
+
+### Roles
+
+Roles globales validados en Auth:
+
+- `USER_ROLE`
+- `ADMIN_ROLE`
+
+Sub-roles de colaboracion observados en room:
+
+- `HOST_ROLE` en la representacion de conectados
+- `ANFITRION` en participaciones
+
+### Ejemplo rapido de login
+
+```bash
+curl -X POST http://localhost:3006/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"user@example.com\",\"password\":\"Password123!\"}"
+```
+
+## Base de datos
+
+### PostgreSQL
+
+Solo `AuthService` usa PostgreSQL.
+
+Objetos esperables:
+
+- usuarios
+- roles
+- verificaciones y tokens ligados a cuenta
+
+### MongoDB
+
+Los demas servicios usan MongoDB.
+
+Colecciones o dominios esperables:
+
+- rooms
+- room participations
+- files
+- chats
+- messages
+- explanations
+- code sessions
+- code execution consoles
+- code executions
+- feedback comments
+- feedback votes
+
+### Lectura practica
+
+- si falla PostgreSQL, se cae `AuthService`
+- si falla MongoDB, se ven afectados room, chat, sessions, execution y feedback
+
+## Testing
+
+### Swagger
+
+La forma mas rapida de probar cada servicio es Swagger.
+
+### Postman
+
+Archivos detectados:
+
+- `Endpoints/SynapseCode.postman_collection.json`
+- `SynapseCode/ROOMS_POSTMAN_ENDPOINTS.md`
+
+### Secuencia recomendada de testing
+
+1. login en `AuthService`
+2. crear sala en `ServiceRoom`
+3. crear archivo en `ServiceRoom`
+4. guardar sesion en `ServiceCodeSessions`
+5. ejecutar codigo en `ServiceExecutionCode`
+6. levantar consola compartida en `ServiceCodeSessions`
+7. crear mensaje o explicacion en `ServiceChat`
+8. crear comentario en `ServiceFeedback`
+
+### Ejemplos utiles
+
+Crear sala:
+
+```bash
+curl -X POST http://localhost:3007/api/v1/rooms \
+  -H "Authorization: Bearer TU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"roomName\":\"Mi sala\",\"roomLanguage\":\"PYTHON\"}"
+```
+
+Crear archivo:
+
+```bash
+curl -X POST http://localhost:3007/api/v1/files \
+  -H "Authorization: Bearer TU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"roomId\":\"ROOM_ID\",\"fileName\":\"main.py\",\"content\":\"print('hola')\"}"
+```
+
+Ejecutar codigo:
+
+```bash
+curl -X POST http://localhost:3010/api/v1/codeExecutions/run \
+  -H "Authorization: Bearer TU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"language\":\"PYTHON\",\"code\":\"print('hola')\"}"
+```
+
+Iniciar consola:
+
+```bash
+curl -X POST http://localhost:3009/api/v1/console/start \
+  -H "Authorization: Bearer TU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"sessionId\":\"SESSION_ID\",\"fileId\":\"FILE_ID\",\"roomId\":\"ROOM_ID\",\"code\":\"print('hola')\",\"language\":\"PYTHON\"}"
+```
+
+Crear comentario:
+
+```bash
+curl -X POST http://localhost:3011/api/v1/feedback/comments \
+  -H "Authorization: Bearer TU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"content\":\"Buenisima idea para la plataforma\"}"
+```
 
 ## Troubleshooting
 
-### Error: "ECONNREFUSED" en puerto 3007/3008/etc.
+### MongoDB no conecta
 
-**Causa:** Servicios no están levantados
+Sintomas:
 
-**Solución:**
-```bash
-# Opción 1: Levantar todos
-pnpm run dev
+- errores al arrancar servicios Mongo
+- errores de conexion a `MONGO_URI`
 
-# Opción 2: Verificar que estén levantados
-curl http://localhost:3006/api-docs
-curl http://localhost:3007/api-docs
-```
-
-### Error: "MongoDB connection failed"
-
-**Causa:** MongoDB no está corriendo
-
-**Solución:**
-```bash
-# Iniciar MongoDB
-mongod
-
-# Verificar conexión
-mongo --eval "db.version()"
-```
-
-### Error: "JWT validation failed"
-
-**Causa:** Token expirado o JWT_SECRET incorrecto
-
-**Solución:**
-1. Obtener nuevo token: `POST /api/v1/auth/login`
-2. Verificar `JWT_SECRET` en `.env`
-3. Asegurar que sea igual en todos los servicios
-
-### Error: "Service unavailable" en ServiceChat
-
-**Causa:** ServiceChat no responde (pero room se crea igual)
-
-**Solución:**
-1. Reiniciar ServiceChat
-2. Verificar `CHAT_SERVICE_URL` en `.env`
-3. Logs: `console.debug('Chat service error:', err?.message)`
-
-### Error: "CORS error"
-
-**Causa:** Headers no configurados correctamente
-
-**Solución:**
-- Swagger UI maneja CORS automáticamente
-- Si es desde Frontend, configurar CORS en nginx/proxy
-
----
-
-## Monitoreo
-
-### Verificar Servicios
+Revision:
 
 ```bash
-# Health check de cada servicio
-curl http://localhost:3006/api-docs
-curl http://localhost:3007/api-docs
-curl http://localhost:3008/api-docs
-curl http://localhost:3009/api-docs
-curl http://localhost:3010/api-docs
-
-# Todos deberían retornar HTML (Swagger)
+mongosh
 ```
 
-### Logs
+Cosas a revisar:
 
-Cada servicio imprime logs en consola:
-- INFO - Operaciones normales
-- WARN - Advertencias (ej: ServiceChat caído)
-- ERROR - Errores críticos
+- que MongoDB este corriendo
+- que `MONGO_URI` o `URI_MONGO` sean correctas
+- que la base `SynapseCodeDB` sea accesible
+
+### PostgreSQL no conecta
+
+Sintomas:
+
+- `AuthService` no arranca
+- errores desde `configs/db.js`
+
+Revision:
+
+```bash
+psql -U postgres
+```
+
+Cosas a revisar:
+
+- `DB_HOST`
+- `DB_PORT`
+- `DB_NAME`
+- `DB_USER`
+- `DB_PASSWORD`
+
+### JWT invalido
+
+Sintomas:
+
+- 401 o 403 en servicios protegidos
+
+Revision:
+
+- hacer login nuevamente
+- verificar que `JWT_SECRET` sea la misma entre servicios
+- revisar expiracion del token
+
+### Swagger no abre
+
+Revisar:
+
+- puerto correcto
+- ruta correcta
+- diferencia entre `docs` y `api-docs`
+
+Resumen:
+
+- AuthService: `/api/v1/docs`
+- resto: `/api-docs`
+
+### ServiceChat falla al crear sala
+
+Sintoma:
+
+- crear sala responde error por indisponibilidad del servicio de chat
+
+Revisar:
+
+- que `ServiceChat` este arriba
+- que `CHAT_SERVICE_URL` sea correcto
+- logs de room y chat
+
+### Groq falla
+
+Revisar:
+
+- `GROQ_API_KEY`
+- cuota o acceso de la cuenta
+- valor de `GROQ_MODEL`
+
+### Judge0 falla
+
+Revisar:
+
+- `JUDGE0_API_URL`
+- si se usa RapidAPI, `JUDGE0_API_KEY` y `JUDGE0_API_HOST`
+- conectividad hacia `https://ce.judge0.com`
+
+### ServiceFeedback no aparece al usar el script raiz
+
+Causa:
+
+- los scripts raiz no lo incluyen
+
+Solucion:
+
+```bash
+cd SynapseCode-ServiceFeedback
+pnpm dev
+```
+
+## Diferencias importantes del estado actual
+
+Estas son cosas importantes para no confiar ciegamente en documentacion vieja:
+
+- los contadores de endpoints de README anteriores no siempre coinciden con las rutas reales.
+- `AuthService` no expone `/api-docs`; expone `/api/v1/docs`.
+- `AuthService` usa `/api/v1/health`; el resto `/api/v1/Health`.
+- el script raiz no levanta `ServiceFeedback`.
+- la validacion de pertenencia real a sala en la consola compartida todavia esta pendiente.
+- en los README viejos aparecian claims como 35 lenguajes exactos o ciertos roles extra; aqui se priorizo lo comprobable contra codigo.
+
+## Notas de desarrollo
+
+### Sobre `SynapseCode/`
+
+La carpeta `SynapseCode/` sigue en el repo y contiene piezas del monolito anterior. Sirve para:
+
+- referencia historica
+- comparar la evolucion a microservicios
+- revisar endpoints o estructuras que existian antes
+
+No debe tomarse como la fuente principal de la arquitectura actual.
+
+### Estado de madurez observado
+
+Fortalezas:
+
+- separacion clara por dominios
+- Swagger en todos los servicios
+- auth centralizada
+- soporte de IA y Judge0
+- consola colaborativa ya modelada
+
+Pendientes visibles desde codigo:
+
+- consolidar mejor la validacion inter-servicio de pertenencia a sala
+- alinear naming de health/docs entre servicios
+- incluir `ServiceFeedback` en scripts raiz
+- endurecer mas la documentacion y ejemplos de entorno
+
+### Recomendacion para trabajar en este repo
+
+- usar `README.md` como documento principal
+- usar Swagger para el detalle request/response
+- revisar controladores y rutas si hay dudas de comportamiento fino
+- tratar `SynapseCode/` como legado o referencia, no como la app activa
 
 ---
 
-## Notas de Desarrollo
-
-### Cambios Respecto al Monolito Original
-
-| Feature | Monolito | Microservicios | Cambio |
-|---------|----------|----------------|--------|
-| Arquitectura | Único servidor | 6 servicios | Mejor escalabilidad |
-| Chats en rooms | No incluidos | Incluidos | Mejor UX |
-| Resiliencia | N/A | Fallback si ServiceChat cae | Más robusto |
-| Swagger | Local | Uno por servicio | Mejor documentación |
-| JWT | Centralizado | Validación en c/servicio | Más secure |
-| BD | Monolito | Compartida | Mismo modelo |
-
-### Planes Futuros
-
-- [ ] API Gateway (Kong/Nginx)
-- [ ] Circuit Breaker (Resilience4j)
-- [ ] Rate Limiting por servicio
-- [ ] Caché distribuido (Redis)
-- [ ] Event-driven (RabbitMQ/Kafka)
-- [ ] Docker + Kubernetes
-- [ ] Observabilidad (ELK Stack)
-
----
-
-## Soporte
-
-Para reportar problemas o sugerencias:
-1. Revisar esta documentación
-2. Consultar `Swagger` de cada servicio
-3. Verificar `.env` y conexiones de BD
-4. Revisar logs en consola
-
----
-
-**Última actualización:** 6 de abril de 2026  
-**Status:** Completado y validado  
-**Versión:** 1.0
+Ultima actualizacion de este README: 28 de abril de 2026.  
+Estado del documento: consolidado y expandido en una sola fuente.
