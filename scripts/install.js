@@ -7,6 +7,7 @@ const services = [
   { name: 'SynapseCode-ServiceCodeSessions', path: 'SynapseCode-ServiceCodeSessions' },
   { name: 'SynapseCode-ServiceExecutionCode', path: 'SynapseCode-ServiceExecutionCode' },
   { name: 'SynapseCode-ServiceFeedback', path: 'SynapseCode-ServiceFeedback' },
+  { name: 'SynapseCode-ServiceGit', path: 'SynapseCode-ServiceGit' },
   { name: 'SynapseCode-ServiceRoom', path: 'SynapseCode-ServiceRoom' },
 ];
 

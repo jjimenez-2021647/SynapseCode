@@ -50,6 +50,14 @@ const services = [
     healthUrl: 'http://localhost:3011/api/v1/Health',
     docsUrl: 'http://localhost:3011/api-docs',
   },
+  {
+    name: 'ServiceGit',
+    path: 'SynapseCode-ServiceGit',
+    port: 3012,
+    color: '\x1b[37m',
+    healthUrl: 'http://localhost:3012/health',
+    docsUrl: 'http://localhost:3012/api-docs',
+  },
 ];
 
 const adminCredentials = {

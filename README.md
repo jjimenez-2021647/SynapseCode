@@ -27,6 +27,7 @@ Este README esta pensado para ser la fuente unica de verdad del repo. Junta en u
 - [SynapseCode-ServiceChat](#synapsecode-servicechat)
 - [SynapseCode-ServiceCodeSessions](#synapsecode-servicecodesessions)
 - [SynapseCode-ServiceExecutionCode](#synapsecode-serviceexecutioncode)
+- [SynapseCode-ServiceGit](#synapsecode-servicegit)
 - [SynapseCode-ServiceFeedback](#synapsecode-servicefeedback)
 - [Consola interactiva compartida](#consola-interactiva-compartida)
 - [Lenguajes soportados en ejecucion](#lenguajes-soportados-en-ejecucion)
@@ -75,6 +76,7 @@ SynapseCode/                        Monolito anterior y archivos de referencia
 SynapseCode-ServiceChat/            Chats, mensajes, explicaciones y propuestas IA
 SynapseCode-ServiceCodeSessions/    Sesiones de codigo y consola compartida
 SynapseCode-ServiceExecutionCode/   Ejecucion de codigo y Judge0
+SynapseCode-ServiceGit/             Versionado Git y workspace por usuario/sala
 SynapseCode-ServiceFeedback/        Comentarios, votos y feedback comunitario
 SynapseCode-ServiceRoom/            Salas, participaciones y archivos
 README.md                           Documento principal
@@ -109,6 +111,8 @@ Cliente / Frontend
         |
         +--> ServiceExecutionCode (3010) ----------> MongoDB + Judge0
         |
+        +--> ServiceGit (3012) --------------------> MongoDB + simple-git
+        |
         +--> ServiceFeedback (3011) ---------------> MongoDB
 ```
 
@@ -119,6 +123,7 @@ Patrones de comunicacion que si se ven en el codigo:
 - `ServiceRoom` tiene configuradas URLs hacia `ServiceCodeSessions` y `ServiceExecutionCode`.
 - `ServiceChat` usa Groq para explicaciones y propuestas.
 - `ServiceExecutionCode` usa Judge0.
+- `ServiceGit` encapsula operaciones Git con `simple-git` y workspace local.
 - `ServiceCodeSessions` usa un helper de ejecucion para su consola interactiva.
 - todos los servicios protegidos validan JWT.
 
@@ -131,6 +136,7 @@ Patrones de comunicacion que si se ven en el codigo:
 | ServiceChat | 3008 | MongoDB | Express, Mongoose, Groq | Chat, mensajes, explicaciones, IA |
 | ServiceCodeSessions | 3009 | MongoDB | Express, Mongoose | Historial de codigo y consola compartida |
 | ServiceExecutionCode | 3010 | MongoDB | Express, Mongoose, Judge0 | Ejecucion de codigo |
+| ServiceGit | 3012 | MongoDB | Express, Mongoose, simple-git | Versionado Git y repos locales |
 | ServiceFeedback | 3011 | MongoDB | Express, Mongoose | Comentarios y votos |
 
 ## Documentacion y health checks
@@ -142,12 +148,14 @@ Patrones de comunicacion que si se ven en el codigo:
 | ServiceChat | `http://localhost:3008/api-docs` | `http://localhost:3008/api/v1/Health` |
 | ServiceCodeSessions | `http://localhost:3009/api-docs` | `http://localhost:3009/api/v1/Health` |
 | ServiceExecutionCode | `http://localhost:3010/api-docs` | `http://localhost:3010/api/v1/Health` |
+| ServiceGit | sin Swagger detectado | `http://localhost:3012/health` |
 | ServiceFeedback | `http://localhost:3011/api-docs` | `http://localhost:3011/api/v1/Health` |
 
 Nota importante:
 
 - `AuthService` usa `/api/v1/docs` y `health` en minuscula.
 - los demas servicios usan `/api-docs` y `Health` con H mayuscula.
+- `ServiceGit` hoy expone `GET /health` y no trae Swagger montado en este workspace.
 
 ## Servicios detallados
 
@@ -736,6 +744,113 @@ JUDGE0_API_HOST=judge0-ce.p.rapidapi.com
 - es el ejecutor puro de codigo.
 - el repo tambien tiene logica de ejecucion en `ServiceCodeSessions`, pero ahi el objetivo es la consola colaborativa, no la API principal de ejecucion.
 
+## SynapseCode-ServiceGit
+
+Ubicacion: `SynapseCode-ServiceGit/`  
+Puerto: `3012`  
+Base de datos: `MongoDB`
+
+### Que hace
+
+- crea repositorios Git individuales por usuario
+- crea repositorios Git compartidos por sala
+- clona repositorios remotos al workspace del servicio
+- ejecuta comandos Git controlados desde API
+- registra historial de comandos ejecutados
+- conecta remotos y sincroniza con GitHub
+- mantiene metadatos como rama actual, remoto y ultimo commit
+
+### Stack y dependencias
+
+- Express
+- Mongoose
+- simple-git
+
+### Estructura interna relevante
+
+```text
+SynapseCode-ServiceGit/
+├── configs/
+├── middleware/
+├── services/
+│   └── gitService.js
+├── src/
+│   ├── repositories/
+│   │   ├── repositories.controller.js
+│   │   ├── repositories.model.js
+│   │   └── repositories.routes.js
+│   └── commands/
+│       ├── commands.controller.js
+│       ├── commands.model.js
+│       └── commands.routes.js
+├── workspace/
+├── index.js
+└── package.json
+```
+
+### Endpoints de repositorios
+
+```text
+POST   /api/repositories/init
+GET    /api/repositories/:type/:identifier
+GET    /api/repositories/user/:userId
+GET    /api/repositories/room/:roomId
+POST   /api/repositories/:type/:identifier/remote
+DELETE /api/repositories/:type/:identifier
+```
+
+### Endpoints de comandos
+
+```text
+POST /api/commands/execute
+GET  /api/commands/history/:repositoryId
+GET  /api/commands/user/:userId
+GET  /api/commands/stats/:repositoryId
+GET  /health
+```
+
+### Comandos Git soportados
+
+- `init`
+- `clone`
+- `add`
+- `commit`
+- `amend`
+- `push`
+- `pull`
+- `status`
+- `log`
+- `branch`
+- `remote`
+- `switch`
+- `rename-branch`
+- `merge`
+- `checkout`
+
+### Comportamiento notable
+
+- el workspace local vive dentro de `SynapseCode-ServiceGit/workspace/`
+- el repo se resuelve por `type` e `identifier`, separando `individual` y `shared`
+- `clone` crea el registro del repositorio si aun no existe
+- `remote` soporta `action: "add"` y actua como add/update de remoto
+- `push` acepta `args.token` para autenticacion puntual por HTTPS y no persiste ese token
+- el servicio guarda historial de comandos con estado, argumentos, resultado y error
+- al ejecutar comandos clave sincroniza rama actual, remoto `origin` y URL asociada
+
+### Variables de entorno relevantes
+
+```env
+PORT=3012
+MONGODB_URI=mongodb://localhost:27017/synapsecode-servicegit
+NODE_ENV=development
+```
+
+### Observaciones
+
+- este servicio no esta incluido hoy en los scripts raiz `dev` y `start`
+- no se detecto Swagger montado; la superficie principal es REST puro
+- usa `simple-git`, asi que depende de tener Git disponible en el entorno
+
 ## SynapseCode-ServiceFeedback
 
 Ubicacion: `SynapseCode-ServiceFeedback/`  
@@ -777,6 +892,16 @@ POST /api/v1/feedback/comments/:commentId/vote
 - crear, editar, borrar y votar requieren JWT.
 - moderar `status` requiere `ADMIN_ROLE`.
 - el servicio esta pensado para sugerencias, comentarios y ranking por votos.
+- editar comentario solo se permite dentro de 30 minutos desde su creacion.
+- el voto es toggle: si vuelves a votar el mismo comentario, el voto se elimina.
+- el listado soporta paginacion, busqueda por texto y orden por popularidad.
+
+### Modelo de datos y busqueda
+
+- `feedback_comments` guarda `content`, `voteCount`, `isEdited`, `editedAt`, `userId` y timestamps
+- `feedback_votes` guarda la relacion `commentId + userId`
+- hay indice de texto sobre `content`
+- hay indice unico sobre `{ commentId, userId }` para impedir votos duplicados
 
 ### Variables de entorno relevantes
 
@@ -791,6 +916,7 @@ AUTH_SERVICE_URL=http://localhost:3006
 
 - este servicio tiene README propio adicional dentro de su carpeta.
 - hoy existe como microservicio independiente, pero el orquestador raiz no lo levanta.
+- su README tambien documenta respuestas estandar `success/message/data` y codigos de error de negocio.
 
 ## Consola interactiva compartida
 
@@ -889,6 +1015,7 @@ Eso deja la plataforma en 30+ lenguajes soportados a nivel de mapeo actual.
 MongoDB:
 
 - los servicios `ServiceRoom`, `ServiceChat`, `ServiceCodeSessions`, `ServiceExecutionCode` y `ServiceFeedback` dependen de MongoDB
+- `ServiceGit` tambien depende de MongoDB y en su implementacion actual usa `MONGODB_URI`
 - en el codigo se usa principalmente `MONGO_URI`, y en algunos casos tambien `URI_MONGO` como respaldo
 
 PostgreSQL:
@@ -921,6 +1048,9 @@ pnpm install
 cd ..\SynapseCode-ServiceExecutionCode
 pnpm install
 
+cd ..\SynapseCode-ServiceGit
+pnpm install
+
 cd ..\SynapseCode-ServiceFeedback
 pnpm install
 ```
@@ -936,6 +1066,7 @@ Se detectaron estos archivos presentes:
 - `SynapseCode-ServiceChat/.env`
 - `SynapseCode-ServiceCodeSessions/.env`
 - `SynapseCode-ServiceExecutionCode/.env`
+- `SynapseCode-ServiceGit/.env`
 
 Importante:
 
@@ -1031,6 +1162,14 @@ JUDGE0_API_KEY=
 JUDGE0_API_HOST=judge0-ce.p.rapidapi.com
 ```
 
+### ServiceGit
+
+```env
+PORT=3012
+MONGODB_URI=mongodb://localhost:27017/synapsecode-servicegit
+NODE_ENV=development
+```
+
 ### ServiceFeedback
 
 ```env
@@ -1079,9 +1218,15 @@ pnpm start
 
 No levantan:
 
+- `SynapseCode-ServiceGit`
 - `SynapseCode-ServiceFeedback`
 
-Asi que `ServiceFeedback` se debe correr aparte si lo necesitas:
+Asi que `ServiceGit` y `ServiceFeedback` se deben correr aparte si los necesitas:
+
+```bash
+cd SynapseCode-ServiceGit
+pnpm dev
+```
 
 ```bash
 cd SynapseCode-ServiceFeedback
@@ -1125,6 +1270,13 @@ cd SynapseCode-ServiceExecutionCode
 pnpm dev
 ```
 
+ServiceGit:
+
+```bash
+cd SynapseCode-ServiceGit
+pnpm dev
+```
+
 ServiceFeedback:
 
 ```bash
@@ -1141,6 +1293,7 @@ curl http://localhost:3008/api/v1/Health
 curl http://localhost:3009/api/v1/Health
 curl http://localhost:3010/api/v1/Health
 curl http://localhost:3011/api/v1/Health
+curl http://localhost:3012/health
 ```
 
 ## Swagger y uso de la API
@@ -1154,6 +1307,7 @@ Cada servicio tiene Swagger.
 - ServiceChat: `http://localhost:3008/api-docs`
 - ServiceCodeSessions: `http://localhost:3009/api-docs`
 - ServiceExecutionCode: `http://localhost:3010/api-docs`
+- ServiceGit: sin Swagger detectado
 - ServiceFeedback: `http://localhost:3011/api-docs`
 
 ### Que sirve Swagger aqui
@@ -1242,7 +1396,15 @@ Cada servicio tiene Swagger.
 2. leer propuesta con `GET /api/v1/code-generation/proposal/:proposalId`
 3. aprobar o rechazar
 
-### Flujo 10. Feedback comunitario
+### Flujo 10. Versionado Git
+
+1. inicializar repo con `POST /api/repositories/init`
+2. o clonar repo con `POST /api/commands/execute` usando `command: "clone"`
+3. vincular remoto con `POST /api/repositories/:type/:identifier/remote` o `command: "remote"`
+4. versionar con `add`, `commit`, `branch`, `merge`, `push` y `pull`
+5. revisar historial con `GET /api/commands/history/:repositoryId`
+
+### Flujo 11. Feedback comunitario
 
 1. `POST /api/v1/feedback/comments`
 2. listar publicamente con `GET /api/v1/feedback/comments`
@@ -1336,6 +1498,8 @@ Colecciones o dominios esperables:
 - code sessions
 - code execution consoles
 - code executions
+- git repositories
+- git commands
 - feedback comments
 - feedback votes
 
@@ -1366,7 +1530,8 @@ Archivos detectados:
 5. ejecutar codigo en `ServiceExecutionCode`
 6. levantar consola compartida en `ServiceCodeSessions`
 7. crear mensaje o explicacion en `ServiceChat`
-8. crear comentario en `ServiceFeedback`
+8. clonar o inicializar repo en `ServiceGit`
+9. crear comentario en `ServiceFeedback`
 
 ### Ejemplos utiles
 
@@ -1413,6 +1578,22 @@ curl -X POST http://localhost:3011/api/v1/feedback/comments \
   -H "Authorization: Bearer TU_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{\"content\":\"Buenisima idea para la plataforma\"}"
+```
+
+Clonar repositorio Git:
+
+```bash
+curl -X POST http://localhost:3012/api/commands/execute \
+  -H "Content-Type: application/json" \
+  -d "{\"userId\":\"user123\",\"type\":\"individual\",\"identifier\":\"user123\",\"command\":\"clone\",\"args\":{\"url\":\"https://github.com/usuario/repo.git\",\"branch\":\"main\"}}"
+```
+
+Agregar remoto Git:
+
+```bash
+curl -X POST http://localhost:3012/api/commands/execute \
+  -H "Content-Type: application/json" \
+  -d "{\"userId\":\"user123\",\"type\":\"individual\",\"identifier\":\"user123\",\"command\":\"remote\",\"args\":{\"action\":\"add\",\"name\":\"origin\",\"url\":\"https://github.com/usuario/repo.git\"}}"
 ```
 
 ## Troubleshooting
@@ -1523,6 +1704,28 @@ cd SynapseCode-ServiceFeedback
 pnpm dev
 ```
 
+### ServiceGit no aparece al usar el script raiz
+
+Causa:
+
+- los scripts raiz no lo incluyen
+
+Solucion:
+
+```bash
+cd SynapseCode-ServiceGit
+pnpm dev
+```
+
+### ServiceGit no puede clonar o hacer push
+
+Revisar:
+
+- que Git este instalado en el entorno
+- conectividad a la URL remota
+- que el remoto use HTTPS si vas a mandar `args.token` en `push`
+- que `MONGODB_URI` este configurado si el servicio no arranca
+
 ## Diferencias importantes del estado actual
 
 Estas son cosas importantes para no confiar ciegamente en documentacion vieja:
@@ -1530,7 +1733,9 @@ Estas son cosas importantes para no confiar ciegamente en documentacion vieja:
 - los contadores de endpoints de README anteriores no siempre coinciden con las rutas reales.
 - `AuthService` no expone `/api-docs`; expone `/api/v1/docs`.
 - `AuthService` usa `/api/v1/health`; el resto `/api/v1/Health`.
+- `ServiceGit` usa `GET /health` y no sigue la convencion `api/v1/Health`.
 - el script raiz no levanta `ServiceFeedback`.
+- el script raiz tampoco levanta `ServiceGit`.
 - la validacion de pertenencia real a sala en la consola compartida todavia esta pendiente.
 - en los README viejos aparecian claims como 35 lenguajes exactos o ciertos roles extra; aqui se priorizo lo comprobable contra codigo.
 
@@ -1561,6 +1766,7 @@ Pendientes visibles desde codigo:
 - consolidar mejor la validacion inter-servicio de pertenencia a sala
 - alinear naming de health/docs entre servicios
 - incluir `ServiceFeedback` en scripts raiz
+- incluir `ServiceGit` en scripts raiz
 - endurecer mas la documentacion y ejemplos de entorno
 
 ### Recomendacion para trabajar en este repo

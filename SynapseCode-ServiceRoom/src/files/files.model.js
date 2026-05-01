@@ -39,6 +39,11 @@ const FileSchema = new Schema(
             },
             uppercase: true,
         },
+        parentFolderId: {
+            type: Schema.Types.ObjectId,
+            ref: 'Folder',
+            default: null,
+        },
         currentCode: {
             type: String,
             required: false,
@@ -92,7 +97,7 @@ const FileSchema = new Schema(
     }
 );
 
-FileSchema.index({ roomId: 1, fileName: 1, fileExtension: 1 }, { unique: true });
+FileSchema.index({ roomId: 1, parentFolderId: 1, fileName: 1, fileExtension: 1 }, { unique: true });
 FileSchema.index({ roomId: 1, isActive: 1 });
 FileSchema.index({ createdByUserId: 1 });
 FileSchema.index({ roomId: 1, displayOrder: 1 });

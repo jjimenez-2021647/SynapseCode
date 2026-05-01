@@ -1,6 +1,14 @@
 'use strict'
 import File from './files.model.js';
+import Folder from '../folders/folders.model.js';
 import Room from '../rooms/rooms.model.js';
+import {
+    buildExportEntries,
+    buildFileExplorerTree,
+    buildZipArchive,
+    ensureFolderBelongsToRoom,
+    normalizeOptionalObjectId,
+} from '../../helpers/file-tree.helpers.js';
 
 const getRequesterUserId = (req) =>
     req.user?.userId || req.user?.id || req.user?.sub || null;
@@ -15,12 +23,89 @@ const LANGUAGE_EXTENSIONS = {
 };
 
 const isExtensionAllowed = (fileExtension, roomLanguage) => {
-    // Si roomLanguage es null (multilenguaje), permite todas
     if (!roomLanguage) return true;
 
     const allowedExtensions = LANGUAGE_EXTENSIONS[roomLanguage];
     return allowedExtensions?.includes(fileExtension.toLowerCase());
+};
+
+const resolveParentFolderForRoom = async ({ roomId, parentFolderId }) => {
+    const normalizedParentFolderId = normalizeOptionalObjectId(parentFolderId);
+
+    if (parentFolderId && !normalizedParentFolderId) {
+        return {
+            error: {
+                status: 400,
+                message: 'parentFolderId invalido',
+                code: 'INVALID_PARENT_FOLDER_ID',
+            },
+        };
+    }
+
+    if (!normalizedParentFolderId) {
+        return { parentFolderId: null, parentFolder: null };
+    }
+
+    const parentFolder = await Folder.findById(normalizedParentFolderId);
+    if (!parentFolder || !parentFolder.isActive) {
+        return {
+            error: {
+                status: 404,
+                message: 'Carpeta padre no encontrada',
+                code: 'PARENT_FOLDER_NOT_FOUND',
+            },
+        };
+    }
+
+    if (!ensureFolderBelongsToRoom(parentFolder, roomId)) {
+        return {
+            error: {
+                status: 400,
+                message: 'La carpeta padre no pertenece a la sala indicada',
+                code: 'INVALID_PARENT_FOLDER_ROOM',
+            },
+        };
+    }
+
+    return { parentFolderId: normalizedParentFolderId, parentFolder };
+};
+
+const buildScopedFileFilter = ({ roomId, parentFolderId, fileName, fileExtension, excludeFileId }) => {
+    const filter = {
+        roomId,
+        parentFolderId: parentFolderId || null,
+        fileName: String(fileName).trim(),
+        fileExtension: String(fileExtension).toLowerCase(),
     };
+
+    if (excludeFileId) {
+        filter._id = { $ne: excludeFileId };
+    }
+
+    return filter;
+};
+
+const ensureScopedFileNameAvailable = async ({
+    roomId,
+    parentFolderId,
+    fileName,
+    fileExtension,
+    excludeFileId,
+}) => {
+    const existingFile = await File.findOne(
+        buildScopedFileFilter({
+            roomId,
+            parentFolderId,
+            fileName,
+            fileExtension,
+            excludeFileId,
+        })
+    )
+        .select('_id')
+        .lean();
+
+    return !existingFile;
+};
 
 /**
  * Crear nuevo archivo
@@ -28,12 +113,12 @@ const isExtensionAllowed = (fileExtension, roomLanguage) => {
 export const createFile = async (req, res) => {
     try {
         const userId = getRequesterUserId(req);
-        const { roomId, fileName, fileExtension, language, currentCode } = req.body;
+        const { roomId, fileName, fileExtension, language, currentCode, parentFolderId } = req.body;
 
         if (!userId) {
             return res.status(401).json({
                 success: false,
-                message: 'Token inválido',
+                message: 'Token invÃ¡lido',
                 error: 'UNAUTHORIZED',
             });
         }
@@ -46,7 +131,6 @@ export const createFile = async (req, res) => {
             });
         }
 
-        // Verificar que sala existe
         const room = await Room.findById(roomId);
         if (!room) {
             return res.status(404).json({
@@ -56,7 +140,6 @@ export const createFile = async (req, res) => {
             });
         }
 
-        // Validar que la extensión sea compatible con el tipo de sala
         if (!isExtensionAllowed(fileExtension, room.roomLanguage)) {
             const allowedExts = room.roomLanguage
                 ? LANGUAGE_EXTENSIONS[room.roomLanguage].join(', ')
@@ -64,23 +147,31 @@ export const createFile = async (req, res) => {
 
             return res.status(400).json({
                 success: false,
-                message: `Esta sala requiere archivos con extensión: ${allowedExts}`,
+                message: `Esta sala requiere archivos con extensiÃ³n: ${allowedExts}`,
                 error: 'INVALID_FILE_EXTENSION_FOR_ROOM',
             });
         }
 
-        // Verificar si ya existe un archivo con ese nombre
-        const existingFile = await File.findOne({
+        const parentFolderResult = await resolveParentFolderForRoom({ roomId, parentFolderId });
+        if (parentFolderResult.error) {
+            return res.status(parentFolderResult.error.status).json({
+                success: false,
+                message: parentFolderResult.error.message,
+                error: parentFolderResult.error.code,
+            });
+        }
+
+        const isAvailable = await ensureScopedFileNameAvailable({
             roomId,
-            fileName: fileName.trim(),
-            fileExtension: fileExtension.toLowerCase(),
-            isActive: true,
+            parentFolderId: parentFolderResult.parentFolderId,
+            fileName,
+            fileExtension,
         });
 
-        if (existingFile) {
+        if (!isAvailable) {
             return res.status(409).json({
                 success: false,
-                message: `Ya existe un archivo '${fileName}.${fileExtension}' en esta sala`,
+                message: `Ya existe un archivo '${fileName}.${fileExtension}' en esta carpeta`,
                 error: 'FILE_ALREADY_EXISTS',
             });
         }
@@ -90,6 +181,7 @@ export const createFile = async (req, res) => {
             fileName: fileName.trim(),
             fileExtension: fileExtension.toLowerCase(),
             language: language || 'JAVASCRIPT',
+            parentFolderId: parentFolderResult.parentFolderId,
             currentCode: currentCode || '',
             createdByUserId: userId,
             lastModifiedByUserId: userId,
@@ -121,7 +213,7 @@ export const getFilesByUser = async (req, res) => {
         if (!userId) {
             return res.status(401).json({
                 success: false,
-                message: 'Token inválido',
+                message: 'Token invÃ¡lido',
                 error: 'UNAUTHORIZED',
             });
         }
@@ -177,6 +269,47 @@ export const getFilesByRoom = async (req, res) => {
             success: false,
             message: 'Error obteniendo archivos de la sala',
             error: 'GET_FILES_BY_ROOM_ERROR',
+        });
+    }
+};
+
+export const getFilesTreeByRoom = async (req, res) => {
+    try {
+        const { roomId } = req.params;
+
+        if (!roomId) {
+            return res.status(400).json({
+                success: false,
+                message: 'roomId es obligatorio',
+                error: 'MISSING_ROOM_ID',
+            });
+        }
+
+        const [room, folders, files] = await Promise.all([
+            Room.findById(roomId).select('roomName roomCode').lean(),
+            Folder.find({ roomId, isActive: true }).sort({ displayOrder: 1, folderName: 1 }).lean(),
+            File.find({ roomId, isActive: true }).sort({ displayOrder: 1, fileName: 1 }).lean(),
+        ]);
+
+        if (!room) {
+            return res.status(404).json({
+                success: false,
+                message: 'Sala no encontrada',
+                error: 'ROOM_NOT_FOUND',
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Arbol de archivos obtenido exitosamente',
+            data: buildFileExplorerTree({ room, folders, files }),
+        });
+    } catch (error) {
+        console.error('getFilesTreeByRoom error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error obteniendo el arbol de archivos',
+            error: 'GET_FILES_TREE_BY_ROOM_ERROR',
         });
     }
 };
@@ -249,13 +382,22 @@ export const updateFileContent = async (req, res) => {
     try {
         const userId = getRequesterUserId(req);
         const { fileId } = req.params;
-        const { currentCode, fileName, fileExtension } = req.body;
+        const { currentCode, fileName, fileExtension, parentFolderId } = req.body;
 
         if (!userId) {
             return res.status(401).json({
                 success: false,
-                message: 'Token inválido',
+                message: 'Token invÃ¡lido',
                 error: 'UNAUTHORIZED',
+            });
+        }
+
+        const existingFile = await File.findById(fileId).select('roomId parentFolderId fileName fileExtension');
+        if (!existingFile) {
+            return res.status(404).json({
+                success: false,
+                message: 'Archivo no encontrado',
+                error: 'FILE_NOT_FOUND',
             });
         }
 
@@ -268,15 +410,45 @@ export const updateFileContent = async (req, res) => {
         if (fileName) updates.fileName = fileName.trim();
         if (fileExtension) updates.fileExtension = fileExtension.toLowerCase();
 
-        const file = await File.findByIdAndUpdate(fileId, updates, { new: true });
+        let nextParentFolderId = existingFile.parentFolderId || null;
 
-        if (!file) {
-            return res.status(404).json({
+        if (parentFolderId !== undefined) {
+            const parentFolderResult = await resolveParentFolderForRoom({
+                roomId: existingFile.roomId,
+                parentFolderId,
+            });
+
+            if (parentFolderResult.error) {
+                return res.status(parentFolderResult.error.status).json({
+                    success: false,
+                    message: parentFolderResult.error.message,
+                    error: parentFolderResult.error.code,
+                });
+            }
+
+            updates.parentFolderId = parentFolderResult.parentFolderId;
+            nextParentFolderId = parentFolderResult.parentFolderId;
+        }
+
+        const nextFileName = updates.fileName || existingFile.fileName;
+        const nextFileExtension = updates.fileExtension || existingFile.fileExtension;
+        const isAvailable = await ensureScopedFileNameAvailable({
+            roomId: existingFile.roomId,
+            parentFolderId: nextParentFolderId,
+            fileName: nextFileName,
+            fileExtension: nextFileExtension,
+            excludeFileId: fileId,
+        });
+
+        if (!isAvailable) {
+            return res.status(409).json({
                 success: false,
-                message: 'Archivo no encontrado',
-                error: 'FILE_NOT_FOUND',
+                message: `Ya existe un archivo '${nextFileName}.${nextFileExtension}' en esta carpeta`,
+                error: 'FILE_ALREADY_EXISTS',
             });
         }
+
+        const file = await File.findByIdAndUpdate(fileId, updates, { new: true });
 
         return res.status(200).json({
             success: true,
@@ -300,31 +472,71 @@ export const updateFile = async (req, res) => {
     try {
         const userId = getRequesterUserId(req);
         const { fileId } = req.params;
-        const { currentCode, fileName } = req.body;
+        const { currentCode, fileName, parentFolderId } = req.body;
 
         if (!userId) {
             return res.status(401).json({
                 success: false,
-                message: 'Token inválido',
+                message: 'Token invÃ¡lido',
                 error: 'UNAUTHORIZED',
             });
         }
 
-        const allowedUpdates = {};
-        if (currentCode !== undefined) allowedUpdates.currentCode = currentCode;
-        if (fileName !== undefined) allowedUpdates.fileName = fileName;
-        allowedUpdates.lastModifiedByUserId = userId;
-        allowedUpdates.lastModifiedAt = new Date();
-
-        const file = await File.findByIdAndUpdate(fileId, allowedUpdates, { new: true });
-
-        if (!file) {
+        const existingFile = await File.findById(fileId).select('roomId parentFolderId fileName fileExtension');
+        if (!existingFile) {
             return res.status(404).json({
                 success: false,
                 message: 'Archivo no encontrado',
                 error: 'FILE_NOT_FOUND',
             });
         }
+
+        const allowedUpdates = {};
+        if (currentCode !== undefined) allowedUpdates.currentCode = currentCode;
+        if (fileName !== undefined) allowedUpdates.fileName = fileName;
+
+        let nextParentFolderId = existingFile.parentFolderId || null;
+
+        if (parentFolderId !== undefined) {
+            const parentFolderResult = await resolveParentFolderForRoom({
+                roomId: existingFile.roomId,
+                parentFolderId,
+            });
+
+            if (parentFolderResult.error) {
+                return res.status(parentFolderResult.error.status).json({
+                    success: false,
+                    message: parentFolderResult.error.message,
+                    error: parentFolderResult.error.code,
+                });
+            }
+
+            allowedUpdates.parentFolderId = parentFolderResult.parentFolderId;
+            nextParentFolderId = parentFolderResult.parentFolderId;
+        }
+
+        const nextFileName = allowedUpdates.fileName || existingFile.fileName;
+        const nextFileExtension = existingFile.fileExtension;
+        const isAvailable = await ensureScopedFileNameAvailable({
+            roomId: existingFile.roomId,
+            parentFolderId: nextParentFolderId,
+            fileName: nextFileName,
+            fileExtension: nextFileExtension,
+            excludeFileId: fileId,
+        });
+
+        if (!isAvailable) {
+            return res.status(409).json({
+                success: false,
+                message: `Ya existe un archivo '${nextFileName}.${nextFileExtension}' en esta carpeta`,
+                error: 'FILE_ALREADY_EXISTS',
+            });
+        }
+
+        allowedUpdates.lastModifiedByUserId = userId;
+        allowedUpdates.lastModifiedAt = new Date();
+
+        const file = await File.findByIdAndUpdate(fileId, allowedUpdates, { new: true });
 
         return res.status(200).json({
             success: true,
@@ -353,7 +565,7 @@ export const renameFile = async (req, res) => {
         if (!userId) {
             return res.status(401).json({
                 success: false,
-                message: 'Token inválido',
+                message: 'Token invÃ¡lido',
                 error: 'UNAUTHORIZED',
             });
         }
@@ -366,6 +578,15 @@ export const renameFile = async (req, res) => {
             });
         }
 
+        const existingFile = await File.findById(fileId).select('roomId parentFolderId fileName fileExtension');
+        if (!existingFile) {
+            return res.status(404).json({
+                success: false,
+                message: 'Archivo no encontrado',
+                error: 'FILE_NOT_FOUND',
+            });
+        }
+
         const updates = {
             lastModifiedAt: new Date(),
             lastModifiedByUserId: userId,
@@ -374,15 +595,25 @@ export const renameFile = async (req, res) => {
         if (fileName) updates.fileName = fileName.trim();
         if (fileExtension) updates.fileExtension = fileExtension.toLowerCase();
 
-        const file = await File.findByIdAndUpdate(fileId, updates, { new: true });
+        const nextFileName = updates.fileName || existingFile.fileName;
+        const nextFileExtension = updates.fileExtension || existingFile.fileExtension;
+        const isAvailable = await ensureScopedFileNameAvailable({
+            roomId: existingFile.roomId,
+            parentFolderId: existingFile.parentFolderId || null,
+            fileName: nextFileName,
+            fileExtension: nextFileExtension,
+            excludeFileId: fileId,
+        });
 
-        if (!file) {
-            return res.status(404).json({
+        if (!isAvailable) {
+            return res.status(409).json({
                 success: false,
-                message: 'Archivo no encontrado',
-                error: 'FILE_NOT_FOUND',
+                message: `Ya existe un archivo '${nextFileName}.${nextFileExtension}' en esta carpeta`,
+                error: 'FILE_ALREADY_EXISTS',
             });
         }
+
+        const file = await File.findByIdAndUpdate(fileId, updates, { new: true });
 
         return res.status(200).json({
             success: true,
@@ -399,6 +630,78 @@ export const renameFile = async (req, res) => {
     }
 };
 
+export const moveFile = async (req, res) => {
+    try {
+        const userId = getRequesterUserId(req);
+        const { fileId } = req.params;
+        const { parentFolderId } = req.body;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Token invÃ¡lido',
+                error: 'UNAUTHORIZED',
+            });
+        }
+
+        const file = await File.findById(fileId);
+        if (!file) {
+            return res.status(404).json({
+                success: false,
+                message: 'Archivo no encontrado',
+                error: 'FILE_NOT_FOUND',
+            });
+        }
+
+        const parentFolderResult = await resolveParentFolderForRoom({
+            roomId: file.roomId,
+            parentFolderId,
+        });
+
+        if (parentFolderResult.error) {
+            return res.status(parentFolderResult.error.status).json({
+                success: false,
+                message: parentFolderResult.error.message,
+                error: parentFolderResult.error.code,
+            });
+        }
+
+        const isAvailable = await ensureScopedFileNameAvailable({
+            roomId: file.roomId,
+            parentFolderId: parentFolderResult.parentFolderId,
+            fileName: file.fileName,
+            fileExtension: file.fileExtension,
+            excludeFileId: fileId,
+        });
+
+        if (!isAvailable) {
+            return res.status(409).json({
+                success: false,
+                message: `Ya existe un archivo '${file.fileName}.${file.fileExtension}' en la carpeta destino`,
+                error: 'FILE_ALREADY_EXISTS',
+            });
+        }
+
+        file.parentFolderId = parentFolderResult.parentFolderId;
+        file.lastModifiedAt = new Date();
+        file.lastModifiedByUserId = userId;
+        await file.save();
+
+        return res.status(200).json({
+            success: true,
+            message: 'Archivo movido exitosamente',
+            data: file,
+        });
+    } catch (error) {
+        console.error('moveFile error:', error);
+        return res.status(400).json({
+            success: false,
+            message: error.message || 'Error moviendo el archivo',
+            error: 'MOVE_FILE_ERROR',
+        });
+    }
+};
+
 /**
  * Alternar modo solo lectura
  */
@@ -411,7 +714,7 @@ export const toggleReadOnly = async (req, res) => {
         if (!userId) {
             return res.status(401).json({
                 success: false,
-                message: 'Token inválido',
+                message: 'Token invÃ¡lido',
                 error: 'UNAUTHORIZED',
             });
         }
@@ -468,7 +771,7 @@ export const deleteFile = async (req, res) => {
         if (!userId) {
             return res.status(401).json({
                 success: false,
-                message: 'Token inválido',
+                message: 'Token invÃ¡lido',
                 error: 'UNAUTHORIZED',
             });
         }
@@ -517,7 +820,7 @@ export const restoreFile = async (req, res) => {
         if (!userId) {
             return res.status(401).json({
                 success: false,
-                message: 'Token inválido',
+                message: 'Token invÃ¡lido',
                 error: 'UNAUTHORIZED',
             });
         }
@@ -566,7 +869,7 @@ export const deleteFilePermanently = async (req, res) => {
         if (!userId) {
             return res.status(401).json({
                 success: false,
-                message: 'Token inválido',
+                message: 'Token invÃ¡lido',
                 error: 'UNAUTHORIZED',
             });
         }
@@ -607,7 +910,7 @@ export const reorderFiles = async (req, res) => {
         if (!userId) {
             return res.status(401).json({
                 success: false,
-                message: 'Token inválido',
+                message: 'Token invÃ¡lido',
                 error: 'UNAUTHORIZED',
             });
         }
@@ -656,7 +959,7 @@ export const duplicateFile = async (req, res) => {
         if (!userId) {
             return res.status(401).json({
                 success: false,
-                message: 'Token inválido',
+                message: 'Token invÃ¡lido',
                 error: 'UNAUTHORIZED',
             });
         }
@@ -674,11 +977,27 @@ export const duplicateFile = async (req, res) => {
         const newFileName = `${originalFile.fileName}_copy`;
         const displayOrder = (originalFile.displayOrder || 0) + 1;
 
+        const isAvailable = await ensureScopedFileNameAvailable({
+            roomId: originalFile.roomId,
+            parentFolderId: originalFile.parentFolderId || null,
+            fileName: newFileName,
+            fileExtension: originalFile.fileExtension,
+        });
+
+        if (!isAvailable) {
+            return res.status(409).json({
+                success: false,
+                message: `Ya existe un archivo '${newFileName}.${originalFile.fileExtension}' en esta carpeta`,
+                error: 'FILE_ALREADY_EXISTS',
+            });
+        }
+
         const duplicatedFile = await File.create({
             roomId: originalFile.roomId,
             fileName: newFileName,
             fileExtension: originalFile.fileExtension,
             language: originalFile.language,
+            parentFolderId: originalFile.parentFolderId || null,
             currentCode: originalFile.currentCode,
             createdByUserId: userId,
             lastModifiedByUserId: userId,
@@ -698,6 +1017,49 @@ export const duplicateFile = async (req, res) => {
             success: false,
             message: error.message || 'Error duplicando el archivo',
             error: 'DUPLICATE_FILE_ERROR',
+        });
+    }
+};
+
+export const exportFilesByRoom = async (req, res) => {
+    try {
+        const { roomId } = req.params;
+        const room = await Room.findById(roomId).select('roomName roomCode').lean();
+
+        if (!room) {
+            return res.status(404).json({
+                success: false,
+                message: 'Sala no encontrada',
+                error: 'ROOM_NOT_FOUND',
+            });
+        }
+
+        const [folders, files] = await Promise.all([
+            Folder.find({ roomId, isActive: true }).lean(),
+            File.find({ roomId, isActive: true }).lean(),
+        ]);
+
+        const archive = buildZipArchive(
+            buildExportEntries({
+                folders,
+                files,
+                roomName: room.roomName || room.roomCode || 'synapse-room',
+            })
+        );
+
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader(
+            'Content-Disposition',
+            `attachment; filename="${String(room.roomName || room.roomCode || 'sala').trim()}.zip"`
+        );
+
+        return res.status(200).send(archive);
+    } catch (error) {
+        console.error('exportFilesByRoom error:', error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || 'Error exportando la sala',
+            error: 'EXPORT_FILES_BY_ROOM_ERROR',
         });
     }
 };

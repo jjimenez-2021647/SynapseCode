@@ -8,9 +8,11 @@ import { dirname, join } from 'node:path';
 import { dbConnection } from './db.js';
 import { corsOptions } from './cors-configuration.js';
 import { helmetConfiguration } from './helmet-configuration.js';
+import { ensureScopedFileIndexes } from '../helpers/file-index-migration.js';
 import roomsRoutes from '../src/rooms/rooms.routes.js';
 import roomParticipationsRoutes from '../src/roomParticipations/roomParticipations.routes.js';
 import filesRoutes from '../src/files/files.routes.js';
+import foldersRoutes from '../src/folders/folders.routes.js';
 import swaggerJSDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 
@@ -31,6 +33,7 @@ const routes = (app) => {
     app.use(`${BASE_PATH}/rooms`, roomsRoutes);
     app.use(`${BASE_PATH}/room-participations`, roomParticipationsRoutes);
     app.use(`${BASE_PATH}/files`, filesRoutes);
+    app.use(`${BASE_PATH}/folders`, foldersRoutes);
     app.get(`${BASE_PATH}/Health`, (request, response) => {
         response.status(200).json({
             status: 'Healthy',
@@ -54,6 +57,7 @@ export const initServer = async () => {
 
     try {
         await dbConnection();
+        await ensureScopedFileIndexes();
         middlewares(app);
 
         const swaggerDefinition = {
