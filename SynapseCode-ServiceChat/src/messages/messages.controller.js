@@ -1,6 +1,7 @@
 'use strict'
 import Message from './messages.model.js';
 import Chat from '../chats/chats.model.js';
+import { validateAIExplanationUsage } from '../../helpers/ai-limits-validator.js';
 
 const getRequesterUserId = (req) =>
     req.user?.userId || req.user?.id || req.user?.sub || null;
@@ -29,6 +30,28 @@ export const createMessage = async (req, res) => {
                 message: 'content y typeMessage son obligatorios',
                 error: 'MISSING_REQUIRED_FIELDS',
             });
+        }
+
+        // ✅ Validar límite de explicaciones IA (ServicePlans)
+        if (typeMessage === 'IA' || typeMessage === 'EXPLICACION_IA' || typeMessage === 'RESPONSE_IA') {
+            try {
+                const token = req.headers['x-token'] || req.headers.authorization?.replace('Bearer ', '');
+                const aiValidation = await validateAIExplanationUsage(userId, token, Chat);
+
+                if (!aiValidation.valid) {
+                    return res.status(403).json({
+                        success: false,
+                        message: aiValidation.message,
+                        planName: aiValidation.planName,
+                        limit: aiValidation.limit,
+                        used: aiValidation.used,
+                        error: 'AI_LIMIT_EXCEEDED'
+                    });
+                }
+            } catch (error) {
+                console.warn('[WARN] Validación de límites de IA fallida, continuando:', error.message);
+                // Continuar aunque ServicePlans no esté disponible
+            }
         }
 
         const message = await Message.create({

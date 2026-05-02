@@ -9,6 +9,7 @@ const services = [
   { name: 'ServiceExecutionCode', path: 'SynapseCode-ServiceExecutionCode', port: 3010 },
   { name: 'ServiceFeedback', path: 'SynapseCode-ServiceFeedback', port: 3011 },
   { name: 'ServiceGit', path: 'SynapseCode-ServiceGit', port: 3012 },
+  { name: 'ServicePlans', path: 'SynapseCode-ServicePlans', port: 3013 },
 ];
 
 console.log('\nLevantando microservicios en PRODUCCIÓN...\n');

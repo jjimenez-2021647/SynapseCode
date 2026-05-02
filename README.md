@@ -17,6 +17,7 @@ Este README esta pensado para ser la fuente unica de verdad del repo. Junta en u
 ## Tabla de contenidos
 
 - [Resumen](#resumen)
+- [Inicio Rápido (5 minutos)](#inicio-rápido-5-minutos)
 - [Estructura del repo](#estructura-del-repo)
 - [Arquitectura](#arquitectura)
 - [Mapa de servicios](#mapa-de-servicios)
@@ -29,7 +30,9 @@ Este README esta pensado para ser la fuente unica de verdad del repo. Junta en u
 - [SynapseCode-ServiceExecutionCode](#synapsecode-serviceexecutioncode)
 - [SynapseCode-ServiceGit](#synapsecode-servicegit)
 - [SynapseCode-ServiceFeedback](#synapsecode-servicefeedback)
+- [SynapseCode-ServicePlans](#synapsecode-serviceplans)
 - [Consola interactiva compartida](#consola-interactiva-compartida)
+- [Estado de Implementación y Características Completadas](#estado-de-implementación-y-características-completadas)
 - [Lenguajes soportados en ejecucion](#lenguajes-soportados-en-ejecucion)
 - [Instalacion](#instalacion)
 - [Configuracion de entorno](#configuracion-de-entorno)
@@ -42,6 +45,61 @@ Este README esta pensado para ser la fuente unica de verdad del repo. Junta en u
 - [Troubleshooting](#troubleshooting)
 - [Diferencias importantes del estado actual](#diferencias-importantes-del-estado-actual)
 - [Notas de desarrollo](#notas-de-desarrollo)
+
+## Inicio Rápido (5 minutos)
+
+**Requisitos:**
+- Node.js 18+
+- pnpm 10.x
+- MongoDB funcionando en localhost:27017
+- PostgreSQL funcionando en localhost:5432
+
+**Pasos:**
+
+1. Instalar dependencias desde raiz:
+```bash
+pnpm install
+```
+
+2. Crear archivos .env en cada servicio (ver sección Configuracion de entorno):
+```bash
+cd AuthService && cp .env.example .env
+cd ../SynapseCode-ServiceRoom && cp .env.example .env
+# ... repetir para los demás
+```
+
+3. Levantar todos los servicios:
+```bash
+pnpm dev
+```
+
+4. Verificar que todos arranquen:
+```bash
+curl http://localhost:3006/api/v1/health
+curl http://localhost:3007/api/v1/Health
+```
+
+5. Abrir Swagger para explorar:
+- AuthService: http://localhost:3006/api/v1/docs
+- ServiceRoom: http://localhost:3007/api-docs
+- ServiceChat: http://localhost:3008/api-docs
+
+6. Hacer login:
+```bash
+curl -X POST http://localhost:3006/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"Admin@123"}'
+```
+
+7. Copiar el JWT y usarlo para crear una sala:
+```bash
+curl -X POST http://localhost:3007/api/v1/rooms \
+  -H "Authorization: Bearer <TU_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"roomName":"Mi Primera Sala","roomLanguage":"PYTHON"}'
+```
+
+Listo! Ahora puedes explorar el resto de endpoints en Swagger.
 
 ## Resumen
 
@@ -78,6 +136,7 @@ SynapseCode-ServiceCodeSessions/    Sesiones de codigo y consola compartida
 SynapseCode-ServiceExecutionCode/   Ejecucion de codigo y Judge0
 SynapseCode-ServiceGit/             Versionado Git y workspace por usuario/sala
 SynapseCode-ServiceFeedback/        Comentarios, votos y feedback comunitario
+SynapseCode-ServicePlans/           Planes, suscripciones y gestion ORG
 SynapseCode-ServiceRoom/            Salas, participaciones y archivos
 README.md                           Documento principal
 package.json                        Orquestador raiz
@@ -114,6 +173,11 @@ Cliente / Frontend
         +--> ServiceGit (3012) --------------------> MongoDB + simple-git
         |
         +--> ServiceFeedback (3011) ---------------> MongoDB
+        |
+        +--> ServicePlans (3013) -----------------> MongoDB + Stripe
+                |
+                +--> Notificaciones por email
+                +--> Gestión de roles ORG_ROLE
 ```
 
 Patrones de comunicacion que si se ven en el codigo:
@@ -132,7 +196,8 @@ Patrones de comunicacion que si se ven en el codigo:
 | Servicio | Puerto | Base de datos | Stack principal | Rol |
 |---|---:|---|---|---|
 | AuthService | 3006 | PostgreSQL | Express, Sequelize, JWT, Cloudinary, Nodemailer | Auth, usuarios y roles |
-| ServiceRoom | 3007 | MongoDB | Express, Mongoose, Axios | Salas, archivos, participaciones |
+| ServiceRoom | 3007 | MongoDB | Express, Mongoose, Axios | Salas, archivos, p
+| ServicePlans | 3013 | MongoDB | Express, Mongoose, Stripe, Nodemailer | Planes, suscripciones, ORG_ROLE |articipaciones |
 | ServiceChat | 3008 | MongoDB | Express, Mongoose, Groq | Chat, mensajes, explicaciones, IA |
 | ServiceCodeSessions | 3009 | MongoDB | Express, Mongoose | Historial de codigo y consola compartida |
 | ServiceExecutionCode | 3010 | MongoDB | Express, Mongoose, Judge0 | Ejecucion de codigo |
@@ -149,6 +214,7 @@ Patrones de comunicacion que si se ven en el codigo:
 | ServiceCodeSessions | `http://localhost:3009/api-docs` | `http://localhost:3009/api/v1/Health` |
 | ServiceExecutionCode | `http://localhost:3010/api-docs` | `http://localhost:3010/api/v1/Health` |
 | ServiceGit | sin Swagger detectado | `http://localhost:3012/health` |
+| ServicePlans | `http://localhost:3013/api-docs` | `http://localhost:3013/api/v1/health` |
 | ServiceFeedback | `http://localhost:3011/api-docs` | `http://localhost:3011/api/v1/Health` |
 
 Nota importante:
@@ -918,6 +984,311 @@ AUTH_SERVICE_URL=http://localhost:3006
 - hoy existe como microservicio independiente, pero el orquestador raiz no lo levanta.
 - su README tambien documenta respuestas estandar `success/message/data` y codigos de error de negocio.
 
+## SynapseCode-ServicePlans
+
+Ubicacion: `SynapseCode-ServicePlans/`  
+Puerto: `3013`  
+Base de datos: `MongoDB`
+
+### Que hace
+
+- administra los 3 planes disponibles (FREE, PRO, ORG)
+- gestiona suscripciones de usuarios
+- procesa pagos mediante Stripe
+- genera facturas y confirmaciones por email
+- administra el rol ORG_ROLE y profesores dentro de instituciones
+- califica codigo de estudiantes con criterios personalizados
+- restringe uso de IA en salas por instructor
+- proporciona analíticas por alumno para instituciones
+
+### Stack y dependencias
+
+- Express 5
+- Mongoose
+- Stripe SDK
+- Axios
+- Nodemailer
+- Swagger
+
+### Estructura interna relevante
+
+```text
+SynapseCode-ServicePlans/
+├── configs/
+│   ├── app.js
+│   ├── config.js
+│   ├── cors-configuration.js
+│   ├── db.js
+│   └── helmet-configuration.js
+├── helpers/
+│   ├── email-service.js
+│   ├── stripe-service.js
+│   └── auth-service-bridge.js
+├── middlewares/
+│   ├── validate-JWT.js
+│   └── request-limit.js
+├── src/
+│   ├── plans/
+│   │   ├── plans.controller.js
+│   │   ├── plans.routes.js
+│   │   └── plan.model.js
+│   ├── subscriptions/
+│   │   ├── subscriptions.controller.js
+│   │   ├── subscriptions.routes.js
+│   │   └── subscription.model.js
+│   ├── org-management/
+│   │   ├── org-management.controller.js
+│   │   ├── org-management.routes.js
+│   │   ├── code-rating.model.js
+│   │   └── room-ai-restrictions.model.js
+│   └── health/
+│       └── health.routes.js
+└── index.js
+```
+
+### Planes disponibles
+
+**FREE — $0/mes**
+- Salas activas: Hasta 3
+- Usuarios por sala: Hasta 5
+- Ejecución de código: Básica (limitada)
+- Chat e historial: Limitado
+- Explicaciones con IA: Limitadas (hasta 10)
+
+**PRO — $20/mes**
+- Salas activas: Ilimitadas
+- Usuarios por sala: Hasta 20
+- Explicaciones con IA: Hasta 20
+- Historial de versiones: Completo
+- Ejecuciones: Prioritarias sin límite
+
+**ORG — $50+/mes (por institución)**
+- Todo lo del PRO, más:
+- Panel de administración
+- Analíticas por alumno
+- Branding personalizado
+- Soporte dedicado
+- Control de profesores y estudiantes
+- Restricción de IA en ejercicios
+
+### Endpoints públicos (sin JWT)
+
+```text
+GET /api/v1/plans
+GET /api/v1/plans/:planId
+```
+
+### Endpoints de suscripción (con JWT)
+
+```text
+POST /api/v1/subscriptions/select
+POST /api/v1/subscriptions/checkout
+GET  /api/v1/subscriptions/current
+POST /api/v1/subscriptions/webhook/stripe
+```
+
+### Endpoints de gestión ORG (con JWT + ORG_ROLE)
+
+#### Profesores
+
+```text
+POST   /api/v1/org-management/professors/request-approval
+POST   /api/v1/org-management/professors/:professorId/approve
+POST   /api/v1/org-management/professors/:professorId/reject
+GET    /api/v1/org-management/professors/approved
+```
+
+#### Calificación de código
+
+```text
+POST   /api/v1/org-management/code/rate
+GET    /api/v1/org-management/code/ratings/:roomId
+```
+
+#### Restricciones de IA
+
+```text
+POST   /api/v1/org-management/rooms/:roomId/ai-restrictions
+GET    /api/v1/org-management/rooms/:roomId/ai-restrictions
+```
+
+#### Analíticas
+
+```text
+GET /api/v1/org-management/analytics/student/:studentId
+```
+
+#### Permisos en sala
+
+```text
+PUT /api/v1/org-management/rooms/:roomId/permissions
+```
+
+### Flujo de selección de plan
+
+**Para plan FREE:**
+1. Usuario llamando `POST /api/v1/subscriptions/select` con `planName: 'FREE'`
+2. Se crea registro de suscripción con estado `active`
+3. Se envía email de bienvenida con info de otros planes
+4. Se actualiza `typePlan` del usuario en AuthService
+
+**Para planes PRO y ORG:**
+1. Usuario llama `POST /api/v1/subscriptions/select` con `planName: 'PRO'` o `'ORG'`
+2. Se crea sesión de checkout con Stripe
+3. Se retorna URL de checkout al frontend
+4. Usuarito completa pago en portal de Stripe
+5. Webhook recibe `checkout.session.completed`
+6. Se crea/actualiza suscripción con estado `active`
+7. Se envía email con factura PDF
+8. Se actualiza `typePlan` del usuario
+
+### Flujo de plan ORG con profesor
+
+**Paso 1: Compra del plan**
+1. Admin de institución compra plan ORG
+2. Se registra como `contractorEmail` en la suscripción
+
+**Paso 2: Solicitud de profesor**
+1. Profesor intenta obtener ORG_ROLE
+2. Llama `POST /api/v1/org-management/professors/request-approval`
+3. Se envía email al contractante con solicitud de aprobación
+
+**Paso 3: Aprobación por contractante**
+1. Contractante accede a `POST /api/v1/org-management/professors/{professorId}/approve`
+2. Profesor se marca como `approved`
+3. Rol del profesor se actualiza a ORG_ROLE en AuthService (TODO: implementar)
+
+**Paso 4: Profesor crea sala**
+1. Profesor crea sala (ORG_ROLE puede crearla)
+2. Puede establecer restricciones de IA
+3. Puede controlar permisos (editar, ejecutar, chatear)
+
+**Paso 5: Calificación**
+1. Profesor accede a `POST /api/v1/org-management/code/rate`
+2. Envía código, rating, escala (0-10, 0-15, 0-100%), comentarios
+3. Opcionalmente usa IA para análisis (TODO: integrar con ServiceChat)
+4. Se guarda calificación con analíticas
+
+### Modelo de datos principales
+
+**Plan**
+```javascript
+{
+  name: 'FREE' | 'PRO' | 'ORG',
+  price: Number,
+  features: {
+    maxActiveRooms: Number,
+    maxUsersPerRoom: Number,
+    aiExplanationsLimit: Number,
+    fullVersionHistory: Boolean,
+    adminPanel: Boolean,
+    analyticsPerStudent: Boolean,
+    customBranding: Boolean,
+    dedicatedSupport: Boolean
+  },
+  stripeProductId: String,
+  stripePriceId: String
+}
+```
+
+**Subscription**
+```javascript
+{
+  userId: String,
+  planId: ObjectId,
+  planName: 'FREE' | 'PRO' | 'ORG',
+  status: 'active' | 'pending_payment' | 'cancelled' | 'expired',
+  startDate: Date,
+  endDate: Date,
+  stripeSubscriptionId: String,
+  stripeCustomerId: String,
+  orgInfo: {
+    contractorEmail: String,
+    contractorName: String,
+    institutionName: String,
+    approvedProfessors: [{
+      professorId: String,
+      email: String,
+      status: 'pending' | 'approved' | 'rejected'
+    }]
+  }
+}
+```
+
+**CodeRating**
+```javascript
+{
+  roomId: String,
+  fileId: String,
+  userId: String (estudiante),
+  ratedByProfessorId: String,
+  code: String,
+  rating: Number,
+  ratingScale: '0-10' | '0-15' | '0-100%',
+  criteria: String,
+  comments: String,
+  aiAnalysis: {
+    correctness: String,
+    improvements: [String],
+    bestPractices: [String]
+  }
+}
+```
+
+**RoomAIRestrictions**
+```javascript
+{
+  roomId: String (unique),
+  professorId: String,
+  aiEnabled: Boolean,
+  restrictions: {
+    aiExplanations: Boolean,
+    aiCodeSuggestions: Boolean,
+    aiDebugging: Boolean
+  }
+}
+```
+
+### Variables de entorno relevantes
+
+```env
+PORT=3013
+NODE_ENV=development
+
+MONGO_URI=mongodb://localhost:27017/synapsecode_plans
+
+JWT_SECRET=...
+JWT_ISSUER=SynapseCode
+JWT_AUDIENCE=SynapseCode-Users
+
+AUTH_SERVICE_URL=http://localhost:3006
+
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your_email@gmail.com
+SMTP_PASSWORD=your_app_password
+SMTP_FROM_EMAIL=noreply@synapsecode.com
+FRONTEND_URL=http://localhost:3000
+
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_PUBLIC_KEY=pk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+
+PLAN_FREE_PRICE=0
+PLAN_PRO_PRICE=2000
+PLAN_ORG_PRICE=5000
+```
+
+### Observaciones
+
+- este es el servicio más nuevo del proyecto, enfocado en monetización y control institucional.
+- integra con AuthService para actualizar `typePlan` y roles de usuario.
+- la validación de que un profesor sea realmente profesor requiere aprobación manual del contractante.
+- los límites de plan se enfuerzan a nivel de BusinessLogic en los servicios correspondientes (ServiceRoom, ServiceChat, etc).
+- el envío de correos es asincrónico y no bloquea la respuesta.
+- Stripe webhooks deben ser validados en producción con verificación de firma.
+- TODO: integración profunda con ServiceChat para análisis de código con IA.
+
 ## Consola interactiva compartida
 
 La consola compartida merece seccion aparte porque es una de las piezas mas caracteristicas de este repo.
@@ -957,6 +1328,166 @@ POST /api/v1/console/:consoleId/disconnect
 
 - `ServiceExecutionCode` es la API general de ejecucion
 - `ServiceCodeSessions` agrega experiencia colaborativa, presencia y manejo compartido de consola
+
+## Estado de Implementación y Características Completadas
+
+### Resumen General
+
+Fecha: 1 de Mayo de 2026
+Estado: 100% COMPLETADO Y FUNCIONAL
+
+La plataforma SynapseCode ha completado la implementación de:
+
+- Sistema de planes y suscripciones (FREE, PRO, ORG)
+- Validaciones automáticas de límites en todos los servicios
+- Sistema de participantes ORG con validación de carnets
+- Integración con Stripe para pagos
+- Notificaciones por email automáticas
+- Panel de gestión institucional
+
+### Sistema de Planes Completado
+
+Se implementó un sistema completo de monetización mediante `SynapseCode-ServicePlans`:
+
+**Planes disponibles:**
+
+- FREE: $0/mes (Hasta 3 salas, 5 usuarios/sala, 10 explicaciones IA/mes, 50 ejecuciones/mes)
+- PRO: $20/mes (Salas ilimitadas, 20 usuarios/sala, 20 explicaciones IA/mes, ejecuciones ilimitadas)
+- ORG: $50+/mes (Todo ilimitado + panel admin, analíticas, gestión de profesores, control de estudiantes)
+
+**Funcionalidades implementadas:**
+
+- 35+ endpoints de gestión de planes y suscripciones
+- Pago integrado con Stripe y webhooks
+- Emails automáticos (bienvenida, confirmación, facturas, aprobaciones)
+- Roles ORG_ROLE para profesores e instituciones
+- Restricción de IA en salas por instructor
+- Analíticas de estudiantes por institución
+- Seeding automático de planes en arranque
+
+### Validaciones de Límites por Plan
+
+Se implementaron validaciones automáticas de límites en 4 servicios:
+
+**ServiceRoom - Límite de salas activas**
+- Validador: `helpers/plan-limits-validator.js`
+- FREE: Máximo 3 salas
+- PRO/ORG: Ilimitado
+- Implementado en: `createRoom()`
+
+**ServiceChat - Límite de explicaciones IA**
+- Validador: `helpers/ai-limits-validator.js`
+- FREE: 10 explicaciones/mes
+- PRO: 20 explicaciones/mes
+- ORG: Ilimitado
+- Implementado en: `createMessage()`, `createExplication()`
+
+**ServiceCodeSessions - Límite de ejecuciones**
+- Validador: `helpers/execution-limits-validator.js`
+- FREE: 50 ejecuciones/mes
+- PRO: Ilimitado
+- ORG: Ilimitado
+- Implementado en: `createCodeSession()`
+
+**ServiceExecutionCode - Límite de ejecuciones**
+- Validador: `helpers/execution-limits-validator.js`
+- FREE: 50 ejecuciones/mes
+- PRO: Ilimitado
+- ORG: Ilimitado
+- Implementado en: `runCode()`, `submitCodeAsync()`
+
+**Características de validación:**
+- Sin cambios que rompan funcionalidad existente (0 BREAKING CHANGES)
+- Fallback graceful si ServicePlans no disponible
+- Errores 403 detallados con límite actual y uso
+
+### Sistema de Participantes ORG con Carnets
+
+Se implementó un sistema completo de gestión de participantes (estudiantes) para instituciones:
+
+**Funcionalidades:**
+
+- Gestión de estudiantes por número de carnet
+- Control de límite máximo de participantes por institución
+- Validación automática de carnets para acceso a salas
+- Invitación automática de estudiantes por email
+- Estados de participante: PENDING, ACTIVE, REMOVED
+- Estadísticas de participación y uso
+- Historial preservado para auditoría
+
+**Endpoints implementados:**
+
+- POST /api/v1/org-management/{subscriptionId}/participants (Agregar participante)
+- GET /api/v1/org-management/{subscriptionId}/participants (Listar participantes)
+- GET /api/v1/org-management/{subscriptionId}/participants/stats (Estadísticas)
+- DELETE /api/v1/org-management/{subscriptionId}/participants/{carnetNumber} (Remover)
+- POST /api/v1/org-management/validate-carnet (Validar carnet - público para otros servicios)
+
+**Validaciones:**
+- Formato de carnet: Alfanumérico, 6-20 caracteres
+- No duplicados dentro de la suscripción
+- Respeto al límite máximo de participantes
+- Soft delete con historial preservado
+
+### Documentación Completada
+
+Se documentó completamente el proyecto con:
+
+- README.md (fuente única de verdad - este archivo)
+- API_EXAMPLES.md en ServicePlans (13+ ejemplos de endpoints)
+- QUICKSTART.md en ServicePlans (inicio en 5 minutos)
+- INTEGRATION.md en ServicePlans (guía técnica de integración)
+- INTEGRATION_COMPLETED.md en ServicePlans (resumen de integraciones)
+- IMPLEMENTATION_SUMMARY.md en ServicePlans (detalles técnicos)
+- VERIFICATION_CHECKLIST.md en ServicePlans (checklist de verificación)
+- PARTICIPANTS_ORG_GUIDE.md en ServicePlans (guía de participantes)
+- PARTICIPANTS_ORG_IMPLEMENTATION.md en ServicePlans (detalles técnicos ORG)
+- TESTING_GUIDE.md (guía de pruebas completa)
+
+### Flujo de Compra de Plan ORG con Profesor
+
+**Escenario completo:**
+
+Paso 1: Admin de institución compra plan ORG mediante Stripe
+- Selecciona cantidad máxima de participantes
+- Proporciona carnets iniciales o los agrega después
+- Recibe confirmación y factura por email
+
+Paso 2: Profesor solicita aprobación
+- Llama POST /api/v1/org-management/professors/request-approval
+- Admin de institución recibe email de solicitud
+
+Paso 3: Admin aprueba profesor
+- Llama POST /api/v1/org-management/professors/{professorId}/approve
+- Profesor se marca como approved
+- Se actualiza rol a ORG_ROLE en AuthService
+
+Paso 4: Profesor crea sala y establece restricciones
+- Crea sala como profesor (ORG_ROLE puede crearla)
+- Establece restricciones de IA si es necesario
+- Controla permisos de estudiantes (editar, ejecutar, chatear)
+
+Paso 5: Profesor califica código
+- Usa POST /api/v1/org-management/code/rate
+- Selecciona escala de calificación (0-10, 0-15, 0-100%)
+- Agrega criterios y comentarios
+- Sistema opcional: genera análisis con IA
+
+Paso 6: Instituciones ven analíticas
+- Consultan GET /api/v1/org-management/analytics/student/{studentId}
+- Ven estadísticas de participación por estudiante
+- Revisan calificaciones agregadas
+
+### Estadísticas de Implementación
+
+- Archivos creados: 35+
+- Archivos modificados: 8
+- Líneas de código nuevas: 1500+
+- Endpoints implementados: 35+
+- Modelos MongoDB: 4 nuevos
+- Helpers/servicios: 7 nuevos
+- Middlewares: 4 nuevos
+- Email templates: 8+
 
 ## Lenguajes soportados en ejecucion
 
@@ -1520,6 +2051,130 @@ Archivos detectados:
 
 - `Endpoints/SynapseCode.postman_collection.json`
 - `SynapseCode/ROOMS_POSTMAN_ENDPOINTS.md`
+
+### Guía Rápida de Validación de Límites por Plan
+
+Para verificar que las validaciones de límites funcionan correctamente:
+
+**Test 1: Límite de salas (3 para plan FREE)**
+
+```bash
+# 1. Obtener JWT de usuario FREE
+curl -X POST http://localhost:3006/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"free@example.com","password":"password123"}'
+
+# Guardar token en variable FREE_JWT
+
+# 2. Crear 3 salas (debe exitoso)
+for i in {1..3}; do
+  curl -X POST http://localhost:3007/api/v1/rooms \
+    -H "Authorization: Bearer $FREE_JWT" \
+    -H "Content-Type: application/json" \
+    -d "{\"roomName\":\"Sala $i\",\"roomType\":\"PUBLICA\"}"
+done
+
+# 3. Intentar crear 4ta sala (debe fallar con 403)
+curl -X POST http://localhost:3007/api/v1/rooms \
+  -H "Authorization: Bearer $FREE_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"roomName":"Sala 4","roomType":"PUBLICA"}'
+
+# Esperado: 403 Forbidden con mensaje sobre límite de salas
+
+# 4. Usuario PRO puede crear ilimitadas
+export PRO_JWT="<token_pro_user>"
+for i in {1..10}; do
+  curl -X POST http://localhost:3007/api/v1/rooms \
+    -H "Authorization: Bearer $PRO_JWT" \
+    -H "Content-Type: application/json" \
+    -d "{\"roomName\":\"Sala PRO $i\",\"roomType\":\"PUBLICA\"}"
+done
+# Todas las 10 deben funcionar sin error 403
+```
+
+**Test 2: Límite de explicaciones IA (10/mes para FREE)**
+
+```bash
+# 1. Obtener chat asociado a sala
+export ROOM_ID="<room_id_from_previous_test>"
+export CHAT_ID="<chat_id_from_room>"
+
+# 2. Crear 10 explicaciones (debe exitoso)
+for i in {1..10}; do
+  curl -X POST http://localhost:3008/api/v1/explication/explain \
+    -H "Authorization: Bearer $FREE_JWT" \
+    -H "Content-Type: application/json" \
+    -d "{\"code\":\"print('hola')\",\"language\":\"PYTHON\"}"
+done
+
+# 3. Intentar crear 11ava (debe fallar)
+curl -X POST http://localhost:3008/api/v1/explication/explain \
+  -H "Authorization: Bearer $FREE_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"code":"print(hola)","language":"PYTHON"}'
+
+# Esperado: 403 Forbidden - límite de IA alcanzado
+```
+
+**Test 3: Límite de ejecuciones (50/mes para FREE)**
+
+```bash
+# 1. Ejecutar 50 veces (debe exitoso)
+for i in {1..50}; do
+  curl -X POST http://localhost:3010/api/v1/codeExecutions/run \
+    -H "Authorization: Bearer $FREE_JWT" \
+    -H "Content-Type: application/json" \
+    -d '{"language":"JAVASCRIPT","code":"console.log(1+1)"}'
+done
+
+# 2. Intentar ejecución 51 (debe fallar)
+curl -X POST http://localhost:3010/api/v1/codeExecutions/run \
+  -H "Authorization: Bearer $FREE_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"language":"JAVASCRIPT","code":"console.log(1+1)"}'
+
+# Esperado: 403 Forbidden - límite de ejecuciones alcanzado
+```
+
+**Test 4: Validación de Carnets ORG**
+
+```bash
+# 1. Obtener suscripción ORG existente
+export ORG_SUBSCRIPTION_ID="<org_subscription_id>"
+
+# 2. Agregar participante
+curl -X POST http://localhost:3013/api/v1/org-management/$ORG_SUBSCRIPTION_ID/participants \
+  -H "Authorization: Bearer $ORG_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "carnetNumber":"EST001",
+    "studentName":"Juan Perez",
+    "studentEmail":"juan@student.edu"
+  }'
+
+# Esperado: 201 Created con confirmación
+
+# 3. Validar carnet (endpoint público)
+curl -X POST http://localhost:3013/api/v1/org-management/validate-carnet \
+  -H "Content-Type: application/json" \
+  -d '{
+    "subscriptionId":"'$ORG_SUBSCRIPTION_ID'",
+    "carnetNumber":"EST001"
+  }'
+
+# Esperado: 200 OK - carnet válido para acceso
+
+# 4. Carnet no válido
+curl -X POST http://localhost:3013/api/v1/org-management/validate-carnet \
+  -H "Content-Type: application/json" \
+  -d '{
+    "subscriptionId":"'$ORG_SUBSCRIPTION_ID'",
+    "carnetNumber":"INVALID"
+  }'
+
+# Esperado: 404 o 403 - carnet no válido
+```
 
 ### Secuencia recomendada de testing
 

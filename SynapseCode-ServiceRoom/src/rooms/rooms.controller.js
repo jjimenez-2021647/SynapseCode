@@ -5,6 +5,7 @@ import RoomParticipation from '../roomParticipations/roomParticipations.model.js
 import generateUniqueRoomCode from '../../helpers/rooms.helpers.js';
 import { getRoleDefaultPermissions, calculateTotalMinutes } from '../../helpers/roomParticipations.helpers.js';
 import { callService } from '../../helpers/service-communication.js';
+import { validateRoomCreation } from '../../helpers/plan-limits-validator.js';
 import axios from 'axios';
 
 const getRequesterUserId = (req) =>
@@ -29,6 +30,29 @@ export const createRoom = async (req, res) => {
             return res.status(401).json({
                 message: 'Token invalido: no contiene userId',
             });
+        }
+
+        // ✅ Validar límite de salas por plan (ServicePlans)
+        try {
+            const activeRoomsCount = await Room.countDocuments({
+                hostId: hostIdFromToken,
+                status: { $in: ['ABIERTA', 'ACTIVA'] }
+            });
+
+            const token = req.headers['x-token'] || req.headers.authorization?.replace('Bearer ', '');
+            const limitValidation = await validateRoomCreation(hostIdFromToken, token, activeRoomsCount);
+
+            if (!limitValidation.valid) {
+                return res.status(403).json({
+                    message: limitValidation.message,
+                    planName: limitValidation.planName,
+                    limit: limitValidation.limit,
+                    current: activeRoomsCount
+                });
+            }
+        } catch (error) {
+            console.warn('[WARN] Validación de límites de plan fallida, continuando:', error.message);
+            // Continuar aunque ServicePlans no esté disponible
         }
 
         payload.hostId = hostIdFromToken;

@@ -5,6 +5,7 @@ import {
     getNextVersionByFile,
 } from '../../helpers/code-sessions.helpers.js';
 import { normalizeCodeContent } from '../../helpers/code-normalizer.js';
+import { validateExecutionUsage } from '../../helpers/execution-limits-validator.js';
 
 const getRequesterUserId = (req) => req.user?.userId || req.user?.id || req.user?.sub || null;
 
@@ -47,6 +48,26 @@ export const createCodeSession = async (req, res) => {
                 message: 'code inválido',
                 error: 'INVALID_CODE',
             });
+        }
+
+        // ✅ Validar límite de ejecuciones (ServicePlans)
+        try {
+            const token = req.headers['x-token'] || req.headers.authorization?.replace('Bearer ', '');
+            const execValidation = await validateExecutionUsage(userId, token, CodeSession);
+
+            if (!execValidation.valid) {
+                return res.status(403).json({
+                    success: false,
+                    message: execValidation.message,
+                    planName: execValidation.planName,
+                    limit: execValidation.limit,
+                    used: execValidation.used,
+                    error: 'EXECUTION_LIMIT_EXCEEDED'
+                });
+            }
+        } catch (error) {
+            console.warn('[WARN] Validación de límites de ejecución fallida, continuando:', error.message);
+            // Continuar aunque ServicePlans no esté disponible
         }
 
         const version = await getNextVersionByFile(fileId);

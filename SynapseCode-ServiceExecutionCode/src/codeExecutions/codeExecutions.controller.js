@@ -1,6 +1,7 @@
 'use strict'
 import CodeExecution from './codeExecutions.model.js';
 import { executeCode, submitCode, getSubmissionResult } from '../../helpers/Judge0.service.js';
+import { validateExecutionUsage } from '../../helpers/execution-limits-validator.js';
 
 // ─── Limite de ejecuciones por hora ───────────────────────────────────────────
 const HOURLY_LIMIT = 50;
@@ -120,6 +121,26 @@ export const runCode = async (req, res) => {
             });
         }
 
+        // ✅ Validar límite de ejecuciones por plan (ServicePlans)
+        try {
+            const token = req.headers['x-token'] || req.headers.authorization?.replace('Bearer ', '');
+            const execValidation = await validateExecutionUsage(userId, token, CodeExecution);
+
+            if (!execValidation.valid) {
+                return res.status(403).json({
+                    success: false,
+                    message: execValidation.message,
+                    planName: execValidation.planName,
+                    limit: execValidation.limit,
+                    used: execValidation.used,
+                    error: 'PLAN_EXECUTION_LIMIT_EXCEEDED'
+                });
+            }
+        } catch (error) {
+            console.warn('[WARN] Validación de límites de ejecución fallida, continuando:', error.message);
+            // Continuar aunque ServicePlans no esté disponible
+        }
+
         const { count, limitReached } = await checkUserRateLimit(userId);
         if (limitReached) {
             return res.status(429).json({
@@ -196,6 +217,26 @@ export const submitCodeAsync = async (req, res) => {
                 message: 'language y code son obligatorios',
                 error: 'MISSING_REQUIRED_FIELDS',
             });
+        }
+
+        // ✅ Validar límite de ejecuciones por plan (ServicePlans)
+        try {
+            const token = req.headers['x-token'] || req.headers.authorization?.replace('Bearer ', '');
+            const execValidation = await validateExecutionUsage(userId, token, CodeExecution);
+
+            if (!execValidation.valid) {
+                return res.status(403).json({
+                    success: false,
+                    message: execValidation.message,
+                    planName: execValidation.planName,
+                    limit: execValidation.limit,
+                    used: execValidation.used,
+                    error: 'PLAN_EXECUTION_LIMIT_EXCEEDED'
+                });
+            }
+        } catch (error) {
+            console.warn('[WARN] Validación de límites de ejecución fallida, continuando:', error.message);
+            // Continuar aunque ServicePlans no esté disponible
         }
 
         const { count, limitReached } = await checkUserRateLimit(userId);

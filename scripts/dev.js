@@ -58,6 +58,14 @@ const services = [
     healthUrl: 'http://localhost:3012/health',
     docsUrl: 'http://localhost:3012/api-docs',
   },
+  {
+    name: 'ServicePlans',
+    path: 'SynapseCode-ServicePlans',
+    port: 3013,
+    color: '\x1b[93m',
+    healthUrl: 'http://localhost:3013/api/v1/health',
+    docsUrl: 'http://localhost:3013/api-docs',
+  },
 ];
 
 const adminCredentials = {
