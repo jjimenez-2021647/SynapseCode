@@ -9,6 +9,7 @@ const services = [
   { name: 'SynapseCode-ServiceFeedback', path: 'SynapseCode-ServiceFeedback' },
   { name: 'SynapseCode-ServiceGit', path: 'SynapseCode-ServiceGit' },
   { name: 'SynapseCode-ServiceRoom', path: 'SynapseCode-ServiceRoom' },
+  { name: 'SynapseCode-ServicePlans', path: 'SynapseCode-ServicePlans' },
 ];
 
 const reset = '\x1b[0m';
