@@ -1,4 +1,4 @@
-# SynapseCode
+﻿# SynapseCode
 
 Plataforma colaborativa para programacion, explicacion de codigo con IA, ejecucion remota y trabajo en salas. El proyecto nacio como un monolito y hoy esta dividido en microservicios Node.js/Express.
 
@@ -17,7 +17,7 @@ Este README esta pensado para ser la fuente unica de verdad del repo. Junta en u
 ## Tabla de contenidos
 
 - [Resumen](#resumen)
-- [Inicio Rápido (5 minutos)](#inicio-rápido-5-minutos)
+- [Inicio RÃ¡pido (5 minutos)](#inicio-rÃ¡pido-5-minutos)
 - [Estructura del repo](#estructura-del-repo)
 - [Arquitectura](#arquitectura)
 - [Mapa de servicios](#mapa-de-servicios)
@@ -32,7 +32,7 @@ Este README esta pensado para ser la fuente unica de verdad del repo. Junta en u
 - [SynapseCode-ServiceFeedback](#synapsecode-servicefeedback)
 - [SynapseCode-ServicePlans](#synapsecode-serviceplans)
 - [Consola interactiva compartida](#consola-interactiva-compartida)
-- [Estado de Implementación y Características Completadas](#estado-de-implementación-y-características-completadas)
+- [Estado de ImplementaciÃ³n y CaracterÃ­sticas Completadas](#estado-de-implementaciÃ³n-y-caracterÃ­sticas-completadas)
 - [Lenguajes soportados en ejecucion](#lenguajes-soportados-en-ejecucion)
 - [Instalacion](#instalacion)
 - [Configuracion de entorno](#configuracion-de-entorno)
@@ -46,7 +46,7 @@ Este README esta pensado para ser la fuente unica de verdad del repo. Junta en u
 - [Diferencias importantes del estado actual](#diferencias-importantes-del-estado-actual)
 - [Notas de desarrollo](#notas-de-desarrollo)
 
-## Inicio Rápido (5 minutos)
+## Inicio RÃ¡pido (5 minutos)
 
 **Requisitos:**
 - Node.js 18+
@@ -61,11 +61,11 @@ Este README esta pensado para ser la fuente unica de verdad del repo. Junta en u
 pnpm install
 ```
 
-2. Crear archivos .env en cada servicio (ver sección Configuracion de entorno):
+2. Crear archivos .env en cada servicio (ver secciÃ³n Configuracion de entorno):
 ```bash
 cd AuthService && cp .env.example .env
 cd ../SynapseCode-ServiceRoom && cp .env.example .env
-# ... repetir para los demás
+# ... repetir para los demÃ¡s
 ```
 
 3. Levantar todos los servicios:
@@ -148,6 +148,7 @@ Detalle util:
 - los microservicios activos son `AuthService` y los directorios `SynapseCode-Service*`.
 - `Endpoints/SynapseCode.postman_collection.json` existe en el repo.
 - `SynapseCode/ROOMS_POSTMAN_ENDPOINTS.md` tambien existe como apoyo.
+- este `README.md` es la fuente principal de documentacion del repo.
 
 ## Arquitectura
 
@@ -174,10 +175,10 @@ Cliente / Frontend
         |
         +--> ServiceFeedback (3011) ---------------> MongoDB
         |
-        +--> ServicePlans (3013) -----------------> MongoDB + Stripe
+        +--> ServicePlans (3013) -----------------> MongoDB + Stripe (diferido en local)
                 |
                 +--> Notificaciones por email
-                +--> Gestión de roles ORG_ROLE
+                +--> GestiÃ³n de roles ORG_ROLE
 ```
 
 Patrones de comunicacion que si se ven en el codigo:
@@ -197,7 +198,7 @@ Patrones de comunicacion que si se ven en el codigo:
 |---|---:|---|---|---|
 | AuthService | 3006 | PostgreSQL | Express, Sequelize, JWT, Cloudinary, Nodemailer | Auth, usuarios y roles |
 | ServiceRoom | 3007 | MongoDB | Express, Mongoose, Axios | Salas, archivos, p
-| ServicePlans | 3013 | MongoDB | Express, Mongoose, Stripe, Nodemailer | Planes, suscripciones, ORG_ROLE |articipaciones |
+| ServicePlans | 3013 | MongoDB | Express, Mongoose, Nodemailer | Planes, suscripciones, ORG_ROLE |articipaciones |
 | ServiceChat | 3008 | MongoDB | Express, Mongoose, Groq | Chat, mensajes, explicaciones, IA |
 | ServiceCodeSessions | 3009 | MongoDB | Express, Mongoose | Historial de codigo y consola compartida |
 | ServiceExecutionCode | 3010 | MongoDB | Express, Mongoose, Judge0 | Ejecucion de codigo |
@@ -274,25 +275,25 @@ Base de datos: `PostgreSQL`
 
 ```text
 AuthService/
-├── configs/
-│   ├── app.js
-│   ├── config.js
-│   ├── cors-configuration.js
-│   ├── db.js
-│   ├── helmet-configuration.js
-│   ├── swagger-config.js
-│   ├── swagger-endpoints.js
-│   └── swagger-setup.js
-├── helpers/
-├── middlewares/
-├── src/
-│   ├── auth/
-│   │   ├── auth.controller.js
-│   │   └── auth.routes.js
-│   └── users/
-│       ├── user.controller.js
-│       └── user.routes.js
-└── index.js
+â”œâ”€â”€ configs/
+â”‚   â”œâ”€â”€ app.js
+â”‚   â”œâ”€â”€ config.js
+â”‚   â”œâ”€â”€ cors-configuration.js
+â”‚   â”œâ”€â”€ db.js
+â”‚   â”œâ”€â”€ helmet-configuration.js
+â”‚   â”œâ”€â”€ swagger-config.js
+â”‚   â”œâ”€â”€ swagger-endpoints.js
+â”‚   â””â”€â”€ swagger-setup.js
+â”œâ”€â”€ helpers/
+â”œâ”€â”€ middlewares/
+â”œâ”€â”€ src/
+â”‚   â”œâ”€â”€ auth/
+â”‚   â”‚   â”œâ”€â”€ auth.controller.js
+â”‚   â”‚   â””â”€â”€ auth.routes.js
+â”‚   â””â”€â”€ users/
+â”‚       â”œâ”€â”€ user.controller.js
+â”‚       â””â”€â”€ user.routes.js
+â””â”€â”€ index.js
 ```
 
 ### Endpoints de autenticacion
@@ -413,21 +414,21 @@ Base de datos: `MongoDB`
 
 ```text
 SynapseCode-ServiceRoom/
-├── configs/
-├── helpers/
-│   └── service-communication.js
-├── middlewares/
-├── src/
-│   ├── rooms/
-│   │   ├── rooms.controller.js
-│   │   └── rooms.routes.js
-│   ├── roomParticipations/
-│   │   ├── roomParticipations.controller.js
-│   │   └── roomParticipations.routes.js
-│   └── files/
-│       ├── files.controller.js
-│       └── files.routes.js
-└── index.js
+â”œâ”€â”€ configs/
+â”œâ”€â”€ helpers/
+â”‚   â””â”€â”€ service-communication.js
+â”œâ”€â”€ middlewares/
+â”œâ”€â”€ src/
+â”‚   â”œâ”€â”€ rooms/
+â”‚   â”‚   â”œâ”€â”€ rooms.controller.js
+â”‚   â”‚   â””â”€â”€ rooms.routes.js
+â”‚   â”œâ”€â”€ roomParticipations/
+â”‚   â”‚   â”œâ”€â”€ roomParticipations.controller.js
+â”‚   â”‚   â””â”€â”€ roomParticipations.routes.js
+â”‚   â””â”€â”€ files/
+â”‚       â”œâ”€â”€ files.controller.js
+â”‚       â””â”€â”€ files.routes.js
+â””â”€â”€ index.js
 ```
 
 ### Endpoints de salas
@@ -531,28 +532,28 @@ Base de datos: `MongoDB`
 
 ```text
 SynapseCode-ServiceChat/
-├── configs/
-│   ├── apps.js
-│   ├── prompts.config.js
-│   └── swagger-endpoints.js
-├── helpers/
-│   └── groq.service.js
-├── src/
-│   ├── chats/
-│   │   ├── chats.controller.js
-│   │   └── chats.routes.js
-│   ├── messages/
-│   │   ├── messages.controller.js
-│   │   └── messages.routes.js
-│   ├── explication/
-│   │   ├── explication.controller.js
-│   │   ├── codeChat.controller.js
-│   │   ├── codeProposal.controller.js
-│   │   └── explication.routes.js
-│   └── codeGeneration/
-│       ├── codeGeneration.controller.js
-│       └── codeGeneration.routes.js
-└── index.js
+â”œâ”€â”€ configs/
+â”‚   â”œâ”€â”€ apps.js
+â”‚   â”œâ”€â”€ prompts.config.js
+â”‚   â””â”€â”€ swagger-endpoints.js
+â”œâ”€â”€ helpers/
+â”‚   â””â”€â”€ groq.service.js
+â”œâ”€â”€ src/
+â”‚   â”œâ”€â”€ chats/
+â”‚   â”‚   â”œâ”€â”€ chats.controller.js
+â”‚   â”‚   â””â”€â”€ chats.routes.js
+â”‚   â”œâ”€â”€ messages/
+â”‚   â”‚   â”œâ”€â”€ messages.controller.js
+â”‚   â”‚   â””â”€â”€ messages.routes.js
+â”‚   â”œâ”€â”€ explication/
+â”‚   â”‚   â”œâ”€â”€ explication.controller.js
+â”‚   â”‚   â”œâ”€â”€ codeChat.controller.js
+â”‚   â”‚   â”œâ”€â”€ codeProposal.controller.js
+â”‚   â”‚   â””â”€â”€ explication.routes.js
+â”‚   â””â”€â”€ codeGeneration/
+â”‚       â”œâ”€â”€ codeGeneration.controller.js
+â”‚       â””â”€â”€ codeGeneration.routes.js
+â””â”€â”€ index.js
 ```
 
 ### Endpoints de chats
@@ -654,17 +655,17 @@ Base de datos: `MongoDB`
 
 ```text
 SynapseCode-ServiceCodeSessions/
-├── configs/
-├── helpers/
-│   └── code-execution.helper.js
-├── src/
-│   └── codeSessions/
-│       ├── codeSessions.controller.js
-│       ├── codeSessions.routes.js
-│       ├── codeExecutionConsole.controller.js
-│       ├── codeExecutionConsole.routes.js
-│       └── codeExecutionConsole.model.js
-└── index.js
+â”œâ”€â”€ configs/
+â”œâ”€â”€ helpers/
+â”‚   â””â”€â”€ code-execution.helper.js
+â”œâ”€â”€ src/
+â”‚   â””â”€â”€ codeSessions/
+â”‚       â”œâ”€â”€ codeSessions.controller.js
+â”‚       â”œâ”€â”€ codeSessions.routes.js
+â”‚       â”œâ”€â”€ codeExecutionConsole.controller.js
+â”‚       â”œâ”€â”€ codeExecutionConsole.routes.js
+â”‚       â””â”€â”€ codeExecutionConsole.model.js
+â””â”€â”€ index.js
 ```
 
 ### Endpoints de sesiones
@@ -752,14 +753,14 @@ Base de datos: `MongoDB`
 
 ```text
 SynapseCode-ServiceExecutionCode/
-├── configs/
-├── helpers/
-│   └── Judge0.service.js
-├── src/
-│   └── codeExecutions/
-│       ├── codeExecutions.controller.js
-│       └── codeExecutions.routes.js
-└── index.js
+â”œâ”€â”€ configs/
+â”œâ”€â”€ helpers/
+â”‚   â””â”€â”€ Judge0.service.js
+â”œâ”€â”€ src/
+â”‚   â””â”€â”€ codeExecutions/
+â”‚       â”œâ”€â”€ codeExecutions.controller.js
+â”‚       â””â”€â”€ codeExecutions.routes.js
+â””â”€â”€ index.js
 ```
 
 ### Endpoints
@@ -836,22 +837,22 @@ Base de datos: `MongoDB`
 
 ```text
 SynapseCode-ServiceGit/
-├── configs/
-├── middleware/
-├── services/
-│   └── gitService.js
-├── src/
-│   ├── repositories/
-│   │   ├── repositories.controller.js
-│   │   ├── repositories.model.js
-│   │   └── repositories.routes.js
-│   └── commands/
-│       ├── commands.controller.js
-│       ├── commands.model.js
-│       └── commands.routes.js
-├── workspace/
-├── index.js
-└── package.json
+â”œâ”€â”€ configs/
+â”œâ”€â”€ middleware/
+â”œâ”€â”€ services/
+â”‚   â””â”€â”€ gitService.js
+â”œâ”€â”€ src/
+â”‚   â”œâ”€â”€ repositories/
+â”‚   â”‚   â”œâ”€â”€ repositories.controller.js
+â”‚   â”‚   â”œâ”€â”€ repositories.model.js
+â”‚   â”‚   â””â”€â”€ repositories.routes.js
+â”‚   â””â”€â”€ commands/
+â”‚       â”œâ”€â”€ commands.controller.js
+â”‚       â”œâ”€â”€ commands.model.js
+â”‚       â””â”€â”€ commands.routes.js
+â”œâ”€â”€ workspace/
+â”œâ”€â”€ index.js
+â””â”€â”€ package.json
 ```
 
 ### Endpoints de repositorios
@@ -980,7 +981,7 @@ AUTH_SERVICE_URL=http://localhost:3006
 
 ### Observaciones
 
-- este servicio tiene README propio adicional dentro de su carpeta.
+- la documentacion operativa debe consolidarse en este README raiz.
 - hoy existe como microservicio independiente, pero el orquestador raiz no lo levanta.
 - su README tambien documenta respuestas estandar `success/message/data` y codigos de error de negocio.
 
@@ -999,7 +1000,7 @@ Base de datos: `MongoDB`
 - administra el rol ORG_ROLE y profesores dentro de instituciones
 - califica codigo de estudiantes con criterios personalizados
 - restringe uso de IA en salas por instructor
-- proporciona analíticas por alumno para instituciones
+- proporciona analÃ­ticas por alumno para instituciones
 
 ### Stack y dependencias
 
@@ -1014,71 +1015,71 @@ Base de datos: `MongoDB`
 
 ```text
 SynapseCode-ServicePlans/
-├── configs/
-│   ├── app.js
-│   ├── config.js
-│   ├── cors-configuration.js
-│   ├── db.js
-│   └── helmet-configuration.js
-├── helpers/
-│   ├── email-service.js
-│   ├── stripe-service.js
-│   └── auth-service-bridge.js
-├── middlewares/
-│   ├── validate-JWT.js
-│   └── request-limit.js
-├── src/
-│   ├── plans/
-│   │   ├── plans.controller.js
-│   │   ├── plans.routes.js
-│   │   └── plan.model.js
-│   ├── subscriptions/
-│   │   ├── subscriptions.controller.js
-│   │   ├── subscriptions.routes.js
-│   │   └── subscription.model.js
-│   ├── org-management/
-│   │   ├── org-management.controller.js
-│   │   ├── org-management.routes.js
-│   │   ├── code-rating.model.js
-│   │   └── room-ai-restrictions.model.js
-│   └── health/
-│       └── health.routes.js
-└── index.js
+â”œâ”€â”€ configs/
+â”‚   â”œâ”€â”€ app.js
+â”‚   â”œâ”€â”€ config.js
+â”‚   â”œâ”€â”€ cors-configuration.js
+â”‚   â”œâ”€â”€ db.js
+â”‚   â””â”€â”€ helmet-configuration.js
+â”œâ”€â”€ helpers/
+â”‚   â”œâ”€â”€ email-service.js
+â”‚   â”œâ”€â”€ stripe-service.js
+â”‚   â””â”€â”€ auth-service-bridge.js
+â”œâ”€â”€ middlewares/
+â”‚   â”œâ”€â”€ validate-JWT.js
+â”‚   â””â”€â”€ request-limit.js
+â”œâ”€â”€ src/
+â”‚   â”œâ”€â”€ plans/
+â”‚   â”‚   â”œâ”€â”€ plans.controller.js
+â”‚   â”‚   â”œâ”€â”€ plans.routes.js
+â”‚   â”‚   â””â”€â”€ plan.model.js
+â”‚   â”œâ”€â”€ subscriptions/
+â”‚   â”‚   â”œâ”€â”€ subscriptions.controller.js
+â”‚   â”‚   â”œâ”€â”€ subscriptions.routes.js
+â”‚   â”‚   â””â”€â”€ subscription.model.js
+â”‚   â”œâ”€â”€ org-management/
+â”‚   â”‚   â”œâ”€â”€ org-management.controller.js
+â”‚   â”‚   â”œâ”€â”€ org-management.routes.js
+â”‚   â”‚   â”œâ”€â”€ code-rating.model.js
+â”‚   â”‚   â””â”€â”€ room-ai-restrictions.model.js
+â”‚   â””â”€â”€ health/
+â”‚       â””â”€â”€ health.routes.js
+â””â”€â”€ index.js
 ```
 
 ### Planes disponibles
 
-**FREE — $0/mes**
+**FREE â€” $0/mes**
 - Salas activas: Hasta 3
 - Usuarios por sala: Hasta 5
-- Ejecución de código: Básica (limitada)
+- EjecuciÃ³n de cÃ³digo: BÃ¡sica (limitada)
 - Chat e historial: Limitado
 - Explicaciones con IA: Limitadas (hasta 10)
 
-**PRO — $20/mes**
+**PRO â€” $20/mes**
 - Salas activas: Ilimitadas
 - Usuarios por sala: Hasta 20
 - Explicaciones con IA: Hasta 20
 - Historial de versiones: Completo
-- Ejecuciones: Prioritarias sin límite
+- Ejecuciones: Prioritarias sin lÃ­mite
 
-**ORG — $50+/mes (por institución)**
-- Todo lo del PRO, más:
-- Panel de administración
-- Analíticas por alumno
+**ORG â€” $50+/mes (por instituciÃ³n)**
+- Todo lo del PRO, mÃ¡s:
+- Panel de administraciÃ³n
+- AnalÃ­ticas por alumno
 - Branding personalizado
 - Soporte dedicado
 - Control de profesores y estudiantes
-- Restricción de IA en ejercicios
+- RestricciÃ³n de IA en ejercicios
 
-### Endpoints públicos (sin JWT)
+### Endpoints pÃºblicos (sin JWT)
 
 ```text
 GET /api/v1/plans
 GET /api/v1/plans/:planId
 ```
 
-### Endpoints de suscripción (con JWT)
+### Endpoints de suscripciÃ³n (con JWT)
 
 ```text
 POST /api/v1/subscriptions/select
@@ -1087,7 +1088,14 @@ GET  /api/v1/subscriptions/current
 POST /api/v1/subscriptions/webhook/stripe
 ```
 
-### Endpoints de gestión ORG (con JWT + ORG_ROLE)
+### Estado actual del flujo de suscripciones
+
+- en entorno local, `POST /api/v1/subscriptions/select` activa `FREE`, `PRO` y `ORG` directamente en MongoDB.
+- en local, `POST /api/v1/subscriptions/checkout` responde `501` porque Stripe quedo diferido para despliegue.
+- en local, `POST /api/v1/subscriptions/webhook/stripe` tambien responde `501`.
+- `helpers/stripe-service.js` se conserva como base para reactivar checkout y webhook reales cuando la app se despliegue.
+
+### Endpoints de gestiÃ³n ORG (con JWT + ORG_ROLE)
 
 #### Profesores
 
@@ -1098,7 +1106,7 @@ POST   /api/v1/org-management/professors/:professorId/reject
 GET    /api/v1/org-management/professors/approved
 ```
 
-#### Calificación de código
+#### CalificaciÃ³n de cÃ³digo
 
 ```text
 POST   /api/v1/org-management/code/rate
@@ -1112,7 +1120,7 @@ POST   /api/v1/org-management/rooms/:roomId/ai-restrictions
 GET    /api/v1/org-management/rooms/:roomId/ai-restrictions
 ```
 
-#### Analíticas
+#### AnalÃ­ticas
 
 ```text
 GET /api/v1/org-management/analytics/student/:studentId
@@ -1124,36 +1132,44 @@ GET /api/v1/org-management/analytics/student/:studentId
 PUT /api/v1/org-management/rooms/:roomId/permissions
 ```
 
-### Flujo de selección de plan
+### Flujo de selecciÃ³n de plan
 
 **Para plan FREE:**
 1. Usuario llamando `POST /api/v1/subscriptions/select` con `planName: 'FREE'`
-2. Se crea registro de suscripción con estado `active`
-3. Se envía email de bienvenida con info de otros planes
+2. Se crea registro de suscripciÃ³n con estado `active`
+3. Se envÃ­a email de bienvenida con info de otros planes
 4. Se actualiza `typePlan` del usuario en AuthService
 
-**Para planes PRO y ORG:**
+**Para planes PRO y ORG en local (estado actual):**
 1. Usuario llama `POST /api/v1/subscriptions/select` con `planName: 'PRO'` o `'ORG'`
-2. Se crea sesión de checkout con Stripe
+2. En el estado actual del repo, la activaciÃƒÂ³n local se hace directo en MongoDB sin checkout externo.
+3. Para `ORG` se valida `institutionName`, `maxParticipants` y opcionalmente `carnets`.
+4. Si se mandan carnets, el servicio intenta crear participantes ORG.
+5. Se envÃƒÂ­a confirmaciÃƒÂ³n por email y se actualiza `typePlan` en AuthService.
+
+Nota:
+
+- las lÃƒÂ­neas que siguen describen el flujo Stripe original pensado para despliegue futuro.
+2. Se crea sesiÃ³n de checkout con Stripe
 3. Se retorna URL de checkout al frontend
 4. Usuarito completa pago en portal de Stripe
 5. Webhook recibe `checkout.session.completed`
-6. Se crea/actualiza suscripción con estado `active`
-7. Se envía email con factura PDF
+6. Se crea/actualiza suscripciÃ³n con estado `active`
+7. Se envÃ­a email con factura PDF
 8. Se actualiza `typePlan` del usuario
 
 ### Flujo de plan ORG con profesor
 
 **Paso 1: Compra del plan**
-1. Admin de institución compra plan ORG
-2. Se registra como `contractorEmail` en la suscripción
+1. Admin de instituciÃ³n compra plan ORG
+2. Se registra como `contractorEmail` en la suscripciÃ³n
 
 **Paso 2: Solicitud de profesor**
 1. Profesor intenta obtener ORG_ROLE
 2. Llama `POST /api/v1/org-management/professors/request-approval`
-3. Se envía email al contractante con solicitud de aprobación
+3. Se envÃ­a email al contractante con solicitud de aprobaciÃ³n
 
-**Paso 3: Aprobación por contractante**
+**Paso 3: AprobaciÃ³n por contractante**
 1. Contractante accede a `POST /api/v1/org-management/professors/{professorId}/approve`
 2. Profesor se marca como `approved`
 3. Rol del profesor se actualiza a ORG_ROLE en AuthService (TODO: implementar)
@@ -1163,11 +1179,11 @@ PUT /api/v1/org-management/rooms/:roomId/permissions
 2. Puede establecer restricciones de IA
 3. Puede controlar permisos (editar, ejecutar, chatear)
 
-**Paso 5: Calificación**
+**Paso 5: CalificaciÃ³n**
 1. Profesor accede a `POST /api/v1/org-management/code/rate`
-2. Envía código, rating, escala (0-10, 0-15, 0-100%), comentarios
-3. Opcionalmente usa IA para análisis (TODO: integrar con ServiceChat)
-4. Se guarda calificación con analíticas
+2. EnvÃ­a cÃ³digo, rating, escala (0-10, 0-15, 0-100%), comentarios
+3. Opcionalmente usa IA para anÃ¡lisis (TODO: integrar con ServiceChat)
+4. Se guarda calificaciÃ³n con analÃ­ticas
 
 ### Modelo de datos principales
 
@@ -1279,15 +1295,20 @@ PLAN_PRO_PRICE=2000
 PLAN_ORG_PRICE=5000
 ```
 
+Nota:
+
+- en el estado local actual, las variables `STRIPE_*` pueden quedar como placeholders si no se va a reactivar checkout real.
+- para despliegue o pruebas reales de pago, esas tres variables deben venir de Stripe.
+
 ### Observaciones
 
-- este es el servicio más nuevo del proyecto, enfocado en monetización y control institucional.
+- este es el servicio mÃ¡s nuevo del proyecto, enfocado en monetizaciÃ³n y control institucional.
 - integra con AuthService para actualizar `typePlan` y roles de usuario.
-- la validación de que un profesor sea realmente profesor requiere aprobación manual del contractante.
-- los límites de plan se enfuerzan a nivel de BusinessLogic en los servicios correspondientes (ServiceRoom, ServiceChat, etc).
-- el envío de correos es asincrónico y no bloquea la respuesta.
-- Stripe webhooks deben ser validados en producción con verificación de firma.
-- TODO: integración profunda con ServiceChat para análisis de código con IA.
+- la validaciÃ³n de que un profesor sea realmente profesor requiere aprobaciÃ³n manual del contractante.
+- los lÃ­mites de plan se enfuerzan a nivel de BusinessLogic en los servicios correspondientes (ServiceRoom, ServiceChat, etc).
+- el envÃ­o de correos es asincrÃ³nico y no bloquea la respuesta.
+- Stripe webhooks deben ser validados en producciÃ³n con verificaciÃ³n de firma.
+- TODO: integraciÃ³n profunda con ServiceChat para anÃ¡lisis de cÃ³digo con IA.
 
 ## Consola interactiva compartida
 
@@ -1329,133 +1350,133 @@ POST /api/v1/console/:consoleId/disconnect
 - `ServiceExecutionCode` es la API general de ejecucion
 - `ServiceCodeSessions` agrega experiencia colaborativa, presencia y manejo compartido de consola
 
-## Estado de Implementación y Características Completadas
+## Estado de ImplementaciÃ³n y CaracterÃ­sticas Completadas
 
 ### Resumen General
 
 Fecha: 1 de Mayo de 2026
 Estado: 100% COMPLETADO Y FUNCIONAL
 
-La plataforma SynapseCode ha completado la implementación de:
+La plataforma SynapseCode ha completado la implementaciÃ³n de:
 
 - Sistema de planes y suscripciones (FREE, PRO, ORG)
-- Validaciones automáticas de límites en todos los servicios
-- Sistema de participantes ORG con validación de carnets
-- Integración con Stripe para pagos
-- Notificaciones por email automáticas
-- Panel de gestión institucional
+- Validaciones automÃ¡ticas de lÃ­mites en todos los servicios
+- Sistema de participantes ORG con validaciÃ³n de carnets
+- IntegraciÃ³n con Stripe para pagos
+- Notificaciones por email automÃ¡ticas
+- Panel de gestiÃ³n institucional
 
 ### Sistema de Planes Completado
 
-Se implementó un sistema completo de monetización mediante `SynapseCode-ServicePlans`:
+Se implementÃ³ un sistema completo de monetizaciÃ³n mediante `SynapseCode-ServicePlans`:
 
 **Planes disponibles:**
 
 - FREE: $0/mes (Hasta 3 salas, 5 usuarios/sala, 10 explicaciones IA/mes, 50 ejecuciones/mes)
 - PRO: $20/mes (Salas ilimitadas, 20 usuarios/sala, 20 explicaciones IA/mes, ejecuciones ilimitadas)
-- ORG: $50+/mes (Todo ilimitado + panel admin, analíticas, gestión de profesores, control de estudiantes)
+- ORG: $50+/mes (Todo ilimitado + panel admin, analÃ­ticas, gestiÃ³n de profesores, control de estudiantes)
 
 **Funcionalidades implementadas:**
 
-- 35+ endpoints de gestión de planes y suscripciones
+- 35+ endpoints de gestiÃ³n de planes y suscripciones
 - Pago integrado con Stripe y webhooks
-- Emails automáticos (bienvenida, confirmación, facturas, aprobaciones)
+- Emails automÃ¡ticos (bienvenida, confirmaciÃ³n, facturas, aprobaciones)
 - Roles ORG_ROLE para profesores e instituciones
-- Restricción de IA en salas por instructor
-- Analíticas de estudiantes por institución
-- Seeding automático de planes en arranque
+- RestricciÃ³n de IA en salas por instructor
+- AnalÃ­ticas de estudiantes por instituciÃ³n
+- Seeding automÃ¡tico de planes en arranque
 
-### Validaciones de Límites por Plan
+### Validaciones de LÃ­mites por Plan
 
-Se implementaron validaciones automáticas de límites en 4 servicios:
+Se implementaron validaciones automÃ¡ticas de lÃ­mites en 4 servicios:
 
-**ServiceRoom - Límite de salas activas**
+**ServiceRoom - LÃ­mite de salas activas**
 - Validador: `helpers/plan-limits-validator.js`
-- FREE: Máximo 3 salas
+- FREE: MÃ¡ximo 3 salas
 - PRO/ORG: Ilimitado
 - Implementado en: `createRoom()`
 
-**ServiceChat - Límite de explicaciones IA**
+**ServiceChat - LÃ­mite de explicaciones IA**
 - Validador: `helpers/ai-limits-validator.js`
 - FREE: 10 explicaciones/mes
 - PRO: 20 explicaciones/mes
 - ORG: Ilimitado
 - Implementado en: `createMessage()`, `createExplication()`
 
-**ServiceCodeSessions - Límite de ejecuciones**
+**ServiceCodeSessions - LÃ­mite de ejecuciones**
 - Validador: `helpers/execution-limits-validator.js`
 - FREE: 50 ejecuciones/mes
 - PRO: Ilimitado
 - ORG: Ilimitado
 - Implementado en: `createCodeSession()`
 
-**ServiceExecutionCode - Límite de ejecuciones**
+**ServiceExecutionCode - LÃ­mite de ejecuciones**
 - Validador: `helpers/execution-limits-validator.js`
 - FREE: 50 ejecuciones/mes
 - PRO: Ilimitado
 - ORG: Ilimitado
 - Implementado en: `runCode()`, `submitCodeAsync()`
 
-**Características de validación:**
+**CaracterÃ­sticas de validaciÃ³n:**
 - Sin cambios que rompan funcionalidad existente (0 BREAKING CHANGES)
 - Fallback graceful si ServicePlans no disponible
-- Errores 403 detallados con límite actual y uso
+- Errores 403 detallados con lÃ­mite actual y uso
 
 ### Sistema de Participantes ORG con Carnets
 
-Se implementó un sistema completo de gestión de participantes (estudiantes) para instituciones:
+Se implementÃ³ un sistema completo de gestiÃ³n de participantes (estudiantes) para instituciones:
 
 **Funcionalidades:**
 
-- Gestión de estudiantes por número de carnet
-- Control de límite máximo de participantes por institución
-- Validación automática de carnets para acceso a salas
-- Invitación automática de estudiantes por email
+- GestiÃ³n de estudiantes por nÃºmero de carnet
+- Control de lÃ­mite mÃ¡ximo de participantes por instituciÃ³n
+- ValidaciÃ³n automÃ¡tica de carnets para acceso a salas
+- InvitaciÃ³n automÃ¡tica de estudiantes por email
 - Estados de participante: PENDING, ACTIVE, REMOVED
-- Estadísticas de participación y uso
-- Historial preservado para auditoría
+- EstadÃ­sticas de participaciÃ³n y uso
+- Historial preservado para auditorÃ­a
 
 **Endpoints implementados:**
 
 - POST /api/v1/org-management/{subscriptionId}/participants (Agregar participante)
 - GET /api/v1/org-management/{subscriptionId}/participants (Listar participantes)
-- GET /api/v1/org-management/{subscriptionId}/participants/stats (Estadísticas)
+- GET /api/v1/org-management/{subscriptionId}/participants/stats (EstadÃ­sticas)
 - DELETE /api/v1/org-management/{subscriptionId}/participants/{carnetNumber} (Remover)
-- POST /api/v1/org-management/validate-carnet (Validar carnet - público para otros servicios)
+- POST /api/v1/org-management/validate-carnet (Validar carnet - pÃºblico para otros servicios)
 
 **Validaciones:**
-- Formato de carnet: Alfanumérico, 6-20 caracteres
-- No duplicados dentro de la suscripción
-- Respeto al límite máximo de participantes
+- Formato de carnet: AlfanumÃ©rico, 6-20 caracteres
+- No duplicados dentro de la suscripciÃ³n
+- Respeto al lÃ­mite mÃ¡ximo de participantes
 - Soft delete con historial preservado
 
-### Documentación Completada
+### DocumentaciÃ³n Completada
 
-Se documentó completamente el proyecto con:
+Se documentÃ³ completamente el proyecto con:
 
-- README.md (fuente única de verdad - este archivo)
+- README.md (fuente Ãºnica de verdad - este archivo)
 - API_EXAMPLES.md en ServicePlans (13+ ejemplos de endpoints)
 - QUICKSTART.md en ServicePlans (inicio en 5 minutos)
-- INTEGRATION.md en ServicePlans (guía técnica de integración)
+- INTEGRATION.md en ServicePlans (guÃ­a tÃ©cnica de integraciÃ³n)
 - INTEGRATION_COMPLETED.md en ServicePlans (resumen de integraciones)
-- IMPLEMENTATION_SUMMARY.md en ServicePlans (detalles técnicos)
-- VERIFICATION_CHECKLIST.md en ServicePlans (checklist de verificación)
-- PARTICIPANTS_ORG_GUIDE.md en ServicePlans (guía de participantes)
-- PARTICIPANTS_ORG_IMPLEMENTATION.md en ServicePlans (detalles técnicos ORG)
-- TESTING_GUIDE.md (guía de pruebas completa)
+- IMPLEMENTATION_SUMMARY.md en ServicePlans (detalles tÃ©cnicos)
+- VERIFICATION_CHECKLIST.md en ServicePlans (checklist de verificaciÃ³n)
+- PARTICIPANTS_ORG_GUIDE.md en ServicePlans (guÃ­a de participantes)
+- PARTICIPANTS_ORG_IMPLEMENTATION.md en ServicePlans (detalles tÃ©cnicos ORG)
+- TESTING_GUIDE.md (guÃ­a de pruebas completa)
 
 ### Flujo de Compra de Plan ORG con Profesor
 
 **Escenario completo:**
 
-Paso 1: Admin de institución compra plan ORG mediante Stripe
-- Selecciona cantidad máxima de participantes
-- Proporciona carnets iniciales o los agrega después
-- Recibe confirmación y factura por email
+Paso 1: Admin de instituciÃ³n compra plan ORG mediante Stripe
+- Selecciona cantidad mÃ¡xima de participantes
+- Proporciona carnets iniciales o los agrega despuÃ©s
+- Recibe confirmaciÃ³n y factura por email
 
-Paso 2: Profesor solicita aprobación
+Paso 2: Profesor solicita aprobaciÃ³n
 - Llama POST /api/v1/org-management/professors/request-approval
-- Admin de institución recibe email de solicitud
+- Admin de instituciÃ³n recibe email de solicitud
 
 Paso 3: Admin aprueba profesor
 - Llama POST /api/v1/org-management/professors/{professorId}/approve
@@ -1467,22 +1488,22 @@ Paso 4: Profesor crea sala y establece restricciones
 - Establece restricciones de IA si es necesario
 - Controla permisos de estudiantes (editar, ejecutar, chatear)
 
-Paso 5: Profesor califica código
+Paso 5: Profesor califica cÃ³digo
 - Usa POST /api/v1/org-management/code/rate
-- Selecciona escala de calificación (0-10, 0-15, 0-100%)
+- Selecciona escala de calificaciÃ³n (0-10, 0-15, 0-100%)
 - Agrega criterios y comentarios
-- Sistema opcional: genera análisis con IA
+- Sistema opcional: genera anÃ¡lisis con IA
 
-Paso 6: Instituciones ven analíticas
+Paso 6: Instituciones ven analÃ­ticas
 - Consultan GET /api/v1/org-management/analytics/student/{studentId}
-- Ven estadísticas de participación por estudiante
+- Ven estadÃ­sticas de participaciÃ³n por estudiante
 - Revisan calificaciones agregadas
 
-### Estadísticas de Implementación
+### EstadÃ­sticas de ImplementaciÃ³n
 
 - Archivos creados: 35+
 - Archivos modificados: 8
-- Líneas de código nuevas: 1500+
+- LÃ­neas de cÃ³digo nuevas: 1500+
 - Endpoints implementados: 35+
 - Modelos MongoDB: 4 nuevos
 - Helpers/servicios: 7 nuevos
@@ -2052,11 +2073,11 @@ Archivos detectados:
 - `Endpoints/SynapseCode.postman_collection.json`
 - `SynapseCode/ROOMS_POSTMAN_ENDPOINTS.md`
 
-### Guía Rápida de Validación de Límites por Plan
+### GuÃ­a RÃ¡pida de ValidaciÃ³n de LÃ­mites por Plan
 
-Para verificar que las validaciones de límites funcionan correctamente:
+Para verificar que las validaciones de lÃ­mites funcionan correctamente:
 
-**Test 1: Límite de salas (3 para plan FREE)**
+**Test 1: LÃ­mite de salas (3 para plan FREE)**
 
 ```bash
 # 1. Obtener JWT de usuario FREE
@@ -2080,7 +2101,7 @@ curl -X POST http://localhost:3007/api/v1/rooms \
   -H "Content-Type: application/json" \
   -d '{"roomName":"Sala 4","roomType":"PUBLICA"}'
 
-# Esperado: 403 Forbidden con mensaje sobre límite de salas
+# Esperado: 403 Forbidden con mensaje sobre lÃ­mite de salas
 
 # 4. Usuario PRO puede crear ilimitadas
 export PRO_JWT="<token_pro_user>"
@@ -2093,7 +2114,7 @@ done
 # Todas las 10 deben funcionar sin error 403
 ```
 
-**Test 2: Límite de explicaciones IA (10/mes para FREE)**
+**Test 2: LÃ­mite de explicaciones IA (10/mes para FREE)**
 
 ```bash
 # 1. Obtener chat asociado a sala
@@ -2114,10 +2135,10 @@ curl -X POST http://localhost:3008/api/v1/explication/explain \
   -H "Content-Type: application/json" \
   -d '{"code":"print(hola)","language":"PYTHON"}'
 
-# Esperado: 403 Forbidden - límite de IA alcanzado
+# Esperado: 403 Forbidden - lÃ­mite de IA alcanzado
 ```
 
-**Test 3: Límite de ejecuciones (50/mes para FREE)**
+**Test 3: LÃ­mite de ejecuciones (50/mes para FREE)**
 
 ```bash
 # 1. Ejecutar 50 veces (debe exitoso)
@@ -2128,19 +2149,19 @@ for i in {1..50}; do
     -d '{"language":"JAVASCRIPT","code":"console.log(1+1)"}'
 done
 
-# 2. Intentar ejecución 51 (debe fallar)
+# 2. Intentar ejecuciÃ³n 51 (debe fallar)
 curl -X POST http://localhost:3010/api/v1/codeExecutions/run \
   -H "Authorization: Bearer $FREE_JWT" \
   -H "Content-Type: application/json" \
   -d '{"language":"JAVASCRIPT","code":"console.log(1+1)"}'
 
-# Esperado: 403 Forbidden - límite de ejecuciones alcanzado
+# Esperado: 403 Forbidden - lÃ­mite de ejecuciones alcanzado
 ```
 
-**Test 4: Validación de Carnets ORG**
+**Test 4: ValidaciÃ³n de Carnets ORG**
 
 ```bash
-# 1. Obtener suscripción ORG existente
+# 1. Obtener suscripciÃ³n ORG existente
 export ORG_SUBSCRIPTION_ID="<org_subscription_id>"
 
 # 2. Agregar participante
@@ -2153,9 +2174,9 @@ curl -X POST http://localhost:3013/api/v1/org-management/$ORG_SUBSCRIPTION_ID/pa
     "studentEmail":"juan@student.edu"
   }'
 
-# Esperado: 201 Created con confirmación
+# Esperado: 201 Created con confirmaciÃ³n
 
-# 3. Validar carnet (endpoint público)
+# 3. Validar carnet (endpoint pÃºblico)
 curl -X POST http://localhost:3013/api/v1/org-management/validate-carnet \
   -H "Content-Type: application/json" \
   -d '{
@@ -2163,9 +2184,9 @@ curl -X POST http://localhost:3013/api/v1/org-management/validate-carnet \
     "carnetNumber":"EST001"
   }'
 
-# Esperado: 200 OK - carnet válido para acceso
+# Esperado: 200 OK - carnet vÃ¡lido para acceso
 
-# 4. Carnet no válido
+# 4. Carnet no vÃ¡lido
 curl -X POST http://localhost:3013/api/v1/org-management/validate-carnet \
   -H "Content-Type: application/json" \
   -d '{
@@ -2173,7 +2194,7 @@ curl -X POST http://localhost:3013/api/v1/org-management/validate-carnet \
     "carnetNumber":"INVALID"
   }'
 
-# Esperado: 404 o 403 - carnet no válido
+# Esperado: 404 o 403 - carnet no vÃ¡lido
 ```
 
 ### Secuencia recomendada de testing
@@ -2435,3 +2456,5 @@ Pendientes visibles desde codigo:
 
 Ultima actualizacion de este README: 28 de abril de 2026.  
 Estado del documento: consolidado y expandido en una sola fuente.
+
+
