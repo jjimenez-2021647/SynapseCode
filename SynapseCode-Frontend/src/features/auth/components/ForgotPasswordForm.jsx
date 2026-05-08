@@ -13,7 +13,7 @@ export const ForgotPasswordForm = ({ onSwitch }) => {
     }
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-[1.5rem]">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-[1.75rem]">
             <div>
                 <label className="mb-[0.4rem] block text-[0.85rem] font-medium text-foreground">
                     Email
@@ -38,7 +38,7 @@ export const ForgotPasswordForm = ({ onSwitch }) => {
 
             <button
                 type="submit"
-                className="w-full cursor-pointer rounded-[10px] border-0 bg-gradient-to-r from-primary to-accent !p-[0.8rem] text-[0.95rem] font-semibold text-background shadow-[0_4px_24px_rgba(0,217,255,0.25)] transition-opacity duration-200"
+                className="mt-[0.35rem] w-full cursor-pointer rounded-[10px] border-0 bg-gradient-to-r from-primary to-accent !p-[0.8rem] text-[0.95rem] font-semibold text-background shadow-[0_4px_24px_rgba(0,217,255,0.25)] transition-opacity duration-200"
             >
                 Enviar Correo
             </button>

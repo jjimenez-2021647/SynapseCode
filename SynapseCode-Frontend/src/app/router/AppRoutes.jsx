@@ -7,6 +7,7 @@ export const AppRoutes = () => {
         <Routes>
             {/* RUTAS PUBLICAS */}
             <Route path="/" element={<AuthPage />} />
+            <Route path="/register" element={<AuthPage />} />
 
             {/* PROTECTED ROUTES */}
             <Route path="/dashboard" element={<DashboardPage />} />

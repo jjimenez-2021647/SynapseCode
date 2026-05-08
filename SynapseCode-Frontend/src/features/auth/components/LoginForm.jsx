@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom"
 import { clsx } from "clsx"
 import toast from "react-hot-toast"
 
-export const LoginForm = ({ onForgot }) => {
+export const LoginForm = ({ onForgot, onRegister }) => {
     const navigate = useNavigate()
     const [showPass, setShowPass] = useState(false)
 
@@ -31,7 +31,7 @@ export const LoginForm = ({ onForgot }) => {
     const iconClass = "absolute left-[0.75rem] top-1/2 flex -translate-y-1/2 items-center text-muted-foreground"
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-[1.55rem]">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-[1.75rem]">
 
             {/* Email */}
             <div>
@@ -119,7 +119,7 @@ export const LoginForm = ({ onForgot }) => {
                 type="submit"
                 disabled={loading}
                 className={clsx(
-                    "mt-[0.25rem] flex w-full items-center justify-center gap-[0.5rem] rounded-[10px] border-0 !p-[0.8rem] text-[0.95rem] font-semibold tracking-[0.02em]",
+                    "mt-[0.55rem] flex w-full items-center justify-center gap-[0.5rem] rounded-[10px] border-0 !p-[0.8rem] text-[0.95rem] font-semibold tracking-[0.02em]",
                     "transition-[opacity,box-shadow] duration-200",
                     loading
                         ? "cursor-not-allowed bg-primary/30 text-foreground shadow-none"
@@ -136,10 +136,11 @@ export const LoginForm = ({ onForgot }) => {
                 )}
             </button>
 
-            <p className="-mt-[0.35rem] text-center text-[0.85rem] text-muted-foreground">
+            <p className="-mt-[0.15rem] text-center text-[0.85rem] text-muted-foreground">
                 No tienes cuenta?{' '}
                 <button
                     type="button"
+                    onClick={onRegister}
                     className="cursor-pointer border-0 bg-transparent p-0 text-[0.85rem] font-medium text-primary"
                 >
                     Registrate
