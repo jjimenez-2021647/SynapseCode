@@ -8,6 +8,11 @@ import {
 } from "../../../shared/api"
 import { showError } from "../../../shared/utils/toast"
 
+const isExpired = (expiresAt) => {
+    if (!expiresAt) return false;
+    return new Date(expiresAt).getTime() <= Date.now();
+}
+
 export const useAuthStore = create(
     persist(
         (set, get) => ({
@@ -24,6 +29,19 @@ export const useAuthStore = create(
                 const token = get().token;
                 const role = get().user?.role;
                 const isAdmin = role === "ADMIN_ROLE";
+
+                if (!token || isExpired(get().expiresAt)) {
+                    set({
+                        user: null,
+                        token: null,
+                        refreshToken: null,
+                        expiresAt: null,
+                        isAuthenticated: false,
+                        isLoadingAuth: false,
+                        error: null
+                    })
+                    return;
+                }
 
                 if (token && !isAdmin) {
                     set({
@@ -75,6 +93,7 @@ export const useAuthStore = create(
                         refreshToken: data.refreshToken,
                         expiresAt: data.expiresAt,
                         loading: false,
+                        isLoadingAuth: false,
                         isAuthenticated: true
                     })
 
@@ -86,7 +105,7 @@ export const useAuthStore = create(
                         err.response?.status === 401
                             ? "Usuario o contrasena incorrectos"
                             : err.response?.data?.message || "Error de autenticacion";
-                    set({ error: message, loading: false })
+                    set({ error: message, loading: false, isLoadingAuth: false })
                     return { success: false, error: message }
                 }
             },
@@ -148,11 +167,22 @@ export const useAuthStore = create(
                 set({
                     user: null,
                     token: null,
+                    refreshToken: null,
                     expiresAt: null,
-                    isAuthenticated: false
+                    isAuthenticated: false,
+                    isLoadingAuth: false
                 })
             }
         }),
-        { name: "auth-storage" }
+        {
+            name: "auth-storage",
+            partialize: (state) => ({
+                user: state.user,
+                token: state.token,
+                refreshToken: state.refreshToken,
+                expiresAt: state.expiresAt,
+                isAuthenticated: state.isAuthenticated,
+            })
+        }
     )
 )
