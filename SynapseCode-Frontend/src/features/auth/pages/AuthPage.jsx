@@ -49,8 +49,8 @@ export const AuthPage = () => {
                                 <span className="text-base font-bold text-background">&lt;/&gt;</span>
                             ) : (
                                 <img
-                                    src="/src/assets/img/kinal_sports.png"
-                                    alt="Kinal Sports"
+                                    src="/src/assets/img/logo.png"
+                                    alt="Synapse Code Logo"
                                     className="h-6 w-auto brightness-0 invert"
                                     onError={() => setLogoError(true)}
                                 />

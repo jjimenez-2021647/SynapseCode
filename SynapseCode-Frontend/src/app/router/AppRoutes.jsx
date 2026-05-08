@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
 import { AuthPage } from '../../features/auth/pages/AuthPage.jsx';
 import { DashboardPage } from '../layouts/DasboardPage.jsx';
+import { VerifyEmailPage } from '../../features/auth/pages/VerifyEmailPage.jsx';
 
 export const AppRoutes = () => {
     return (
@@ -8,6 +9,7 @@ export const AppRoutes = () => {
             {/* RUTAS PUBLICAS */}
             <Route path="/" element={<AuthPage />} />
             <Route path="/register" element={<AuthPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
 
             {/* PROTECTED ROUTES */}
             <Route path="/dashboard" element={<DashboardPage />} />
