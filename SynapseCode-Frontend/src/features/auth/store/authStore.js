@@ -3,6 +3,8 @@ import { persist } from 'zustand/middleware'
 import {
     login as loginRequest,
     register as registerRequest,
+    forgotPassword as forgotPasswordRequest,
+    resetPassword as resetPasswordRequest,
 } from "../../../shared/api"
 import { showError } from "../../../shared/utils/toast"
 
@@ -46,7 +48,6 @@ export const useAuthStore = create(
                 try {
                     set({ loading: true, error: null });
                     const { data } = await loginRequest({ emailOrUsername, password })
-                    console.log(data)
 
                     const role = data?.userDetails?.role;
 
@@ -82,7 +83,9 @@ export const useAuthStore = create(
                 } catch (err) {
                     console.error("Login error:", err);
                     const message =
-                        err.response?.data?.message || "Error de autenticación";
+                        err.response?.status === 401
+                            ? "Usuario o contrasena incorrectos"
+                            : err.response?.data?.message || "Error de autenticacion";
                     set({ error: message, loading: false })
                     return { success: false, error: message }
                 }
@@ -100,6 +103,42 @@ export const useAuthStore = create(
                     }
                 } catch (err) {
                     const message = err.response?.data?.message || "Error al registrarse";
+                    set({ error: message, loading: false });
+                    return { success: false, error: message };
+                }
+            },
+
+            forgotPassword: async (email) => {
+                try {
+                    set({ loading: true, error: null });
+                    const { data } = await forgotPasswordRequest(email);
+                    set({ loading: false });
+                    return {
+                        success: true,
+                        message: data?.message || "Te enviamos un enlace para restablecer tu contrasena.",
+                        data,
+                    };
+                } catch (err) {
+                    const message =
+                        err.response?.data?.message || "No se pudo enviar el correo de recuperacion";
+                    set({ error: message, loading: false });
+                    return { success: false, error: message };
+                }
+            },
+
+            resetPassword: async (token, newPassword) => {
+                try {
+                    set({ loading: true, error: null });
+                    const { data } = await resetPasswordRequest(token, newPassword);
+                    set({ loading: false });
+                    return {
+                        success: true,
+                        message: data?.message || "Contrasena actualizada correctamente.",
+                        data,
+                    };
+                } catch (err) {
+                    const message =
+                        err.response?.data?.message || "No se pudo actualizar la contrasena";
                     set({ error: message, loading: false });
                     return { success: false, error: message };
                 }

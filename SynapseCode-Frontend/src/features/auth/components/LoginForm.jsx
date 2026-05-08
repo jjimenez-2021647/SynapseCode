@@ -8,17 +8,22 @@ import toast from "react-hot-toast"
 export const LoginForm = ({ onForgot, onRegister }) => {
     const navigate = useNavigate()
     const [showPass, setShowPass] = useState(false)
+    const [loginError, setLoginError] = useState("")
 
     const { register, handleSubmit, formState: { errors } } = useForm()
     const login = useAuthStore(state => state.login)
     const loading = useAuthStore(state => state.loading)
 
     const onSubmit = async (data) => {
+        setLoginError("")
         const res = await login(data)
         if (res.success) {
             navigate("/dashboard")
             toast.success("¡Bienvenido de nuevo!", { duration: 4000 })
+            return
         }
+
+        setLoginError(res.error || "Usuario o contrasena incorrectos")
     }
 
     const labelClass = "block mb-[0.4rem] text-[0.85rem] font-medium text-foreground"
@@ -113,6 +118,14 @@ export const LoginForm = ({ onForgot, onRegister }) => {
                     </p>
                 )}
             </div>
+
+            {loginError && (
+                <div className="-mt-[0.35rem] rounded-[10px] border border-error/30 bg-error/10 !p-[0.85rem]">
+                    <p className="text-center text-[0.85rem] text-error">
+                        {loginError}
+                    </p>
+                </div>
+            )}
 
             {/* Submit */}
             <button
