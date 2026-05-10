@@ -31,27 +31,43 @@
   --radius-xl: 1rem;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    width: 100%;
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  #root {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #root > * {
+    width: 100%;
+    flex: 1;
+  }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--color-surface); }
+  ::-webkit-scrollbar-thumb { background: var(--color-border-light); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-muted-foreground); }
 }
-
-html { scroll-behavior: smooth; }
-
-body {
-  font-family: var(--font-sans);
-  background-color: var(--color-background);
-  color: var(--color-foreground);
-  min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: var(--color-surface); }
-::-webkit-scrollbar-thumb { background: var(--color-border-light); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--color-muted-foreground); }
 
 .glass {
   background: rgba(13, 19, 32, 0.8);
@@ -63,6 +79,59 @@ body {
   background: rgba(20, 28, 46, 0.6);
   backdrop-filter: blur(8px);
   border: 1px solid var(--color-border);
+}
+
+.synapse-page {
+  background:
+    radial-gradient(circle at var(--cursor-x, 50%) var(--cursor-y, 20%), rgba(0, 217, 255, 0.08), transparent 24rem),
+    linear-gradient(180deg, #0a0e17 0%, #020617 46%, #0a0e17 100%);
+}
+
+.section-shell {
+  width: min(100% - 3rem, 80rem);
+  margin-inline: auto;
+}
+
+.synapse-surface {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(51, 65, 85, 0.56);
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.84), rgba(2, 6, 23, 0.7));
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(16px);
+}
+
+.interactive-card {
+  transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease, background 220ms ease;
+}
+
+.interactive-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(0, 217, 255, 0.42);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0, 217, 255, 0.08);
+}
+
+.spotlight-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at var(--card-x, 50%) var(--card-y, 0%), rgba(0, 217, 255, 0.16), transparent 16rem);
+  transition: opacity 180ms ease;
+}
+
+.spotlight-card:hover::before,
+.spotlight-card:focus-within::before {
+  opacity: 1;
+}
+
+.focus-ring {
+  outline: none;
+}
+
+.focus-ring:focus-visible {
+  box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.24);
 }
 
 .glow-primary { box-shadow: 0 0 20px rgba(0, 217, 255, 0.3); }
@@ -91,13 +160,37 @@ body {
   from { opacity: 0; transform: translateY(-6px); }
   to { opacity: 1; transform: translateY(0); }
 }
+@keyframes scan-line {
+  0% { transform: translateY(-100%); opacity: 0; }
+  20%, 80% { opacity: 0.8; }
+  100% { transform: translateY(380%); opacity: 0; }
+}
+@keyframes shimmer {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
 
 .animate-float { animation: float 3s ease-in-out infinite; }
 .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
 .animate-fade-in { animation: fade-in 0.5s ease-out forwards; }
 .animate-fadeIn { animation: fadeIn 0.15s ease-out; }
+.animate-scan-line { animation: scan-line 4s ease-in-out infinite; }
+.animate-shimmer { animation: shimmer 2.8s ease-in-out infinite; }
 
-::selection {
-  background: rgba(0, 217, 255, 0.3);
-  color: var(--color-foreground);
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@layer base {
+  ::selection {
+    background: rgba(0, 217, 255, 0.3);
+    color: var(--color-foreground);
+  }
 }

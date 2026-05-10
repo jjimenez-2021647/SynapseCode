@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ParticleField } from '../components/landing/ParticleField'
 import { ResetPasswordForm } from '../components/ResetPasswordForm'
@@ -7,11 +6,7 @@ export const ResetPasswordPage = () => {
     const [searchParams] = useSearchParams()
     const navigate = useNavigate()
     const token = searchParams.get('token')
-    const [isValidToken, setIsValidToken] = useState(true)
-
-    useEffect(() => {
-        setIsValidToken(Boolean(token) && token.length >= 20)
-    }, [token])
+    const isValidToken = Boolean(token) && token.length >= 20
 
     const handleSuccess = () => {
         navigate('/', { replace: true })

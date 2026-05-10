@@ -1,4 +1,5 @@
 import { Routes, Route } from 'react-router-dom'
+import { MainPage } from '../../features/main-page';
 import { AuthPage } from '../../features/auth/pages/AuthPage.jsx';
 import { DashboardPage } from '../layouts/DasboardPage.jsx';
 import { VerifyEmailPage } from '../../features/auth/pages/VerifyEmailPage.jsx';
@@ -11,7 +12,8 @@ export const AppRoutes = () => {
     return (
         <Routes>
             {/* RUTAS PUBLICAS */}
-            <Route path="/" element={<AuthPage />} />
+            <Route path="/" element={<MainPage />} />
+            <Route path="/auth" element={<AuthPage />} />
             <Route path="/register" element={<AuthPage />} />
             <Route path="/verify-email" element={<VerifyEmailPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />

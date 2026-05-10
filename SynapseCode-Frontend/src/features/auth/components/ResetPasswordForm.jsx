@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { clsx } from "clsx"
 import toast from "react-hot-toast"
 import Spinner from "../../../shared/components/ui/Spinner"
@@ -20,14 +20,14 @@ const EyeSlashIcon = () => (
 )
 
 export const ResetPasswordForm = ({ token, onSuccess }) => {
-    const { register, handleSubmit, formState: { errors }, watch } = useForm()
+    const { register, handleSubmit, formState: { errors }, control } = useForm()
     const resetPassword = useAuthStore(state => state.resetPassword)
     const loading = useAuthStore(state => state.loading)
     const error = useAuthStore(state => state.error)
 
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-    const password = watch("password", "")
+    const password = useWatch({ control, name: "password", defaultValue: "" })
 
     const onSubmit = async (data) => {
         if (!token) {

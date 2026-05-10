@@ -9,7 +9,7 @@ export default function Spinner({ size = 'md', className = '' }) {
 
     return (
         <svg
-            className={clsx('animate-spin text-primary', sizes[size], className)}
+            className={clsx('animate-spin drop-shadow-[0_0_10px_rgba(0,217,255,0.35)] text-primary', sizes[size], className)}
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"

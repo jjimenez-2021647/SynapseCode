@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ForgotPasswordForm } from '../components/ForgotPasswordForm'
 import { LoginForm } from '../components/LoginForm'
@@ -8,25 +8,22 @@ import { ParticleField } from '../components/landing/ParticleField'
 export const AuthPage = () => {
     const location = useLocation()
     const navigate = useNavigate()
-    const [authView, setAuthView] = useState(location.pathname === '/register' ? 'register' : 'login')
+    const [authOverride, setAuthOverride] = useState(null)
     const [logoError, setLogoError] = useState(false)
-
-    useEffect(() => {
-        setAuthView(location.pathname === '/register' ? 'register' : 'login')
-    }, [location.pathname])
+    const authView = authOverride ?? (location.pathname === '/register' ? 'register' : 'login')
 
     const goLogin = () => {
-        setAuthView('login')
-        navigate('/')
+        setAuthOverride(null)
+        navigate('/auth')
     }
 
     const goRegister = () => {
-        setAuthView('register')
+        setAuthOverride(null)
         navigate('/register')
     }
 
     const goForgot = () => {
-        setAuthView('forgot')
+        setAuthOverride('forgot')
     }
 
     return (
