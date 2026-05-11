@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -13,6 +14,9 @@ import orgManagementRouter from '../src/org-management/org-management.routes.js'
 import healthCheckRouter from '../src/health/health.routes.js';
 
 const app = express();
+
+const invoicesDir = path.resolve('public', 'invoices');
+app.use('/invoices', express.static(invoicesDir));
 
 // Middleware de seguridad y parsing
 app.use(express.json({ limit: '10mb' }));

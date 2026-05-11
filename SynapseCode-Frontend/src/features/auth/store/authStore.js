@@ -5,6 +5,7 @@ import {
     register as registerRequest,
     forgotPassword as forgotPasswordRequest,
     resetPassword as resetPasswordRequest,
+    getProfile as getProfileRequest,
 } from "../../../shared/api"
 import { showError } from "../../../shared/utils/toast"
 
@@ -12,6 +13,8 @@ const isExpired = (expiresAt) => {
     if (!expiresAt) return false;
     return new Date(expiresAt).getTime() <= Date.now();
 }
+
+const allowedRoles = ["USER_ROLE", "ADMIN_ROLE", "ORG_ROLE"];
 
 export const useAuthStore = create(
     persist(
@@ -28,7 +31,7 @@ export const useAuthStore = create(
             checkAuth: () => {
                 const token = get().token;
                 const role = get().user?.role;
-                const isAdmin = role === "ADMIN_ROLE";
+                const hasAllowedRole = allowedRoles.includes(role);
 
                 if (!token || isExpired(get().expiresAt)) {
                     set({
@@ -43,7 +46,7 @@ export const useAuthStore = create(
                     return;
                 }
 
-                if (token && !isAdmin) {
+                if (token && !hasAllowedRole) {
                     set({
                         user: null,
                         token: null,
@@ -51,14 +54,14 @@ export const useAuthStore = create(
                         expiresAt: null,
                         isAuthenticated: false,
                         isLoadingAuth: false,
-                        error: "No tienes permisos para acceder como administrador."
+                        error: "No tienes permisos para acceder."
                     })
                     return;
                 }
 
                 set({
                     isLoadingAuth: false,
-                    isAuthenticated: Boolean(token) && isAdmin
+                    isAuthenticated: Boolean(token) && hasAllowedRole
                 })
             },
 
@@ -66,12 +69,13 @@ export const useAuthStore = create(
                 try {
                     set({ loading: true, error: null });
                     const { data } = await loginRequest({ emailOrUsername, password })
+                    const accessToken = data?.accessToken || data?.token;
 
                     const role = data?.userDetails?.role;
 
-                    if (role !== "ADMIN_ROLE") {
+                    if (!allowedRoles.includes(role)) {
                         const message =
-                            "No tienes permisos para acceder como administrador"
+                            "No tienes permisos para acceder"
                         set({
                             user: null,
                             token: null,
@@ -89,7 +93,7 @@ export const useAuthStore = create(
 
                     set({
                         user: data.userDetails,
-                        token: data.accessToken,
+                        token: accessToken,
                         refreshToken: data.refreshToken,
                         expiresAt: data.expiresAt,
                         loading: false,
@@ -97,7 +101,7 @@ export const useAuthStore = create(
                         isAuthenticated: true
                     })
 
-                    return { success: true }
+                    return { success: true, role, planType: data.userDetails?.planType }
 
                 } catch (err) {
                     console.error("Login error:", err);
@@ -161,6 +165,42 @@ export const useAuthStore = create(
                     set({ error: message, loading: false });
                     return { success: false, error: message };
                 }
+            },
+
+            loadProfile: async () => {
+                try {
+                    const { data } = await getProfileRequest();
+                    const profile = data?.data;
+
+                    if (profile) {
+                        set((state) => ({
+                            user: {
+                                ...state.user,
+                                ...profile,
+                                role: profile.role || state.user?.role,
+                            },
+                        }));
+                    }
+
+                    return { success: true, data: profile };
+                } catch (err) {
+                    const message =
+                        err.response?.data?.message || "No se pudo obtener el perfil";
+                    set({ error: message });
+                    return { success: false, error: message };
+                }
+            },
+
+            setUserPlanType: (planType) => {
+                set((state) => ({
+                    user: state.user ? { ...state.user, planType } : state.user,
+                }));
+            },
+
+            setUserRole: (role) => {
+                set((state) => ({
+                    user: state.user ? { ...state.user, role } : state.user,
+                }));
             },
 
             logout: () => {

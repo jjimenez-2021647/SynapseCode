@@ -21,3 +21,7 @@ export const forgotPassword = async (email) => {
 export const resetPassword = async (token, newPassword) => {
     return await axiosAuth.post("/auth/reset-password", { token, newPassword })
 }
+
+export const getProfile = async () => {
+    return await axiosAuth.get("/auth/profile")
+}

@@ -41,7 +41,7 @@ export const updateUserRole = async (userId, role, token) => {
   try {
     const response = await axios.put(
       `${config.auth_service.url}/api/v1/users/${userId}/role`,
-      { role },
+      { roleName: role },
       {
         headers: {
           Authorization: `Bearer ${token}`,

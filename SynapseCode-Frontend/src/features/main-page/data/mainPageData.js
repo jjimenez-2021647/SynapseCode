@@ -13,7 +13,7 @@ export const pricingPlans = [
     features: [
       { text: "Hasta 3 salas activas", included: true },
       { text: "Hasta 5 usuarios por sala", included: true },
-      { text: "EjecuciÃ³n de cÃ³digo bÃ¡sica", included: true },
+      { text: "Ejecucion de codigo basica", included: true },
       { text: "Chat e historial limitado", included: true },
       { text: "IA explicaciones (limitado)", included: false },
       { text: "Salas ilimitadas", included: false },
@@ -23,7 +23,7 @@ export const pricingPlans = [
   },
   {
     name: "Pro",
-    price: "$15",
+    price: "$20",
     description: "por usuario / mes",
     features: [
       { text: "Salas ilimitadas", included: true },
@@ -31,24 +31,24 @@ export const pricingPlans = [
       { text: "IA explicaciones ilimitadas", included: true },
       { text: "Historial completo de versiones", included: true },
       { text: "Ejecuciones prioritarias", included: true },
-      { text: "GeneraciÃ³n de cÃ³digo con IA", included: true },
+      { text: "Generación de codigo con IA", included: true },
     ],
     buttonText: "Empezar Pro",
     popular: true,
   },
   {
     name: "ORG",
-    price: "$50",
-    description: "por instituciÃ³n / mes",
+    price: "$50 +/-",
+    description: "por institución / mes",
     features: [
       { text: "Todo lo del plan Pro", included: true },
-      { text: "Panel de administraciÃ³n", included: true },
-      { text: "AnalÃ­ticas por alumno", included: true },
+      { text: "Panel de administración", included: true },
+      { text: "Análisis por alumno", included: true },
       { text: "Branding personalizado", included: true },
       { text: "Soporte dedicado", included: true },
       { text: "Licencia institucional (Kinal, universidades)", included: true },
     ],
-    buttonText: "Contactar equipo",
+    buttonText: "Contratar servicio",
     popular: false,
   },
 ];

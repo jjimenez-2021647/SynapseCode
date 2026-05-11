@@ -11,6 +11,7 @@ export const corsConfiguration = {
       'http://localhost:3011',
       'http://localhost:3012',
       'http://localhost:3013',
+      'http://localhost:5173',
     ];
 
     if (!origin || allowedOrigins.includes(origin)) {

@@ -12,7 +12,7 @@ export const VerifyEmailPage = () => {
     const token = new URLSearchParams(location.search).get("token")
 
     const handleFinish = useCallback(() => {
-        setTimeout(() => navigate("/"), 2000)
+        setTimeout(() => navigate("/auth", { replace: true }), 2000)
     }, [navigate])
 
     const { status, message } = useVerifyEmail(token, handleFinish)

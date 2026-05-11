@@ -18,7 +18,13 @@ export const LoginForm = ({ onForgot, onRegister }) => {
         setLoginError("")
         const res = await login(data)
         if (res.success) {
-            navigate("/dashboard")
+            navigate(
+                res.role === "ADMIN_ROLE"
+                    ? "/admin-dashboard"
+                    : res.planType
+                        ? "/dashboard"
+                        : "/pricing-page"
+            )
             toast.success("¡Bienvenido de nuevo!", { duration: 4000 })
             return
         }

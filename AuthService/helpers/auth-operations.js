@@ -176,7 +176,12 @@ export const loginUserHelper = async (emailOrUsername, password) => {
 
         const userDetails = {
             id: plainUser.Id,
+            name: plainUser.Name,
+            surname: plainUser.Surname,
+            email: plainUser.Email,
             username: plainUser.Username,
+            phone: plainUser.UserProfile?.Phone || '',
+            planType: plainUser.UserProfile?.PlanType || null,
             profilePicture:
                 plainUser.UserProfile?.ProfilePicture || null,
             role,

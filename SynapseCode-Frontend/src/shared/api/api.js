@@ -9,6 +9,14 @@ const axiosAuth = axios.create({
     }
 })
 
+const axiosPlans = axios.create({
+    baseURL: import.meta.env.VITE_PLANS_URL || "http://localhost:3013/api/v1",
+    timeout: 10000,
+    headers: {
+        "Content-Type": "application/json"
+    }
+})
+
 axiosAuth.interceptors.request.use((config) => {
     config.axiosClient = "auth";
     const token = useAuthStore.getState().token;
@@ -18,4 +26,14 @@ axiosAuth.interceptors.request.use((config) => {
     return config;
 })
 
-export { axiosAuth }
+axiosPlans.interceptors.request.use((config) => {
+    config.axiosClient = "plans";
+    const token = useAuthStore.getState().token;
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+        config.headers["x-token"] = token;
+    }
+    return config;
+})
+
+export { axiosAuth, axiosPlans }

@@ -8,6 +8,7 @@ import {
 } from '../../helpers/role-db.js';
 import { ALLOWED_ROLES, ADMIN_ROLE } from '../../helpers/role-constants.js';
 import { buildUserResponse } from '../../utils/user-helpers.js';
+import { updateProfileHelper } from '../../helpers/profile-operations.js';
 import { sequelize } from '../../configs/db.js';
 import {
     sendAccountCreatedByAdminEmail,
@@ -34,27 +35,33 @@ const ensureAdmin = async (req) => {
 export const updateUserRole = [
     validateJWT,
     asyncHandler(async (req, res) => {
-        const auth = await ensureAdmin(req);
-        if (!auth.allowed) {
-            return res.status(403).json({ success: false, message: auth.reason });
-        }
-
         const { userId } = req.params;
         const { roleName } = req.body || {};
 
-        // No puede cambiarse el rol a si mismo
-        if (userId === req.userId) {
+        const normalized = (roleName || '').trim().toUpperCase();
+
+        // Allow self-update to ORG_ROLE without admin
+        const isSelfUpdateToOrg = userId === req.userId && normalized === 'ORG_ROLE';
+
+        if (!isSelfUpdateToOrg) {
+            const auth = await ensureAdmin(req);
+            if (!auth.allowed) {
+                return res.status(403).json({ success: false, message: auth.reason });
+            }
+        }
+
+        // No puede cambiarse el rol a si mismo (except for ORG_ROLE)
+        if (userId === req.userId && !isSelfUpdateToOrg) {
             return res.status(403).json({
                 success: false,
                 message: 'No puedes cambiar tu propio rol',
             });
         }
 
-        const normalized = (roleName || '').trim().toUpperCase();
         if (!ALLOWED_ROLES.includes(normalized)) {
             return res.status(400).json({
                 success: false,
-                message: 'Rol no permitido. Usa ADMIN_ROLE o USER_ROLE',
+                message: 'Rol no permitido. Usa ADMIN_ROLE, USER_ROLE o ORG_ROLE',
             });
         }
 
@@ -316,6 +323,35 @@ export const adminDeactivateUser = [
         return res.status(200).json({
             success: true,
             message: 'Cuenta desactivada exitosamente',
+        });
+    }),
+];
+
+export const updateUserPlan = [
+    validateJWT,
+    asyncHandler(async (req, res) => {
+        const { userId } = req.params;
+        const { planName, planType } = req.body || {};
+        const nextPlanType = (planName || planType || '').trim().toUpperCase();
+
+        if (!['FREE', 'PRO', 'ORG'].includes(nextPlanType)) {
+            return res.status(400).json({
+                success: false,
+                message: 'planName debe ser uno de: FREE, PRO, ORG',
+            });
+        }
+
+        if (userId !== req.userId) {
+            const auth = await ensureAdmin(req);
+            if (!auth.allowed) {
+                return res.status(403).json({ success: false, message: auth.reason });
+            }
+        }
+
+        const result = await updateProfileHelper(userId, { planType: nextPlanType });
+        return res.status(200).json({
+            ...result,
+            message: `Plan ${nextPlanType} actualizado exitosamente`,
         });
     }),
 ];

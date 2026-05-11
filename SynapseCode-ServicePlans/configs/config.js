@@ -20,6 +20,7 @@ export const config = {
     from_email: process.env.SMTP_FROM_EMAIL || 'noreply@synapsecode.com',
     frontend_url: process.env.FRONTEND_URL || 'http://localhost:3000',
   },
+  service_url: process.env.SERVICE_PLANS_URL || 'http://localhost:3013',
   stripe: {
     secret_key: process.env.STRIPE_SECRET_KEY,
     public_key: process.env.STRIPE_PUBLIC_KEY,

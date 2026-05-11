@@ -4,8 +4,9 @@ import {
   sendFreePlanEmail,
   sendPaymentConfirmationEmail,
 } from '../../helpers/email-service.js';
-import { updateUserPlan } from '../../helpers/auth-service-bridge.js';
+import { updateUserPlan, updateUserRole } from '../../helpers/auth-service-bridge.js';
 import { addParticipantToORG } from '../../helpers/participants-org.js';
+import { createInvoicePdf } from '../../helpers/invoice-service.js';
 
 const isLocalBillingMode = process.env.NODE_ENV !== 'production';
 
@@ -166,8 +167,30 @@ export const selectPlan = async (req, res) => {
         });
       }
 
+      // Check user role for ORG
+      if (planName === 'ORG') {
+        if (req.user?.role !== 'USER_ROLE') {
+          return res.status(403).json({
+            success: false,
+            message: 'Solo usuarios con rol USER_ROLE pueden seleccionar plan ORG',
+          });
+        }
+        if (!institutionName || !maxParticipants) {
+          return res.status(400).json({
+            success: false,
+            message: 'institutionName y maxParticipants son requeridos para plan ORG',
+          });
+        }
+      }
+
       let orgInfo;
       let normalizedCarnets = [];
+      const requestedAmount = Number(req.body.amountPaid) || 0;
+      const planAmount = Number(plan.price) || 0;
+      const amountPaid =
+        planName === 'ORG'
+          ? requestedAmount || Number(maxParticipants) * 2 || planAmount
+          : requestedAmount || planAmount;
 
       if (planName === 'ORG') {
         const normalizedOrg = normalizeOrgSelection({
@@ -200,6 +223,8 @@ export const selectPlan = async (req, res) => {
           status: 'active',
           startDate: new Date(),
           paymentMethod: 'manual',
+          amountPaid,
+          currency: plan.currency || 'USD',
           ...(orgInfo ? { orgInfo } : {}),
         },
         { upsert: true, new: true }
@@ -209,8 +234,27 @@ export const selectPlan = async (req, res) => {
         await createOrgParticipantsIfNeeded(subscription._id, normalizedCarnets);
       }
 
+      const invoice = await createInvoicePdf({
+        subscriptionId: subscription._id.toString(),
+        planName,
+        name,
+        email,
+        amountPaid,
+        currency: plan.currency || 'USD',
+        institutionName: planName === 'ORG' ? institutionName : null,
+        maxParticipants: planName === 'ORG' ? Number(maxParticipants) : null,
+      });
+
+      await Subscription.updateOne(
+        { _id: subscription._id },
+        { $set: { invoiceUrl: invoice.url } }
+      );
+
       await updateUserPlan(userId, planName, getTokenFromRequest(req));
-      await sendPaymentConfirmationEmail(email, name, planName, null);
+      if (planName === 'ORG') {
+        await updateUserRole(userId, 'ORG_ROLE', getTokenFromRequest(req));
+      }
+      await sendPaymentConfirmationEmail(email, name, planName, invoice.url, invoice.filePath, amountPaid, plan.currency || 'USD');
 
       return res.json({
         success: true,
@@ -219,6 +263,8 @@ export const selectPlan = async (req, res) => {
         meta: {
           billingMode: 'local_db',
           stripeDeferred: true,
+          amountPaid,
+          invoiceUrl: invoice.url,
         },
       });
     }

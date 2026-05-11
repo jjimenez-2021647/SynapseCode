@@ -1,12 +1,14 @@
 import { Routes, Route } from 'react-router-dom'
 import { MainPage } from '../../features/main-page';
 import { AuthPage } from '../../features/auth/pages/AuthPage.jsx';
+import { AdminDashboardPage } from '../layouts/AdminDashboardPage.jsx';
 import { DashboardPage } from '../layouts/DasboardPage.jsx';
 import { VerifyEmailPage } from '../../features/auth/pages/VerifyEmailPage.jsx';
 import { ResetPasswordPage } from '../../features/auth/pages/ResetPasswordPage.jsx';
 import { RoleGuard } from './RoleGuard.jsx';
 import { ProtectedRoute } from './ProtectedRoute.jsx';
 import { UnauthorizedPage } from '../../features/auth/pages/UnauthorizedPage.jsx';
+import { PricingPage } from '../../features/pricing-page/PricingPage.jsx';
 
 export const AppRoutes = () => {
     return (
@@ -21,17 +23,37 @@ export const AppRoutes = () => {
 
             {/* PROTECTED ROUTES */}
             <Route
+                path="/pricing-page"
+                element={
+                    <ProtectedRoute>
+                        <RoleGuard allowedRoles={["USER_ROLE"]}>
+                            <PricingPage />
+                        </RoleGuard>
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
                 path="/dashboard"
                 element={
                     <ProtectedRoute>
-                        <RoleGuard allowedRoles={["ADMIN_ROLE"]}>
+                        <RoleGuard allowedRoles={["USER_ROLE", "ORG_ROLE"]}>
                             <DashboardPage />
                         </RoleGuard>
                     </ProtectedRoute>
                 }
-            >
-                {/* Aquí puedes agregar rutas hijas para el dashboard */}
-            </Route>
+            />
+
+            <Route
+                path="/admin-dashboard"
+                element={
+                    <ProtectedRoute>
+                        <RoleGuard allowedRoles={["ADMIN_ROLE"]}>
+                            <AdminDashboardPage />
+                        </RoleGuard>
+                    </ProtectedRoute>
+                }
+            />
         </Routes>
     )
 }

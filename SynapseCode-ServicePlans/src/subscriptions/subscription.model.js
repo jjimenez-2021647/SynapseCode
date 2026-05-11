@@ -56,6 +56,11 @@ const subscriptionSchema = new Schema(
       ],
     },
     invoiceUrl: String,
+    amountPaid: Number,
+    currency: {
+      type: String,
+      default: 'USD',
+    },
     autoRenewal: {
       type: Boolean,
       default: true,

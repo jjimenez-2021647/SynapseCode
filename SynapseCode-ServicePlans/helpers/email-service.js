@@ -34,8 +34,29 @@ export const sendPlanSelectionEmail = async (email, name, planName, planDetails)
   }
 };
 
-export const sendPaymentConfirmationEmail = async (email, name, planName, invoiceUrl) => {
+export const sendPaymentConfirmationEmail = async (
+  email,
+  name,
+  planName,
+  invoiceUrl,
+  invoiceFilePath,
+  amountPaid,
+  currency = 'USD'
+) => {
   if (!transporter) return;
+
+  const formattedAmount = new Intl.NumberFormat('es-GT', {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: 2,
+  }).format(amountPaid || 0);
+
+  const invoiceSection = invoiceUrl
+    ? `<p>Se ha generado una factura para tu referencia:</p>
+           <a href="${invoiceUrl}" class="invoice-link">Descargar Factura (PDF)</a>`
+    : `<p>Actualmente no hay factura descargable disponible. Puedes consultar los detalles en tu panel de usuario o contactar soporte.</p>`;
+
+  const planSummary = getPlanDetailsTable(planName);
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -48,6 +69,9 @@ export const sendPaymentConfirmationEmail = async (email, name, planName, invoic
           .header { background-color: #1e616d; color: white; padding: 20px; text-align: center; }
           .content { padding: 20px; }
           .invoice-link { display: inline-block; margin: 20px 0; padding: 10px 20px; background-color: #1e616d; color: white; text-decoration: none; border-radius: 5px; }
+          .plans-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+          .plans-table th, .plans-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+          .plans-table th { background-color: #f5f5f5; }
           .footer { background-color: #f5f5f5; padding: 20px; text-align: center; font-size: 12px; }
         </style>
       </head>
@@ -59,9 +83,10 @@ export const sendPaymentConfirmationEmail = async (email, name, planName, invoic
           <div class="content">
             <h3>¡Bienvenido/a ${name}!</h3>
             <p>Tu suscripción al plan <strong>${planName}</strong> ha sido confirmada.</p>
-            <p>Se ha generado una factura para tu referencia:</p>
-            <a href="${invoiceUrl}" class="invoice-link">Descargar Factura (PDF)</a>
+            <p><strong>Monto pagado:</strong> ${formattedAmount}</p>
+            ${invoiceSection}
             <p>Puedes acceder a todos los beneficios del plan ${planName} inmediatamente.</p>
+            ${planSummary}
             <p>Si tienes preguntas, no dudes en contactarnos.</p>
           </div>
           <div class="footer">
@@ -78,17 +103,68 @@ export const sendPaymentConfirmationEmail = async (email, name, planName, invoic
       to: email,
       subject: `Pago confirmado - Plan ${planName}`,
       html: htmlContent,
-      attachments: invoiceUrl ? [
-        {
-          filename: `factura_synapsecode_${Date.now()}.pdf`,
-          path: invoiceUrl,
-        },
-      ] : [],
+      attachments: invoiceFilePath
+        ? [
+            {
+              filename: `factura_synapsecode_${Date.now()}.pdf`,
+              path: invoiceFilePath,
+            },
+          ]
+        : [],
     });
   } catch (error) {
     console.error('Error sending payment confirmation email:', error);
   }
 };
+
+function getPlanDetailsTable(planName) {
+  const planDetails = {
+    FREE: {
+      price: '$0/mes',
+      features: 'Hasta 3 salas activas, hasta 5 usuarios por sala, ejecución de código básica, chat limitado, explicaciones con IA limitadas',
+    },
+    PRO: {
+      price: '$20/mes',
+      features: 'Salas ilimitadas, hasta 20 usuarios por sala, explicaciones con IA hasta 20, historial de versiones completo, ejecuciones prioritarias',
+    },
+    ORG: {
+      price: '$50+/mes',
+      features: 'Todo lo del PRO, panel de administración, analíticas por alumno, branding personalizado, soporte dedicado',
+    },
+  };
+
+  const plan = planDetails[planName] || planDetails.FREE;
+
+  return `
+    <h3>Planes disponibles:</h3>
+    <table class="plans-table">
+      <tr>
+        <th>Plan</th>
+        <th>Precio</th>
+        <th>Características</th>
+      </tr>
+      <tr>
+        <td><strong>FREE</strong></td>
+        <td>$0/mes</td>
+        <td>• Hasta 3 salas activas<br>• Hasta 5 usuarios por sala<br>• Ejecución de código básica<br>• Chat limitado<br>• Explicaciones con IA limitadas</td>
+      </tr>
+      <tr>
+        <td><strong>PRO</strong></td>
+        <td>$20/mes</td>
+        <td>• Salas ilimitadas<br>• Hasta 20 usuarios por sala<br>• Explicaciones con IA hasta 20<br>• Historial de versiones completo<br>• Ejecuciones prioritarias</td>
+      </tr>
+      <tr>
+        <td><strong>ORG</strong></td>
+        <td>$50+/mes</td>
+        <td>• Todo lo del PRO<br>• Panel de administración<br>• Analíticas por alumno<br>• Branding personalizado<br>• Soporte dedicado</td>
+      </tr>
+      <tr>
+        <td colspan="3"><strong>Plan activo:</strong> ${planName} — ${plan.price}</td>
+      </tr>
+    </table>
+  `;
+}
+
 
 export const sendFreePlanEmail = async (email, name) => {
   if (!transporter) return;

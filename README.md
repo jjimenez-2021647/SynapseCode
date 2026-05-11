@@ -1052,7 +1052,7 @@ SynapseCode-ServicePlans/
 **FREE â€” $0/mes**
 - Salas activas: Hasta 3
 - Usuarios por sala: Hasta 5
-- EjecuciÃ³n de cÃ³digo: BÃ¡sica (limitada)
+- Ejecucion de codigo: Basica (limitada)
 - Chat e historial: Limitado
 - Explicaciones con IA: Limitadas (hasta 10)
 
@@ -1063,14 +1063,14 @@ SynapseCode-ServicePlans/
 - Historial de versiones: Completo
 - Ejecuciones: Prioritarias sin lÃ­mite
 
-**ORG â€” $50+/mes (por instituciÃ³n)**
-- Todo lo del PRO, mÃ¡s:
-- Panel de administraciÃ³n
+**ORG â€” $50+/mes (por institucion)**
+- Todo lo del PRO, mas:
+- Panel de administracion
 - AnalÃ­ticas por alumno
 - Branding personalizado
 - Soporte dedicado
 - Control de profesores y estudiantes
-- RestricciÃ³n de IA en ejercicios
+- Restriccion de IA en ejercicios
 
 ### Endpoints pÃºblicos (sin JWT)
 
@@ -1095,7 +1095,7 @@ POST /api/v1/subscriptions/webhook/stripe
 - en local, `POST /api/v1/subscriptions/webhook/stripe` tambien responde `501`.
 - `helpers/stripe-service.js` se conserva como base para reactivar checkout y webhook reales cuando la app se despliegue.
 
-### Endpoints de gestiÃ³n ORG (con JWT + ORG_ROLE)
+### Endpoints de gestion ORG (con JWT + ORG_ROLE)
 
 #### Profesores
 
@@ -1106,7 +1106,7 @@ POST   /api/v1/org-management/professors/:professorId/reject
 GET    /api/v1/org-management/professors/approved
 ```
 
-#### CalificaciÃ³n de cÃ³digo
+#### Calificacion de codigo
 
 ```text
 POST   /api/v1/org-management/code/rate
@@ -1120,7 +1120,7 @@ POST   /api/v1/org-management/rooms/:roomId/ai-restrictions
 GET    /api/v1/org-management/rooms/:roomId/ai-restrictions
 ```
 
-#### AnalÃ­ticas
+#### Analicas
 
 ```text
 GET /api/v1/org-management/analytics/student/:studentId
@@ -1132,7 +1132,7 @@ GET /api/v1/org-management/analytics/student/:studentId
 PUT /api/v1/org-management/rooms/:roomId/permissions
 ```
 
-### Flujo de selecciÃ³n de plan
+### Flujo de seleccion de plan
 
 **Para plan FREE:**
 1. Usuario llamando `POST /api/v1/subscriptions/select` con `planName: 'FREE'`
