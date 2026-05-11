@@ -1,0 +1,27 @@
+{
+  "name": "SynapseCode-ServiceGit",
+  "version": "1.0.0",
+  "description": "Microservicio para control de versiones Git con educación colaborativa",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.29.2",
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  },
+  "dependencies": {
+    "axios": "^1.7.7",
+    "cors": "^2.8.6",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.1",
+    "mongoose": "^8.10.0",
+    "simple-git": "^3.24.0"
+  }
+}

@@ -9,6 +9,7 @@ import {
     updateUser,
     deleteUserById,
     adminDeactivateUser,
+    updateUserPlan,
 } from './user.controller.js';
 import { upload, handleUploadError } from '../../helpers/file-upload.js';
 
@@ -16,6 +17,7 @@ const router = Router();
 
 // roles
 router.put('/:userId/role', ...updateUserRole);
+router.put('/:userId/plan', ...updateUserPlan);
 router.get('/:userId/roles', ...getUserRoles);
 router.get('/by-role/:roleName', ...getUsersByRole);
 

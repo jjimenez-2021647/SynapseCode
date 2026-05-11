@@ -140,6 +140,12 @@ export const UserProfile = sequelize.define(
                 isNumeric: { msg: 'El teléfono solo debe contener números.' },
             },
         },
+        PlanType: {
+            type: DataTypes.ENUM('FREE', 'PRO', 'ORG'),
+            allowNull: true,
+            defaultValue: null,
+            field: 'plan_type',
+        },
     },
     {
         tableName: 'user_profiles',
