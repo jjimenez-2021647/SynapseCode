@@ -41,9 +41,9 @@ export const AuthPage = () => {
                 <div className="!px-[2rem] !py-[2.75rem]">
                     {/* Logo */}
                     <a href="/" className="mb-[1.5rem] flex items-center justify-center gap-[0.5rem]">
-                        <div className="flex h-[40px] w-[40px] items-center justify-center rounded-[12px] bg-[linear-gradient(135deg,#00d9ff,#ff00ff)] shadow-[0_8px_24px_rgba(0,217,255,0.3)]">
+                        <div className="flex h-[40px] w-[40px] items-center justify-center rounded-[12px] border-2 border-primary">
                             {logoError ? (
-                                <span className="text-base font-bold text-background">&lt;/&gt;</span>
+                                <span className="text-base font-bold text-white">&lt;/&gt;</span>
                             ) : (
                                 <img
                                     src="/src/assets/img/logo.png"
