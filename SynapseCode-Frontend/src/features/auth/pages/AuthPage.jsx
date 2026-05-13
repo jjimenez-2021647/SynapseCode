@@ -38,6 +38,15 @@ export const AuthPage = () => {
 
             {/* Card */}
             <div className={`relative z-10 w-full glass rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)] ${authView === 'register' ? 'max-w-2xl' : 'max-w-md'}`}>
+                {/* Back button */}
+                <button 
+                    onClick={() => navigate('/')}
+                    className="absolute -top-14 left-0 text-white/60 hover:text-white transition-colors text-xl font-bold"
+                    aria-label="Regresar"
+                >
+                    ← Atrás
+                </button>
+
                 <div className="!px-[2rem] !py-[2.75rem]">
                     {/* Logo */}
                     <a href="/" className="mb-[1.5rem] flex items-center justify-center gap-[0.5rem]">

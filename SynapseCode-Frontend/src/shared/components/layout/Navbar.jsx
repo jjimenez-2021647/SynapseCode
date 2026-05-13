@@ -11,17 +11,8 @@ export const Navbar = () => {
             <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
                 {/* LOGO */}
                 <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-accent/20 border border-white/10 shadow-[0_0_15px_rgba(0,217,255,0.2)]">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 2L4 6V18L12 22L20 18V6L12 2Z" stroke="url(#logo_grad)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            <path d="M12 6L8 8V16L12 18L16 16V8L12 6Z" fill="url(#logo_grad)" fillOpacity="0.3"/>
-                            <defs>
-                                <linearGradient id="logo_grad" x1="4" y1="2" x2="20" y2="22" gradientUnits="userSpaceOnUse">
-                                    <stop stopColor="#00d9ff"/>
-                                    <stop offset="1" stopColor="#ff00ff"/>
-                                </linearGradient>
-                            </defs>
-                        </svg>
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl border-2 border-primary">
+                        <span className="text-sm font-black text-white">&lt;/&gt;</span>
                     </div>
                     <span className="text-2xl font-black tracking-tight italic">
                         <span className="text-primary drop-shadow-[0_0_8px_rgba(0,217,255,0.5)]">Synapse</span>
