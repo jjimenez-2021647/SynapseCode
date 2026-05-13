@@ -1,9 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
-export function useCountUp(target, duration = 1200) {
+export function useCountUp(target, duration = 1200, shouldStart = true) {
   const [value, setValue] = useState(0);
+  const hasStartedRef = useRef(false);
 
   useEffect(() => {
+    if (!shouldStart || hasStartedRef.current) return;
+
+    hasStartedRef.current = true;
     let frameId;
     const start = performance.now();
     const tick = (time) => {
@@ -15,7 +19,7 @@ export function useCountUp(target, duration = 1200) {
 
     frameId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frameId);
-  }, [target, duration]);
+  }, [target, duration, shouldStart]);
 
   return value;
 }
