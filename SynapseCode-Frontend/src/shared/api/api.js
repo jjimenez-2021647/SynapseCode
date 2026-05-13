@@ -17,6 +17,14 @@ const axiosPlans = axios.create({
     }
 })
 
+const axiosRooms = axios.create({
+    baseURL: import.meta.env.VITE_ROOMS_URL || "http://localhost:3007/api/v1",
+    timeout: 10000,
+    headers: {
+        "Content-Type": "application/json"
+    }
+})
+
 axiosAuth.interceptors.request.use((config) => {
     config.axiosClient = "auth";
     const token = useAuthStore.getState().token;
@@ -36,4 +44,13 @@ axiosPlans.interceptors.request.use((config) => {
     return config;
 })
 
-export { axiosAuth, axiosPlans }
+axiosRooms.interceptors.request.use((config) => {
+    config.axiosClient = "rooms";
+    const token = useAuthStore.getState().token;
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+})
+
+export { axiosAuth, axiosPlans, axiosRooms }

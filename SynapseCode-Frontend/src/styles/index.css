@@ -82,9 +82,44 @@
 }
 
 .synapse-page {
-  background:
-    radial-gradient(circle at var(--cursor-x, 50%) var(--cursor-y, 20%), rgba(0, 217, 255, 0.08), transparent 24rem),
-    linear-gradient(180deg, #0a0e17 0%, #020617 46%, #0a0e17 100%);
+  position: relative;
+  background: linear-gradient(180deg, #0a0e17 0%, #020617 46%, #0a0e17 100%);
+  overflow: hidden;
+}
+
+.synapse-page::before,
+.synapse-page::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 200%;
+  height: 200%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.synapse-page::before {
+  background-image: 
+    radial-gradient(2px 2px at 10% 20%, #fff, transparent),
+    radial-gradient(3px 3px at 30% 40%, rgba(0, 217, 255, 0.4), transparent),
+    radial-gradient(2px 2px at 50% 60%, rgba(255, 0, 255, 0.3), transparent),
+    radial-gradient(3px 3px at 70% 80%, #fff, transparent),
+    radial-gradient(2px 2px at 90% 10%, rgba(0, 217, 255, 0.3), transparent);
+  background-size: 50% 50%;
+  animation: floatParticles 60s linear infinite;
+}
+
+.synapse-page::after {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+@keyframes floatParticles {
+  from { transform: translate(0, 0); }
+  to { transform: translate(-50%, -50%); }
 }
 
 .section-shell {
@@ -188,9 +223,38 @@
   }
 }
 
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary);
+}
+
 @layer base {
   ::selection {
     background: rgba(0, 217, 255, 0.3);
     color: var(--color-foreground);
   }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-fadeInScale {
+  animation: fadeInScale 0.2s ease-out forwards;
 }
