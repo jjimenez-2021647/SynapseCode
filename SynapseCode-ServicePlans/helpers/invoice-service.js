@@ -42,7 +42,7 @@ export const createInvoicePdf = async ({
   const filePath = path.join(invoicesDir, fileName);
   const url = `${config.service_url}/invoices/${fileName}`;
 
-  const doc = new PDFDocument({ size: 'A4', margin: 48 });
+  const doc = new PDFDocument({ size: 'A4', margin: 50 });
   const stream = fs.createWriteStream(filePath);
 
   doc.pipe(stream);
@@ -52,78 +52,96 @@ export const createInvoicePdf = async ({
   const dueDate = new Date(timestamp + 1000 * 60 * 60 * 24 * 30).toLocaleDateString('es-ES');
   const totalAmount = formatCurrency(amountPaid, currency);
 
-  // Header
-  doc.rect(48, 48, 500, 100).fill('#00A5B2');
-  doc.fillColor('#ffffff').fontSize(26).font('Helvetica-Bold').text('SynapseCode', 60, 60);
-  doc.fontSize(10).font('Helvetica').text('Facturación y suscripción', 60, 90);
+  // Header - Logo and title
+  doc.fontSize(32).font('Helvetica-Bold').fillColor('#008B9D').text('SynapseCode', 50, 50);
+  doc.fontSize(11).fillColor('#666666').font('Helvetica').text('Gestión de Suscripciones', 50, 88);
+  
+  // Invoice number and dates (right aligned)
+  doc.fontSize(10).font('Helvetica-Bold').fillColor('#1a1a1a');
+  doc.text(`FACTURA`, 380, 50, { width: 120, align: 'right' });
+  doc.fontSize(9).font('Helvetica').fillColor('#666666');
+  doc.text(`No. ${invoiceNumber}`, 380, 68, { width: 120, align: 'right' });
+  doc.text(`Emitida: ${issueDate}`, 380, 82, { width: 120, align: 'right' });
+  doc.text(`Vencimiento: ${dueDate}`, 380, 96, { width: 120, align: 'right' });
 
-  doc.fillColor('#ffffff').fontSize(10).text(`Factura # ${invoiceNumber}`, 380, 60, { align: 'right' });
-  doc.text(`Emitido: ${issueDate}`, { align: 'right' });
-  doc.text(`Vencimiento: ${dueDate}`, { align: 'right' });
+  // Decorative line
+  doc.moveTo(50, 115).lineTo(545, 115).lineWidth(1.5).strokeColor('#008B9D').stroke();
 
-  // Sender / recipient blocks
-  doc.fillColor('#0F172A').fontSize(10).font('Helvetica-Bold').text('De:', 60, 170);
-  doc.font('Helvetica').fontSize(9).text('SynapseCode', 60, 185);
-  doc.text('Calle Tecnológica 123', 60, 200);
-  doc.text('Guatemala, GT', 60, 215);
-  doc.text('contacto@synapsecode.com', 60, 230);
+  // Sender and Recipient sections
+  doc.fontSize(9).font('Helvetica-Bold').fillColor('#7C2D8A').text('DE:', 50, 135);
+  doc.font('Helvetica').fontSize(9).fillColor('#1a1a1a');
+  doc.text('SynapseCode', 50, 150);
+  doc.font('Helvetica').fontSize(8).fillColor('#666666');
+  doc.text('Calle Tecnológica 123, Guatemala, GT', 50, 163);
+  doc.text('Email: contacto@synapsecode.com', 50, 174);
+  doc.text('Teléfono: +502 1234 5678', 50, 185);
 
-  doc.font('Helvetica-Bold').text('Para:', 320, 170);
-  doc.font('Helvetica').fontSize(9).text(name, 320, 185);
-  doc.text(email, 320, 200);
+  // Para section
+  doc.fontSize(9).font('Helvetica-Bold').fillColor('#7C2D8A').text('PARA:', 280, 135);
+  doc.font('Helvetica').fontSize(9).fillColor('#1a1a1a');
+  doc.text(name, 280, 150);
+  doc.fontSize(8).fillColor('#666666');
+  doc.text(email, 280, 163);
   if (institutionName) {
-    doc.text(institutionName, 320, 215);
+    doc.text(institutionName, 280, 174);
   }
   if (maxParticipants) {
-    doc.text(`Estudiantes: ${maxParticipants}`, 320, 230);
+    doc.text(`Estudiantes: ${maxParticipants}`, 280, 185);
   }
 
-  // Table header
-  const tableTop = 270;
-  doc.fillColor('#00A5B2').rect(48, tableTop, 500, 26).fill();
-  doc.fillColor('#ffffff').fontSize(10).font('Helvetica-Bold');
-  doc.text('Descripción', 60, tableTop + 7);
-  doc.text('Cantidad', 300, tableTop + 7);
-  doc.text('Precio', 380, tableTop + 7, { width: 90, align: 'right' });
-  doc.text('Total', 480, tableTop + 7, { width: 70, align: 'right' });
+  // Decorative line
+  doc.moveTo(50, 205).lineTo(545, 205).lineWidth(1).strokeColor('#E0E0E0').stroke();
 
-  doc.fillColor('#0F172A').font('Helvetica').fontSize(10);
-  const itemTop = tableTop + 40;
+  // Items table header
+  const tableTop = 220;
+  doc.rect(50, tableTop, 495, 28).fill('#7C2D8A');
+  doc.fillColor('#ffffff').fontSize(9).font('Helvetica-Bold');
+  doc.text('DESCRIPCIÓN', 60, tableTop + 8);
+  doc.text('CANT.', 330, tableTop + 8);
+  doc.text('PRECIO UNITARIO', 390, tableTop + 8, { width: 60, align: 'right' });
+  doc.text('TOTAL', 490, tableTop + 8, { width: 50, align: 'right' });
+
+  // Table content
+  const itemTop = tableTop + 38;
+  doc.fillColor('#1a1a1a').fontSize(10).font('Helvetica');
   const quantity = maxParticipants ? maxParticipants : 1;
   const unitPrice = formatCurrency(amountPaid / quantity, currency);
   const lineDescription = planName === 'ORG' ? `Plan ORG - Institución` : `Plan ${planName}`;
 
-  doc.text(lineDescription, 60, itemTop);
-  doc.text(quantity.toString(), 300, itemTop);
-  doc.text(unitPrice, 380, itemTop, { width: 90, align: 'right' });
-  doc.text(totalAmount, 480, itemTop, { width: 70, align: 'right' });
+  // Background alternation for row
+  doc.rect(50, itemTop - 3, 495, 25).fill('#F9F9F9');
+  doc.fillColor('#1a1a1a').fontSize(10).font('Helvetica');
+  doc.text(lineDescription, 60, itemTop + 5);
+  doc.text(quantity.toString(), 330, itemTop + 5);
+  doc.text(unitPrice, 390, itemTop + 5, { width: 60, align: 'right' });
+  doc.text(totalAmount, 490, itemTop + 5, { width: 50, align: 'right' });
 
-  doc.moveTo(48, itemTop + 28).lineTo(548, itemTop + 28).lineWidth(1).stroke('#E2E8F0');
+  // Decorative line
+  doc.moveTo(50, itemTop + 30).lineTo(545, itemTop + 30).lineWidth(1).strokeColor('#E0E0E0').stroke();
 
-  // Total block
-  const totalTop = itemTop + 60;
-  doc.font('Helvetica-Bold').fontSize(12).fillColor('#0F172A');
-  doc.text('TOTAL', 380, totalTop, { width: 90, align: 'right' });
-  doc.text(totalAmount, 480, totalTop, { width: 70, align: 'right' });
+  // Total section
+  const totalTop = itemTop + 50;
+  doc.rect(350, totalTop - 5, 195, 50).fill('#F0F0F0');
+  
+  doc.fontSize(11).font('Helvetica-Bold').fillColor('#7C2D8A');
+  doc.text('TOTAL A PAGAR:', 360, totalTop + 5, { width: 80, align: 'left' });
+  doc.fontSize(18).fillColor('#7C2D8A');
+  doc.text(totalAmount, 360, totalTop + 22, { width: 175, align: 'right' });
 
-  // Footer notes
-  const footerTop = totalTop + 60;
-  doc.font('Helvetica').fontSize(9).fillColor('#475569');
-  doc.text('Gracias por confiar en SynapseCode para tu gestión de planes empresariales.', 60, footerTop, {
-    width: 430,
-    align: 'left',
-  });
+  // Footer section
+  const footerTop = totalTop + 85;
+  
+  // Decorative top line
+  doc.moveTo(50, footerTop - 10).lineTo(545, footerTop - 10).lineWidth(1.5).strokeColor('#008B9D').stroke();
 
-  doc.fontSize(9).fillColor('#0F172A').font('Helvetica-Bold').text('Contacto', 60, footerTop + 40);
-  doc.font('Helvetica').fontSize(9).fillColor('#475569').text('contacto@synapsecode.com', 60, footerTop + 55);
-  doc.text('+502 1234 5678', 60, footerTop + 70);
+  // Message
+  doc.fontSize(9).font('Helvetica').fillColor('#666666').text('Gracias por confiar en SynapseCode. Tu suscripción incluye acceso completo a todas las funcionalidades del plan seleccionado.', 50, footerTop + 5, { width: 495, align: 'center' });
 
-  doc.font('Helvetica-Bold').text('Dirección', 260, footerTop + 40);
-  doc.font('Helvetica').fontSize(9).fillColor('#475569').text('Calle Tecnológica 123', 260, footerTop + 55);
-  doc.text('Guatemala, GT', 260, footerTop + 70);
-
-  doc.font('Helvetica-Bold').text('web', 420, footerTop + 40);
-  doc.font('Helvetica').fontSize(9).fillColor('#475569').text('www.synapsecode.com', 420, footerTop + 55);
+  // Contact info footer
+  doc.fontSize(8).fillColor('#999999').text('contacto@synapsecode.com  |  www.synapsecode.com  |  +502 1234 5678', 50, footerTop + 35, { width: 495, align: 'center' });
+  
+  // Copyright
+  doc.fontSize(7).fillColor('#CCCCCC').text('© 2026 SynapseCode. Todos los derechos reservados. Este documento es una factura oficial.', 50, footerTop + 50, { width: 495, align: 'center' });
 
   doc.end();
 

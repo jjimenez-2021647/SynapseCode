@@ -41,8 +41,8 @@ export const VerifyEmailPage = () => {
 
             <section className="relative z-10 w-full max-w-md glass rounded-2xl !px-[2rem] !py-[2.75rem] text-center shadow-[0_25px_60px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)]">
                 <a href="/" className="mb-[2rem] flex items-center justify-center gap-[0.5rem]">
-                    <div className="flex h-[40px] w-[40px] items-center justify-center rounded-[12px] bg-[linear-gradient(135deg,#00d9ff,#ff00ff)] shadow-[0_8px_24px_rgba(0,217,255,0.3)]">
-                        <span className="text-base font-bold text-background">&lt;/&gt;</span>
+                    <div className="flex h-[40px] w-[40px] items-center justify-center rounded-[12px] border-2 border-[#008B9D] bg-transparent">
+                        <span className="text-base font-bold text-white">&lt;/&gt;</span>
                     </div>
                     <span className="text-[1.5rem] font-bold leading-none">
                         <span className="text-primary">Synapse</span>

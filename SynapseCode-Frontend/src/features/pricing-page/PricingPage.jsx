@@ -106,6 +106,57 @@ export function PricingPage() {
     return digits.replace(/(.{4})/g, '$1-').replace(/-$/, '');
   };
 
+  const formatExpiry = (value) => {
+    // Solo permitir números
+    let digits = value.replace(/\D/g, '').slice(0, 4);
+    
+    // Procesar mes si hay 2 o más dígitos
+    if (digits.length >= 2) {
+      let month = digits.slice(0, 2);
+      
+      // Validar que el mes esté entre 01-12
+      const monthNum = parseInt(month, 10);
+      if (monthNum > 12) {
+        month = '12'; // Si es mayor a 12, establecer a 12
+      } else if (monthNum === 0 && digits.length === 2) {
+        month = '0'; // Dejar que escriba 0 temporalmente para luego ser 01-09
+      }
+      
+      // Si tenemos año también
+      if (digits.length >= 3) {
+        const year = digits.slice(2, 4);
+        digits = month + '/' + year;
+      } else {
+        digits = month;
+      }
+    }
+    
+    return digits;
+  };
+
+  const isCardExpired = (expiryString) => {
+    if (!expiryString || expiryString.length !== 5) return false;
+    
+    const [month, year] = expiryString.split('/');
+    const monthNum = parseInt(month, 10);
+    const yearNum = parseInt(year, 10);
+    
+    // Validar mes válido
+    if (monthNum < 1 || monthNum > 12) return true;
+    
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear() % 100; // Últimos 2 dígitos
+    const currentMonth = currentDate.getMonth() + 1; // getMonth retorna 0-11
+    
+    // Si el año es menor al actual, está vencida
+    if (yearNum < currentYear) return true;
+    
+    // Si es el año actual, verificar que el mes no sea anterior
+    if (yearNum === currentYear && monthNum < currentMonth) return true;
+    
+    return false;
+  };
+
   const getOrgAmount = () => {
     const students = Number(orgData.numStudents);
     if (!students || students < 1) return null;
@@ -180,7 +231,7 @@ export function PricingPage() {
       name === 'cardNumber'
         ? formatCardNumber(value)
         : name === 'expiry'
-        ? value.replace(/[^0-9/]/g, '').slice(0, 5)
+        ? formatExpiry(value)
         : value;
 
     setPaymentData((current) => ({ ...current, [name]: formattedValue }));
@@ -211,6 +262,11 @@ export function PricingPage() {
         return;
       }
 
+      if (isCardExpired(paymentData.expiry)) {
+        showError("La tarjeta ha vencido. Por favor, usa una tarjeta válida.");
+        return;
+      }
+
       await activatePlan("PRO", {
         name: paymentData.name.trim(),
         email: paymentData.email.trim(),
@@ -234,6 +290,11 @@ export function PricingPage() {
         paymentData.cvc.trim().length < 3
       ) {
         showError("Completa los datos de pago.");
+        return;
+      }
+
+      if (isCardExpired(paymentData.expiry)) {
+        showError("La tarjeta ha vencido. Por favor, usa una tarjeta válida.");
         return;
       }
 
@@ -444,10 +505,12 @@ export function PricingPage() {
                 Vencimiento
                 <input
                   name="expiry"
+                  inputMode="numeric"
                   value={paymentData.expiry}
                   onChange={handlePaymentChange}
                   className={cn(layout.input, ui.input)}
                   placeholder="MM/AA"
+                  maxLength="5"
                 />
               </label>
               <label className="grid gap-2 text-sm font-bold text-slate-200">
@@ -455,6 +518,7 @@ export function PricingPage() {
                 <input
                   name="cvc"
                   inputMode="numeric"
+                  maxLength="3"
                   value={paymentData.cvc}
                   onChange={handlePaymentChange}
                   className={cn(layout.input, ui.input)}

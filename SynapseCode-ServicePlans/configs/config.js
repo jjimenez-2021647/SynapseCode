@@ -37,7 +37,7 @@ export const config = {
       ai_explanations_limit: 10,
     },
     pro: {
-      price: parseInt(process.env.PLAN_PRO_PRICE || '2000'),
+      price: parseInt(process.env.PLAN_PRO_PRICE || '20'),
       name: 'PRO',
       active_rooms_limit: null,
       users_per_room: 20,
@@ -46,7 +46,7 @@ export const config = {
       ai_explanations_limit: 20,
     },
     org: {
-      price: parseInt(process.env.PLAN_ORG_PRICE || '5000'),
+      price: parseInt(process.env.PLAN_ORG_PRICE || '0'),
       name: 'ORG',
       active_rooms_limit: null,
       users_per_room: null,

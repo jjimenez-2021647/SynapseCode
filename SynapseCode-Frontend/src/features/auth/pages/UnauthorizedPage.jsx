@@ -17,7 +17,7 @@ export const UnauthorizedPage = () => {
 
             <section className="relative z-10 w-full max-w-md glass rounded-2xl !px-[2rem] !py-[3rem] text-center shadow-[0_25px_60px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.06)]">
                 <a href="/" className="mb-[2.35rem] flex items-center justify-center gap-[0.5rem]">
-                    <div className="flex h-[40px] w-[40px] items-center justify-center rounded-[12px] bg-[linear-gradient(135deg,#00d9ff,#ff00ff)] shadow-[0_8px_24px_rgba(0,217,255,0.3)]">
+                    <div className="flex h-[40px] w-[40px] items-center justify-center rounded-[12px] bg-[linear-gradient(135deg,#008B9D,#7C2D8A)] shadow-[0_8px_24px_rgba(0,139,157,0.3)]">
                         <span className="text-base font-bold text-background">&lt;/&gt;</span>
                     </div>
                     <span className="text-[1.5rem] font-bold leading-none">

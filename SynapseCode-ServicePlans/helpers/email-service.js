@@ -66,12 +66,12 @@ export const sendPaymentConfirmationEmail = async (
         <style>
           body { font-family: Arial, sans-serif; color: #333; }
           .container { max-width: 600px; margin: 0 auto; }
-          .header { background-color: #1e616d; color: white; padding: 20px; text-align: center; }
+          .header { background: linear-gradient(135deg, #008B9D, #7C2D8A); color: white; padding: 20px; text-align: center; }
           .content { padding: 20px; }
-          .invoice-link { display: inline-block; margin: 20px 0; padding: 10px 20px; background-color: #1e616d; color: white; text-decoration: none; border-radius: 5px; }
+          .invoice-link { display: inline-block; margin: 20px 0; padding: 10px 20px; background: linear-gradient(135deg, #008B9D, #7C2D8A); color: white !important; text-decoration: none; border-radius: 5px; font-weight: bold; }
           .plans-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
           .plans-table th, .plans-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-          .plans-table th { background-color: #f5f5f5; }
+          .plans-table th { background: linear-gradient(135deg, #008B9D, #7C2D8A); color: white; }
           .footer { background-color: #f5f5f5; padding: 20px; text-align: center; font-size: 12px; }
         </style>
       </head>
