@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ForgotPasswordForm } from '../components/ForgotPasswordForm'
 import { LoginForm } from '../components/LoginForm'
@@ -26,8 +26,18 @@ export const AuthPage = () => {
         setAuthOverride('forgot')
     }
 
+    useEffect(() => {
+        const root = document.documentElement
+        const update = (event) => {
+            root.style.setProperty("--cursor-x", `${event.clientX}px`)
+            root.style.setProperty("--cursor-y", `${event.clientY}px`)
+        }
+        window.addEventListener("pointermove", update, { passive: true })
+        return () => window.removeEventListener("pointermove", update)
+    }, [])
+
     return (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-[linear-gradient(135deg,#050812_0%,#0a0e17_50%,#0d0a1a_100%)]">
+        <div className="min-h-screen auth-page flex items-center justify-center p-4 bg-[linear-gradient(135deg,#050812_0%,#0a0e17_50%,#0d0a1a_100%)]">
             <ParticleField />
 
             {/* Ambient glow blobs */}
