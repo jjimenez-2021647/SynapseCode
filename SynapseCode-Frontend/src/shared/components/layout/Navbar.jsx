@@ -1,13 +1,22 @@
-import { useState } from "react"
-import { LogOut, User, Settings, Shield } from "lucide-react"
+import { LogOut } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 import { useAuthStore } from "../../../features/auth/store/authStore"
 
 export const Navbar = () => {
     const { user, logout } = useAuthStore()
-    const [showDropdown, setShowDropdown] = useState(false)
+    const navigate = useNavigate()
+
+    const handleLogout = () => {
+        logout()
+        navigate("/auth")
+    }
+
+    const handleProfileClick = () => {
+        navigate("/profile-page")
+    }
 
     return (
-        <nav className="w-full border-b border-white/5 bg-[#0a0e17]/80 backdrop-blur-xl z-[100]">
+        <nav className="w-full border-b-2 border-primary/50 bg-[#0a0e17]/80 backdrop-blur-xl z-[100] shadow-[0_0_20px_rgba(0,217,255,0.25)] element-glow">
             <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
                 {/* LOGO */}
                 <div className="flex items-center gap-3">
@@ -22,58 +31,33 @@ export const Navbar = () => {
 
                 {/* PERFIL CON DROPDOWN */}
                 <div className="flex items-center gap-4 relative">
-                    <div 
-                        className="flex items-center gap-3 px-4 py-1.5 rounded-full bg-success/10 border border-success/20 shadow-[0_0_10px_rgba(16,185,129,0.1)] cursor-pointer hover:bg-success/20 transition-all"
-                        onClick={() => setShowDropdown(!showDropdown)}
+                    <button 
+                        onClick={handleProfileClick}
+                        className="flex-shrink-0 w-10 h-10 rounded-full overflow-hidden border-2 border-primary/50 hover:border-primary transition-all cursor-pointer shadow-[0_0_10px_rgba(0,217,255,0.2)]"
                     >
-                        <div className="h-2 w-2 rounded-full bg-success shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                        <div className="flex flex-col">
-                            <span className="text-sm font-bold text-success">
-                                {user?.username || user?.name || "Carlos M."}
-                            </span>
-                            <span className="text-[8px] font-black uppercase tracking-widest text-success/70 leading-none">
-                                {user?.planType || "FREE"}
-                            </span>
-                        </div>
-                    </div>
+                        {user?.profilePicture ? (
+                            <img 
+                                src={user.profilePicture} 
+                                alt={user?.username || user?.name}
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+                                <span className="text-sm font-bold text-white">
+                                    {(user?.name || user?.username || "U")[0].toUpperCase()}
+                                </span>
+                            </div>
+                        )}
+                    </button>
 
                     <button 
-                        onClick={() => setShowDropdown(!showDropdown)}
-                        className={`p-2 rounded-lg transition-all ${showDropdown ? "bg-white/10 text-white" : "text-muted-foreground hover:text-white"}`}
+                        onClick={handleLogout}
+                        className={`p-2 rounded-lg transition-all text-primary hover:text-primary hover:bg-primary/10 hover:shadow-[0_0_10px_rgba(0,217,255,0.5)]`}
+                        title="Cerrar sesión"
                     >
                         <LogOut className="h-5 w-5" />
                     </button>
-
-                    {/* DROPDOWN MENU */}
-                    {showDropdown && (
-                        <>
-                            <div 
-                                className="fixed inset-0 z-10" 
-                                onClick={() => setShowDropdown(false)}
-                            />
-                            <div className="absolute right-0 top-full mt-2 w-48 rounded-xl bg-[#111827] border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.5)] p-2 z-20 animate-fadeInScale">
-                                <div className="px-3 py-2 mb-1 border-b border-white/5">
-                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Ajustes</p>
-                                </div>
-                                <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-white/5 hover:text-white transition-all">
-                                    <User className="h-4 w-4" />
-                                    Mi Perfil
-                                </button>
-                                <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-white/5 hover:text-white transition-all">
-                                    <Shield className="h-4 w-4" />
-                                    Seguridad
-                                </button>
-                                <div className="my-1 border-t border-white/5" />
-                                <button 
-                                    onClick={logout}
-                                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold text-error hover:bg-error/10 transition-all"
-                                >
-                                    <LogOut className="h-4 w-4" />
-                                    Cerrar Sesión
-                                </button>
-                            </div>
-                        </>
-                    )}
+                    {/* DROPDOWN MENU REMOVIDO */}
                 </div>
             </div>
         </nav>

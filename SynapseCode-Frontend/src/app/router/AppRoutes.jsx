@@ -9,6 +9,8 @@ import { RoleGuard } from './RoleGuard.jsx';
 import { ProtectedRoute } from './ProtectedRoute.jsx';
 import { UnauthorizedPage } from '../../features/auth/pages/UnauthorizedPage.jsx';
 import { PricingPage } from '../../features/pricing-page/PricingPage.jsx';
+import { ProfilePage } from '../../features/profile-page/index.js';
+import { CodeSessionsPage } from '../../features/codeSessions-page/index.js';
 
 export const AppRoutes = () => {
     return (
@@ -34,11 +36,33 @@ export const AppRoutes = () => {
             />
 
             <Route
+                path="/profile-page"
+                element={
+                    <ProtectedRoute>
+                        <RoleGuard allowedRoles={["USER_ROLE", "ORG_ROLE", "ADMIN_ROLE"]}>
+                            <ProfilePage />
+                        </RoleGuard>
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
                 path="/dashboard"
                 element={
                     <ProtectedRoute>
                         <RoleGuard allowedRoles={["USER_ROLE", "ORG_ROLE"]}>
                             <DashboardPage />
+                        </RoleGuard>
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/codeSessions-page/:roomId"
+                element={
+                    <ProtectedRoute>
+                        <RoleGuard allowedRoles={["USER_ROLE", "ORG_ROLE", "ADMIN_ROLE"]}>
+                            <CodeSessionsPage />
                         </RoleGuard>
                     </ProtectedRoute>
                 }

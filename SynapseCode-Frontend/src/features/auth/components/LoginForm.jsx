@@ -141,7 +141,7 @@ export const LoginForm = ({ onForgot, onRegister }) => {
                     "mt-[0.55rem] flex w-full items-center justify-center gap-[0.5rem] rounded-[10px] border-0 !p-[0.8rem] text-[0.95rem] font-semibold tracking-[0.02em]",
                     "transition-[opacity,box-shadow] duration-200",
                     loading
-                        ? "cursor-not-allowed bg-primary/30 text-foreground shadow-none"
+                        ? "cursor-not-allowed bg-gradient-to-r from-primary to-accent text-background opacity-80 shadow-[0_4px_24px_rgba(0,217,255,0.25)]"
                         : "cursor-pointer bg-gradient-to-r from-primary to-accent text-background shadow-[0_4px_24px_rgba(0,217,255,0.25)]"
                 )}
             >

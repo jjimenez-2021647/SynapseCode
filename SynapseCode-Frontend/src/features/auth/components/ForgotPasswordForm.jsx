@@ -54,13 +54,13 @@ export const ForgotPasswordForm = ({ onSwitch }) => {
                 className={clsx(
                     "mt-[0.35rem] flex w-full items-center justify-center gap-[0.5rem] rounded-[10px] border-0 !p-[0.8rem] text-[0.95rem] font-semibold text-background transition-opacity duration-200",
                     loading
-                        ? "cursor-not-allowed bg-primary/30 text-foreground shadow-none"
+                        ? "cursor-not-allowed bg-gradient-to-r from-primary to-accent text-background opacity-80 shadow-[0_4px_24px_rgba(0,217,255,0.25)]"
                         : "cursor-pointer bg-gradient-to-r from-primary to-accent shadow-[0_4px_24px_rgba(0,217,255,0.25)]"
                 )}
             >
                 {loading ? (
                     <>
-                        <Spinner size="sm" className="text-foreground" />
+                        <Spinner size="sm" className="text-background" />
                         Enviando...
                     </>
                 ) : "Enviar Correo"}

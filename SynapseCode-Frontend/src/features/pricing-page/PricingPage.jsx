@@ -186,10 +186,9 @@ export function PricingPage() {
         throw new Error(data?.message || "No se pudo seleccionar el plan.");
       }
 
-      setUserPlanType(planName);
-      if (planName === "ORG") {
-        setUserRole("ORG_ROLE");
-      }
+      // Recargar el perfil del backend para sincronizar todos los datos (igual que en el Navbar)
+      await loadProfile();
+
       setSelectedPlan(null);
       showSuccess(
         planName === "FREE"
@@ -313,10 +312,12 @@ export function PricingPage() {
         <Link to="/" className="inline-flex items-center">
           <Logo />
         </Link>
-        <Link to="/" className={cn(layout.button, ui.buttonBase, ui.buttonGhost)}>
-          Ir al inicio
-          <Icon name="arrow" size={16} />
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link to="/" className={cn(layout.button, ui.buttonBase, ui.buttonGhost)}>
+            Ir al inicio
+            <Icon name="arrow" size={16} />
+          </Link>
+        </div>
       </header>
 
       <main className={layout.shell}>

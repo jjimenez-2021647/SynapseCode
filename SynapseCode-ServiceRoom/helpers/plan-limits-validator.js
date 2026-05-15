@@ -48,6 +48,36 @@ export const getUserPlanInfo = async (userId, token) => {
 };
 
 /**
+ * Obtiene el plan de cualquier usuario por su ID.
+ * Usa el endpoint público de ServicePlans para enriquecer datos de salas existentes.
+ * @param {string} userId - ID del usuario
+ * @returns {Promise<{planName: string, limits: object, subscription: object|null}>}
+ */
+export const getUserPlanInfoByUserId = async (userId) => {
+  try {
+    const response = await axios.get(
+      `${PLANS_SERVICE_URL}/api/v1/subscriptions/user/${userId}`,
+      {
+        timeout: 3000
+      }
+    );
+
+    const subscription = response.data?.data;
+    const planName = subscription?.planName || subscription?.planId?.name || 'FREE';
+    const limits = DEFAULT_PLAN_LIMITS[planName] || DEFAULT_PLAN_LIMITS.FREE;
+
+    return { planName, limits, subscription };
+  } catch (error) {
+    console.warn(`[WARN] No se pudo obtener plan del usuario ${userId}, usando FREE por defecto:`, error.message);
+    return {
+      planName: 'FREE',
+      limits: DEFAULT_PLAN_LIMITS.FREE,
+      subscription: null
+    };
+  }
+};
+
+/**
  * Valida si usuario puede crear una nueva sala
  * @param {string} userId - ID del usuario
  * @param {string} token - JWT token

@@ -3,6 +3,7 @@ import { validatePlanSelection } from '../../middlewares/validation.js';
 import {
   selectPlan,
   getCurrentSubscription,
+  getUserSubscriptionById,
   createCheckoutSession,
   handleStripeWebhook,
 } from './subscriptions.controller.js';
@@ -15,6 +16,13 @@ const router = Router();
  * @access Private
  */
 router.get('/current', getCurrentSubscription);
+
+/**
+ * @route GET /api/v1/subscriptions/user/:userId
+ * @desc Obtener suscripción de un usuario específico por ID
+ * @access Public
+ */
+router.get('/user/:userId', getUserSubscriptionById);
 
 /**
  * @route POST /api/v1/subscriptions/select

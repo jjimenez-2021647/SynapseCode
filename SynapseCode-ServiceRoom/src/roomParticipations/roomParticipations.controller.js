@@ -6,24 +6,49 @@ import {
     mergePermissions,
     calculateTotalMinutes,
 } from '../../helpers/roomParticipations.helpers.js';
+import { getUserPlanInfo, getUserPlanInfoByUserId } from '../../helpers/plan-limits-validator.js';
 
 const mapParticipationRoleToSubRole = (role) =>
     String(role || '').toUpperCase() === 'ANFITRION' ? 'HOST_ROLE' : 'ASSISTANT_ROLE';
 const isAdminRole = (req) => String(req.user?.role || '').toUpperCase() === 'ADMIN_ROLE';
+const getRequesterUserId = (req) =>
+    req.user?.userId || req.user?.id || req.user?.sub || null;
+
+const resolveRoomHostPlan = async (room) => {
+    if (room?.hostPlan) return room.hostPlan;
+    if (!room?.hostId) return 'FREE';
+
+    const planInfo = await getUserPlanInfoByUserId(room.hostId);
+    return planInfo?.planName || 'FREE';
+};
+
+const canJoinRoomPlan = (guestPlan, hostPlan) => {
+    const normalizedGuestPlan = String(guestPlan || 'FREE').toUpperCase();
+    const normalizedHostPlan = String(hostPlan || 'FREE').toUpperCase();
+
+    const allowedPlansByGuest = {
+        FREE: ['FREE'],
+        PRO: ['FREE', 'PRO'],
+        ORG: ['FREE', 'ORG'],
+    };
+
+    return allowedPlansByGuest[normalizedGuestPlan]?.includes(normalizedHostPlan) || false;
+};
 
 /**
  * Crear participación - usuario se une a una sala
  */
 export const createRoomParticipation = async (req, res) => {
     try {
-        const { roomName, roomCode } = req.body;
-        const userId = req.user?.userId;
+        const { roomName, roomCode, passwordRoom } = req.body;
+        const userId = getRequesterUserId(req);
         const username = req.user?.username || null;
+        const token = req.token;
 
-        if (!roomName || !roomCode) {
+        if (!roomCode) {
             return res.status(400).json({
                 success: false,
-                message: 'roomName y roomCode son obligatorios',
+                message: 'roomCode es obligatorio',
                 error: 'MISSING_REQUIRED_FIELDS',
             });
         }
@@ -36,20 +61,43 @@ export const createRoomParticipation = async (req, res) => {
             });
         }
 
-        const room = await Room.findOne({
-            roomName: String(roomName).trim(),
-            roomCode: String(roomCode).toUpperCase(),
-        }).lean();
+        const roomQuery = {
+            roomCode: String(roomCode).toUpperCase().trim(),
+        };
+
+        if (roomName) {
+            roomQuery.roomName = String(roomName).trim();
+        }
+
+        const room = await Room.findOne(roomQuery).lean();
 
         if (!room) {
             return res.status(404).json({
                 success: false,
-                message: 'Sala no encontrada con roomName y roomCode',
+                message: roomName
+                    ? 'Sala no encontrada con roomName y roomCode'
+                    : 'Sala no encontrada con roomCode',
                 error: 'ROOM_NOT_FOUND',
             });
         }
 
         // Validación: Solo se puede unir a salas activas
+        const existingParticipation = await RoomParticipation.findOne({
+            roomId: room._id,
+            userId,
+        });
+
+        if (existingParticipation?.connectionStatus === 'CONECTADO') {
+            return res.status(200).json({
+                success: true,
+                message: 'El usuario ya es participante activo de la sala',
+                data: {
+                    participation: existingParticipation,
+                    room,
+                },
+            });
+        }
+
         if (room.roomStatus !== 'ACTIVA') {
             return res.status(403).json({
                 success: false,
@@ -60,20 +108,44 @@ export const createRoomParticipation = async (req, res) => {
 
         // Validación: Si la sala es privada, requiere contraseña
         if (room.roomType === 'PRIVADA') {
-            if (!req.body.passwordRoom) {
+            if (!passwordRoom) {
                 return res.status(400).json({
                     success: false,
                     message: 'Contraseña requerida para unirse a salas privadas',
                     error: 'PASSWORD_REQUIRED',
                 });
             }
-            if (req.body.passwordRoom !== room.passwordRoom) {
+            if (passwordRoom !== room.passwordRoom) {
                 return res.status(403).json({
                     success: false,
                     message: 'Contraseña incorrecta',
                     error: 'INVALID_PASSWORD',
                 });
             }
+        }
+
+        if (!existingParticipation && (room.connectedUsers?.length || 0) >= (room.maxUsers || 12)) {
+            return res.status(403).json({
+                success: false,
+                message: 'La sala ya alcanzo el limite de participantes',
+                error: 'ROOM_FULL',
+            });
+        }
+
+        const guestPlanInfo = await getUserPlanInfo(userId, token);
+        const guestPlan = guestPlanInfo?.planName || 'FREE';
+        const hostPlan = await resolveRoomHostPlan(room);
+
+        if (!canJoinRoomPlan(guestPlan, hostPlan)) {
+            return res.status(403).json({
+                success: false,
+                message: `Tu plan ${guestPlan} no puede unirse a salas del plan ${hostPlan}`,
+                error: 'PLAN_NOT_ALLOWED',
+                data: {
+                    guestPlan,
+                    hostPlan,
+                },
+            });
         }
 
         const payload = {
@@ -84,7 +156,15 @@ export const createRoomParticipation = async (req, res) => {
             permissions: getRoleDefaultPermissions('MIEMBRO'),
         };
 
-        const participation = await RoomParticipation.create(payload);
+        const participation = existingParticipation
+            ? await existingParticipation.set({
+                username: username || existingParticipation.username || userId,
+                role: 'MIEMBRO',
+                permissions: getRoleDefaultPermissions('MIEMBRO'),
+                connectionStatus: 'CONECTADO',
+                leftAt: null,
+            }).save()
+            : await RoomParticipation.create(payload);
 
         await Room.findByIdAndUpdate(
             room._id,
@@ -111,7 +191,7 @@ export const createRoomParticipation = async (req, res) => {
             console.warn('createRoomParticipation system message error:', systemMessageError.message);
         }
 
-        return res.status(201).json({
+        return res.status(existingParticipation ? 200 : 201).json({
             success: true,
             message: 'Participación creada exitosamente',
             data: participation,

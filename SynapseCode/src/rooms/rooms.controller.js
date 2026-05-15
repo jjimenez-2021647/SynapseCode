@@ -12,6 +12,9 @@ import { getRoleDefaultPermissions, calculateTotalMinutes } from '../../helpers/
 const getRequesterUserId = (req) =>
     req.user?.userId || req.user?.id || req.user?.sub || null;
 
+// Lenguajes soportados (igual al modelo)
+const ROOM_LANGUAGES = ['JAVA', 'PYTHON', 'JAVASCRIPT', 'HTML_CSS', 'CSHARP'];
+
 const isUserRole = (req) => String(req.user?.role || '').toUpperCase() === 'USER_ROLE';
 const isAdminRole = (req) => String(req.user?.role || '').toUpperCase() === 'ADMIN_ROLE';
 const isUserOrAdminRole = (req) => isUserRole(req) || isAdminRole(req);
@@ -63,6 +66,17 @@ export const createRoom = async (req, res) => {
     try {
         const payload = { ...req.body };
         const hostIdFromToken = getRequesterUserId(req);
+
+        // Validación: Si es multi-language, roomLanguage debe tener al menos 1 elemento
+        if (payload.isMultiLanguage === true) {
+            if (!Array.isArray(payload.roomLanguage) || payload.roomLanguage.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'En modo multi-lenguaje, debe haber al menos un lenguaje seleccionado',
+                    error: 'EMPTY_MULTILANGUAGE_ARRAY',
+                });
+            }
+        }
 
         if (!isUserRole(req)) {
             return res.status(403).json({
@@ -147,6 +161,7 @@ export const updateRoom = async (req, res) => {
             'roomName',
             'roomType',
             'roomLanguage',
+            'isMultiLanguage',
             'maxUsers',
             'currentCode',
             'lastActivity',

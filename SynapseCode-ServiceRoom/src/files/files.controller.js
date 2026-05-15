@@ -25,8 +25,11 @@ const LANGUAGE_EXTENSIONS = {
 const isExtensionAllowed = (fileExtension, roomLanguage) => {
     if (!roomLanguage) return true;
 
+    // Si roomLanguage es un número (ID de Judge0), permitir cualquier extensión
+    if (typeof roomLanguage === 'number') return true;
+
     const allowedExtensions = LANGUAGE_EXTENSIONS[roomLanguage];
-    return allowedExtensions?.includes(fileExtension.toLowerCase());
+    return allowedExtensions?.includes(fileExtension.toLowerCase()) ?? true;
 };
 
 const resolveParentFolderForRoom = async ({ roomId, parentFolderId }) => {

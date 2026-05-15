@@ -6,6 +6,7 @@ import { generatePasswordRoom } from '../../helpers/rooms.helpers.js';
 const ROOM_TYPES = ['PUBLICA', 'PRIVADA'];
 const ROOM_LANGUAGES = ['JAVA', 'PYTHON', 'JAVASCRIPT', 'HTML_CSS', 'CSHARP'];
 const ROOM_STATUSES = ['ACTIVA', 'PAUSADA', 'CERRADA', 'ARCHIVADA'];
+const PLAN_NAMES = ['FREE', 'PRO', 'ORG'];
 
 const RoomSchema = new Schema(
     {
@@ -38,21 +39,34 @@ const RoomSchema = new Schema(
             default: null,
         },
         roomLanguage: {
-            type: String,
+            type: Schema.Types.Mixed,  // Aceptar tanto strings como números (ID de Judge0)
             required: false,
             default: null,
-            enum: {
-                values: ROOM_LANGUAGES,
-                message: 'Lenguaje por defecto invalido',
-            },
-            uppercase: true,
-            set: (value) => (value === 'C#' ? 'CSHARP' : value),
+            description: 'String para mono-lenguaje o Array de IDs/nombres para multi-lenguaje',
+        },
+
+        // Indica si la sala soporta múltiples lenguajes
+        isMultiLanguage: {
+            type: Boolean,
+            required: false,
+            default: false,
+            description: 'true si la sala permite múltiples lenguajes, false si es mono-lenguaje',
         },
         hostId: {
             type: String,
             required: [true, 'El anfitrion es obligatorio'],
             trim: true,
             minlength: [1, 'El ID del anfitrion es inválido'],
+        },
+        hostPlan: {
+            type: String,
+            enum: {
+                values: PLAN_NAMES,
+                message: 'Plan del anfitrion invalido',
+            },
+            default: 'FREE',
+            uppercase: true,
+            trim: true,
         },
         maxUsers: {
             type: Number,

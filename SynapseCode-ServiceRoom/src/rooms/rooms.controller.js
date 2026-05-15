@@ -5,7 +5,7 @@ import RoomParticipation from '../roomParticipations/roomParticipations.model.js
 import generateUniqueRoomCode from '../../helpers/rooms.helpers.js';
 import { getRoleDefaultPermissions, calculateTotalMinutes } from '../../helpers/roomParticipations.helpers.js';
 import { callService } from '../../helpers/service-communication.js';
-import { validateRoomCreation } from '../../helpers/plan-limits-validator.js';
+import { getUserPlanInfo, getUserPlanInfoByUserId, validateRoomCreation } from '../../helpers/plan-limits-validator.js';
 import axios from 'axios';
 
 const getRequesterUserId = (req) =>
@@ -15,10 +15,36 @@ const isUserRole = (req) => String(req.user?.role || '').toUpperCase() === 'USER
 const isAdminRole = (req) => String(req.user?.role || '').toUpperCase() === 'ADMIN_ROLE';
 const isUserOrAdminRole = (req) => isUserRole(req) || isAdminRole(req);
 
+const resolveRoomHostPlan = async (room) => {
+    if (room?.hostPlan) {
+        return room.hostPlan;
+    }
+
+    if (!room?.hostId) {
+        return 'FREE';
+    }
+
+    const planInfo = await getUserPlanInfoByUserId(room.hostId);
+    const resolvedPlan = planInfo?.planName || 'FREE';
+
+    try {
+        await Room.updateOne(
+            { _id: room._id, $or: [{ hostPlan: { $exists: false } }, { hostPlan: null }, { hostPlan: '' }] },
+            { $set: { hostPlan: resolvedPlan } }
+        );
+    } catch (error) {
+        console.warn('[WARN] No se pudo backfillear hostPlan en la sala:', error.message);
+    }
+
+    return resolvedPlan;
+};
+
 export const createRoom = async (req, res) => {
     try {
         const payload = { ...req.body };
         const hostIdFromToken = getRequesterUserId(req);
+        const token = req.headers['x-token'] || req.headers.authorization?.replace('Bearer ', '');
+        let hostPlan = 'FREE';
 
         if (!isUserRole(req)) {
             return res.status(403).json({
@@ -39,7 +65,6 @@ export const createRoom = async (req, res) => {
                 status: { $in: ['ABIERTA', 'ACTIVA'] }
             });
 
-            const token = req.headers['x-token'] || req.headers.authorization?.replace('Bearer ', '');
             const limitValidation = await validateRoomCreation(hostIdFromToken, token, activeRoomsCount);
 
             if (!limitValidation.valid) {
@@ -50,12 +75,23 @@ export const createRoom = async (req, res) => {
                     current: activeRoomsCount
                 });
             }
+            hostPlan = limitValidation.planName || 'FREE';
         } catch (error) {
             console.warn('[WARN] Validación de límites de plan fallida, continuando:', error.message);
             // Continuar aunque ServicePlans no esté disponible
         }
 
+        if (hostPlan === 'FREE' && token) {
+            try {
+                const planInfo = await getUserPlanInfo(hostIdFromToken, token);
+                hostPlan = planInfo?.planName || 'FREE';
+            } catch (error) {
+                console.warn('[WARN] No se pudo obtener el plan del host para persistirlo:', error.message);
+            }
+        }
+
         payload.hostId = hostIdFromToken;
+        payload.hostPlan = hostPlan;
         payload.connectedUsers = [
             {
                 userId: hostIdFromToken,
@@ -273,6 +309,7 @@ export const getRoom = async (req, res) => {
         const roomsWithChats = await Promise.all(
             rooms.map(async (room) => {
                 try {
+                    const hostPlan = await resolveRoomHostPlan(room);
                     // eslint-disable-next-line @typescript-eslint/no-base-to-string
                     const roomIdString = room._id.toString();
                     const chatServiceUrl = process.env.CHAT_SERVICE_URL || 'http://localhost:3008';
@@ -297,6 +334,7 @@ export const getRoom = async (req, res) => {
 
                     return {
                         ...room,
+                        hostPlan,
                         chats: roomChats,
                     };
                 } catch (err) {
@@ -306,6 +344,7 @@ export const getRoom = async (req, res) => {
                     console.debug('Chat service error:', err?.message);
                     return {
                         ...room,
+                        hostPlan: room.hostPlan || 'FREE',
                         chats: [],
                     };
                 }
@@ -333,6 +372,8 @@ export const getRoomByCode = async (req, res) => {
         if (!room) {
             return res.status(404).json({ message: 'Sala no encontrada' });
         }
+
+        const hostPlan = await resolveRoomHostPlan(room);
 
         // Obtener chats asociados a la sala
         let chats = [];
@@ -367,6 +408,7 @@ export const getRoomByCode = async (req, res) => {
 
         const roomWithChats = {
             ...room,
+            hostPlan,
             chats,
         };
 
@@ -497,20 +539,23 @@ export const deactivateRoom = async (req, res) => {
 export const getRoomCreatorsAudit = async (_req, res) => {
     try {
         const rooms = await Room.find({})
-            .select('roomCode roomName hostId createdAt roomStatus roomType roomLanguage')
+            .select('roomCode roomName hostId hostPlan createdAt roomStatus roomType roomLanguage')
             .sort({ createdAt: -1 })
             .lean();
 
-        const data = rooms.map((room) => ({
-            roomId: room._id,
-            roomCode: room.roomCode,
-            roomName: room.roomName,
-            createdByUserId: room.hostId,
-            createdAt: room.createdAt || null,
-            roomStatus: room.roomStatus,
-            roomType: room.roomType,
-            roomLanguage: room.roomLanguage || null,
-        }));
+        const data = await Promise.all(
+            rooms.map(async (room) => ({
+                roomId: room._id,
+                roomCode: room.roomCode,
+                roomName: room.roomName,
+                createdByUserId: room.hostId,
+                hostPlan: await resolveRoomHostPlan(room),
+                createdAt: room.createdAt || null,
+                roomStatus: room.roomStatus,
+                roomType: room.roomType,
+                roomLanguage: room.roomLanguage || null,
+            }))
+        );
 
         return res.status(200).json({
             success: true,

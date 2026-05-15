@@ -3,7 +3,7 @@ import CodeExecution from './codeExecutions.model.js';
 import Room from '../rooms/rooms.model.js';
 import File from '../files/files.model.js';
 import CodeSession from '../codeSessions/codeSessions.model.js';
-import { executeCode, submitCode, getSubmissionResult } from '../../helpers/Judge0.service.js';
+import { executeCode, submitCode, getSubmissionResult, getAllJudge0Languages } from '../../helpers/Judge0.service.js';
 
 // ─── Limite de ejecuciones por hora ───────────────────────────────────────────
 const HOURLY_LIMIT = 50;
@@ -73,17 +73,29 @@ const enrichCodeExecutions = async (executions) => {
  * GET /code-executions/languages  — público, sin JWT
  */
 export const getSupportedLanguages = async (req, res) => {
-    return res.status(200).json({
-        success: true,
-        message: 'Lenguajes soportados',
-        data: [
-            { language: 'JAVASCRIPT', judge0Id: 63, description: 'Node.js 12.14.0'        },
-            { language: 'PYTHON',     judge0Id: 71, description: 'Python 3.8.1'            },
-            { language: 'JAVA',       judge0Id: 62, description: 'Java OpenJDK 13'         },
-            { language: 'CSHARP',     judge0Id: 51, description: 'C# Mono 6.6.0'           },
-            { language: 'HTML_CSS',   judge0Id: 63, description: 'Ejecutado como Node.js'  },
-        ],
-    });
+    try {
+        const allLanguages = await getAllJudge0Languages();
+        
+        return res.status(200).json({
+            success: true,
+            message: 'Lenguajes soportados',
+            data: allLanguages,
+        });
+    } catch (error) {
+        console.error('Error obteniendo lenguajes:', error);
+        
+        // Fallback a lenguajes por defecto si hay error
+        return res.status(200).json({
+            success: true,
+            message: 'Lenguajes soportados (fallback)',
+            data: [
+                { id: 63, name: 'JavaScript (Node.js 12.14.0)' },
+                { id: 71, name: 'Python (3.8.1)' },
+                { id: 62, name: 'Java (OpenJDK 13.0.1)' },
+                { id: 51, name: 'C# (Mono 6.6.0)' },
+            ],
+        });
+    }
 };
 
 /**

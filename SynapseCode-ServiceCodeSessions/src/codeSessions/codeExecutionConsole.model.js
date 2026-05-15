@@ -12,7 +12,6 @@ const CodeExecutionConsoleSchema = new Schema(
         sessionId: {
             type: Schema.Types.ObjectId,
             required: [true, 'El ID de la sesión es obligatorio'],
-            index: true,
         },
         fileId: {
             type: Schema.Types.ObjectId,

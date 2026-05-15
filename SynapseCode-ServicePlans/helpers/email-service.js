@@ -64,33 +64,43 @@ export const sendPaymentConfirmationEmail = async (
       <head>
         <meta charset="UTF-8">
         <style>
-          body { font-family: Arial, sans-serif; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; }
-          .header { background: linear-gradient(135deg, #008B9D, #7C2D8A); color: white; padding: 20px; text-align: center; }
-          .content { padding: 20px; }
-          .invoice-link { display: inline-block; margin: 20px 0; padding: 10px 20px; background: linear-gradient(135deg, #008B9D, #7C2D8A); color: white !important; text-decoration: none; border-radius: 5px; font-weight: bold; }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; margin: 0; padding: 0; }
+          .container { max-width: 600px; margin: 0 auto; background: #fff; }
+          .header { background: linear-gradient(135deg, #00D4FF 0%, #E64ECE 100%); color: white; padding: 30px 20px; text-align: center; }
+          .header h2 { margin: 0; font-size: 28px; }
+          .content { padding: 30px 20px; background: #fafafa; }
+          .content-inner { background: white; padding: 20px; border-radius: 8px; }
+          .success-badge { display: inline-block; background: linear-gradient(135deg, #00D4FF 0%, #E64ECE 100%); color: white; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-bottom: 15px; }
+          .invoice-link { display: inline-block; margin: 20px 0; padding: 14px 28px; background: linear-gradient(90deg, #0099CC 0%, #B5169D 100%); color: white !important; text-decoration: none; border-radius: 6px; font-weight: 700; font-size: 16px; }
           .plans-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-          .plans-table th, .plans-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-          .plans-table th { background: linear-gradient(135deg, #008B9D, #7C2D8A); color: white; }
-          .footer { background-color: #f5f5f5; padding: 20px; text-align: center; font-size: 12px; }
+          .plans-table th, .plans-table td { border: 1px solid #e0e0e0; padding: 12px; text-align: left; }
+          .plans-table th { background: linear-gradient(135deg, #00D4FF 0%, #E64ECE 100%); color: white; font-weight: 600; }
+          .plans-table tr:nth-child(even) { background: #f9f9f9; }
+          .amount { font-size: 24px; font-weight: 700; color: #E64ECE; margin: 15px 0; }
+          .footer { background: linear-gradient(135deg, #00D4FF 0%, #E64ECE 100%); color: white; padding: 20px; text-align: center; font-size: 12px; }
+          .footer p { margin: 5px 0; }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
-            <h2>¡Pago Confirmado!</h2>
+            <h2>✓ ¡Pago Confirmado!</h2>
           </div>
           <div class="content">
-            <h3>¡Bienvenido/a ${name}!</h3>
-            <p>Tu suscripción al plan <strong>${planName}</strong> ha sido confirmada.</p>
-            <p><strong>Monto pagado:</strong> ${formattedAmount}</p>
-            ${invoiceSection}
-            <p>Puedes acceder a todos los beneficios del plan ${planName} inmediatamente.</p>
-            ${planSummary}
-            <p>Si tienes preguntas, no dudes en contactarnos.</p>
+            <div class="content-inner">
+              <div class="success-badge">PAGO PROCESADO</div>
+              <h3>¡Bienvenido/a ${name}!</h3>
+              <p>Tu suscripción al plan <strong>${planName}</strong> ha sido confirmada exitosamente.</p>
+              <div class="amount">${formattedAmount}</div>
+              ${invoiceSection}
+              <p>Puedes acceder a todos los beneficios del plan ${planName} inmediatamente en tu panel de control.</p>
+              ${planSummary}
+              <p style="margin-top: 20px; color: #666;">Si tienes preguntas, no dudes en contactarnos. Estamos aquí para ayudarte.</p>
+            </div>
           </div>
           <div class="footer">
             <p>© 2026 SynapseCode. Todos los derechos reservados.</p>
+            <p>Para soporte: synapsecode823@gmail.com | www.synapsecode.com</p>
           </div>
         </div>
       </body>
@@ -175,14 +185,19 @@ export const sendFreePlanEmail = async (email, name) => {
       <head>
         <meta charset="UTF-8">
         <style>
-          body { font-family: Arial, sans-serif; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; }
-          .header { background-color: #1e616d; color: white; padding: 20px; text-align: center; }
-          .content { padding: 20px; }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; margin: 0; padding: 0; }
+          .container { max-width: 600px; margin: 0 auto; background: #fff; }
+          .header { background: linear-gradient(135deg, #00D4FF 0%, #E64ECE 100%); color: white; padding: 30px 20px; text-align: center; }
+          .header h2 { margin: 0; font-size: 28px; }
+          .content { padding: 30px 20px; background: #fafafa; }
+          .content-inner { background: white; padding: 20px; border-radius: 8px; }
           .plans-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-          .plans-table th, .plans-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-          .plans-table th { background-color: #f5f5f5; }
-          .footer { background-color: #f5f5f5; padding: 20px; text-align: center; font-size: 12px; }
+          .plans-table th, .plans-table td { border: 1px solid #e0e0e0; padding: 12px; text-align: left; }
+          .plans-table th { background: linear-gradient(135deg, #00D4FF 0%, #E64ECE 100%); color: white; font-weight: 600; }
+          .plans-table tr:nth-child(even) { background: #f9f9f9; }
+          .upgrade-btn { display: inline-block; margin: 20px 0; padding: 14px 28px; background: linear-gradient(90deg, #0099CC 0%, #B5169D 100%); color: white !important; text-decoration: none; border-radius: 6px; font-weight: 700; font-size: 16px; }
+          .footer { background: linear-gradient(135deg, #00D4FF 0%, #E64ECE 100%); color: white; padding: 20px; text-align: center; font-size: 12px; }
+          .footer p { margin: 5px 0; }
         </style>
       </head>
       <body>
@@ -191,55 +206,62 @@ export const sendFreePlanEmail = async (email, name) => {
             <h2>¡Bienvenido/a a SynapseCode!</h2>
           </div>
           <div class="content">
-            <h3>Has seleccionado el Plan Gratuito</h3>
-            <p>¡Gracias por elegir SynapseCode! Esperamos que disfrutes de nuestro plan gratuito.</p>
-            
-            <h3>Planes disponibles:</h3>
-            <table class="plans-table">
-              <tr>
-                <th>Plan</th>
-                <th>Precio</th>
-                <th>Características</th>
-              </tr>
-              <tr>
-                <td><strong>FREE</strong></td>
-                <td>$0/mes</td>
-                <td>
-                  • Hasta 3 salas activas<br>
-                  • Hasta 5 usuarios por sala<br>
-                  • Ejecución de código básica<br>
-                  • Chat limitado<br>
-                  • Explicaciones con IA limitadas
-                </td>
-              </tr>
-              <tr>
-                <td><strong>PRO</strong></td>
-                <td>$20/mes</td>
-                <td>
-                  • Salas ilimitadas<br>
-                  • Hasta 20 usuarios por sala<br>
-                  • Explicaciones con IA hasta 20<br>
-                  • Historial de versiones completo<br>
-                  • Ejecuciones prioritarias
-                </td>
-              </tr>
-              <tr>
-                <td><strong>ORG</strong></td>
-                <td>$50+/mes</td>
-                <td>
-                  • Todo lo del PRO<br>
-                  • Panel de administración<br>
-                  • Analíticas por alumno<br>
-                  • Branding personalizado<br>
-                  • Soporte dedicado
-                </td>
-              </tr>
-            </table>
-            
-            <p>Puedes cambiar de plan en cualquier momento desde tu panel de usuario.</p>
+            <div class="content-inner">
+              <h3>Has seleccionado el Plan Gratuito</h3>
+              <p>¡Gracias por elegir SynapseCode, ${name}! Esperamos que disfrutes de nuestro plan gratuito y explores todas las funcionalidades que ofrecemos.</p>
+              
+              <h3>Planes disponibles:</h3>
+              <table class="plans-table">
+                <tr>
+                  <th>Plan</th>
+                  <th>Precio</th>
+                  <th>Características principales</th>
+                </tr>
+                <tr>
+                  <td><strong>FREE</strong></td>
+                  <td>$0/mes</td>
+                  <td>
+                    • Hasta 3 salas activas<br>
+                    • Hasta 5 usuarios por sala<br>
+                    • Ejecución de código básica<br>
+                    • Chat limitado<br>
+                    • Explicaciones con IA limitadas
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>PRO</strong></td>
+                  <td>$20/mes</td>
+                  <td>
+                    • Salas ilimitadas<br>
+                    • Hasta 20 usuarios por sala<br>
+                    • Explicaciones con IA hasta 20<br>
+                    • Historial de versiones completo<br>
+                    • Ejecuciones prioritarias
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>ORG</strong></td>
+                  <td>$50+/mes</td>
+                  <td>
+                    • Todo lo del PRO<br>
+                    • Panel de administración<br>
+                    • Analíticas por alumno<br>
+                    • Branding personalizado<br>
+                    • Soporte dedicado
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="text-align: center;">
+                <a href="http://localhost:5173/" class="upgrade-btn">Explorar Planes Premium</a>
+              </p>
+              
+              <p style="color: #666; font-size: 14px;">Puedes cambiar de plan en cualquier momento desde tu panel de usuario. Si tienes preguntas, estamos aquí para ayudarte.</p>
+            </div>
           </div>
           <div class="footer">
             <p>© 2026 SynapseCode. Todos los derechos reservados.</p>
+            <p>Para soporte: synapsecode823@gmail.com | www.synapsecode.com</p>
           </div>
         </div>
       </body>

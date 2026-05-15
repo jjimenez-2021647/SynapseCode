@@ -68,6 +68,32 @@ const mapJudge0Status = (statusId) => {
 // Funciones Principales
 
 /**
+ * Obtiene todos los lenguajes soportados por Judge0
+ * @returns {Promise<Array>} - Array de lenguajes con id, name, etc
+ */
+export const getAllJudge0Languages = async () => {
+    try {
+        const response = await fetch(
+            `${JUDGE0_URL}/languages`,
+            {
+                method:  'GET',
+                headers: getHeaders(),
+            }
+        );
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Judge0 respondio con status ${response.status}: ${errorText}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error obteniendo lenguajes de Judge0:', error);
+        throw error;
+    }
+};
+
+/**
  * Envía código a Judge0 y espera el resultado (modo wait=true)
  * @param {String} language    - Lenguaje del sistema (ej: 'PYTHON')
  * @param {String} code        - Código a ejecutar

@@ -115,6 +115,50 @@ export const getCurrentSubscription = async (req, res) => {
   }
 };
 
+export const getUserSubscriptionById = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'userId es requerido',
+      });
+    }
+
+    let subscription = await Subscription.findOne({ userId }).populate('planId', 'name price');
+
+    // Si no existe suscripción, crear una con plan FREE automáticamente
+    if (!subscription) {
+      const freePlan = await Plan.findOne({ name: 'FREE' });
+      if (freePlan) {
+        subscription = await Subscription.create({
+          userId,
+          planId: freePlan._id,
+          planName: 'FREE',
+          status: 'active',
+          startDate: new Date(),
+          paymentMethod: 'manual',
+        });
+        // Poblar planId después de crear
+        subscription = await subscription.populate('planId', 'name price');
+      }
+    }
+
+    return res.json({
+      success: true,
+      data: subscription,
+      message: subscription ? 'Suscripcion obtenida' : 'Sin suscripcion activa para este usuario',
+    });
+  } catch (error) {
+    console.error('Error getting user subscription:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error al obtener suscripcion del usuario',
+    });
+  }
+};
+
 export const selectPlan = async (req, res) => {
   try {
     const { userId } = req;
