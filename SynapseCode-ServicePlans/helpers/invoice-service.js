@@ -1,9 +1,7 @@
-import fs from 'fs';
-import path from 'path';
+import { Writable } from 'stream';
 import PDFDocument from 'pdfkit';
-import config from '../configs/config.js';
+import { uploadInvoicePdfFromBuffer } from './cloudinary-invoice-service.js';
 
-const invoicesDir = path.resolve('public', 'invoices');
 const PDF_COLORS = {
   brandBlue: '#008B9D',
   brandPurple: '#7C2D8A',
@@ -15,10 +13,20 @@ const PDF_COLORS = {
   copyrightText: '#CCCCCC',
 };
 
-const ensureInvoicesDir = () => {
-  if (!fs.existsSync(invoicesDir)) {
-    fs.mkdirSync(invoicesDir, { recursive: true });
-  }
+/**
+ * Crea un writable stream que acumula chunks en un buffer
+ */
+const createBufferStream = () => {
+  const chunks = [];
+  return {
+    stream: new Writable({
+      write(chunk, encoding, callback) {
+        chunks.push(chunk);
+        callback();
+      },
+    }),
+    getBuffer: () => Buffer.concat(chunks),
+  };
 };
 
 const formatCurrency = (amount, currency = 'USD') => {
@@ -35,9 +43,21 @@ const formatInvoiceNumber = (subscriptionId, timestamp) => {
   return `SC-${new Date(timestamp).getFullYear()}-${id}`;
 };
 
+const sanitizeFileNamePart = (value, fallback) => {
+  const sanitized = String(value || fallback)
+    .trim()
+    .replace(/\s+/g, '_')
+    .replace(/[^a-zA-Z0-9_-]/g, '');
+
+  return sanitized || fallback;
+};
+
+const formatInvoiceDateForFileName = (timestamp) => new Date(timestamp).toISOString().slice(0, 10);
+
 export const createInvoicePdf = async ({
   subscriptionId,
   planName,
+  username,
   name,
   email,
   amountPaid,
@@ -45,16 +65,16 @@ export const createInvoicePdf = async ({
   institutionName,
   maxParticipants,
 }) => {
-  ensureInvoicesDir();
-
   const timestamp = Date.now();
-  const fileName = `factura_synapsecode_${subscriptionId}_${timestamp}.pdf`;
-  const filePath = path.join(invoicesDir, fileName);
-  const url = `${config.service_url}/invoices/${fileName}`;
+  const safeUsername = sanitizeFileNamePart(username, 'Usuario');
+  const safePlanName = sanitizeFileNamePart(planName, 'Plan');
+  const invoiceDate = formatInvoiceDateForFileName(timestamp);
+  const fileName = `Factura_${safeUsername}_${safePlanName}_${invoiceDate}.pdf`;
+
+  // Usar Buffer stream en lugar de archivo temporal
+  const { stream, getBuffer } = createBufferStream();
 
   const doc = new PDFDocument({ size: 'A4', margin: 50 });
-  const stream = fs.createWriteStream(filePath);
-
   doc.pipe(stream);
 
   const invoiceNumber = formatInvoiceNumber(subscriptionId, timestamp);
@@ -157,10 +177,34 @@ export const createInvoicePdf = async ({
 
   doc.end();
 
+  // Esperar a que el PDF se acumule completamente en el buffer
   await new Promise((resolve, reject) => {
     stream.on('finish', resolve);
     stream.on('error', reject);
   });
 
-  return { filePath, url };
+  try {
+    console.log('Uploading invoice to Cloudinary...', { fileName });
+    const pdfBuffer = getBuffer();
+    
+    // Validar que el buffer tenga contenido válido
+    if (!pdfBuffer || pdfBuffer.length < 100) {
+      throw new Error('PDF buffer is empty or too small');
+    }
+
+    console.log('PDF buffer size:', pdfBuffer.length, 'bytes');
+
+    const cloudinaryResult = await uploadInvoicePdfFromBuffer(pdfBuffer, fileName);
+
+    console.log('Invoice uploaded to Cloudinary successfully:', cloudinaryResult.publicId);
+    return {
+      url: cloudinaryResult.url,
+      publicId: cloudinaryResult.publicId,
+      filePath: null,
+      storage: 'cloudinary',
+    };
+  } catch (error) {
+    console.error('Failed to upload invoice to Cloudinary:', error?.message || error);
+    throw new Error('Error uploading invoice to Cloudinary: ' + (error?.message || error));
+  }
 };

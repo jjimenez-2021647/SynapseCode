@@ -178,7 +178,7 @@ export const activateParticipant = async (subscriptionId, carnetNumber, linkedUs
         linkedUserId,
         confirmationEmailSentAt: new Date()
       },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!participant) {
@@ -240,7 +240,7 @@ export const removeParticipant = async (subscriptionId, carnetNumber) => {
         carnetNumber: String(carnetNumber).toUpperCase().trim()
       },
       { status: 'REMOVED' },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!result) {

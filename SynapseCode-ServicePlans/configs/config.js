@@ -21,6 +21,12 @@ export const config = {
     frontend_url: process.env.FRONTEND_URL || 'http://localhost:3000',
   },
   service_url: process.env.SERVICE_PLANS_URL || 'http://localhost:3013',
+  cloudinary: {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+    apiKey: process.env.CLOUDINARY_API_KEY,
+    apiSecret: process.env.CLOUDINARY_API_SECRET,
+    invoicesFolder: process.env.CLOUDINARY_INVOICES_FOLDER || 'SynapseCode-invoices',
+  },
   stripe: {
     secret_key: process.env.STRIPE_SECRET_KEY,
     public_key: process.env.STRIPE_PUBLIC_KEY,

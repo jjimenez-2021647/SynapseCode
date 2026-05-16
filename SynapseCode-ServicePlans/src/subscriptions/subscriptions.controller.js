@@ -13,6 +13,14 @@ const isLocalBillingMode = process.env.NODE_ENV !== 'production';
 const getTokenFromRequest = (req) =>
   req.get('x-token') || req.get('Authorization')?.replace('Bearer ', '');
 
+const getUsernameFromRequest = (req) =>
+  req.user?.username ||
+  req.user?.userName ||
+  req.user?.preferred_username ||
+  req.user?.nickname ||
+  req.body?.username ||
+  req.userId;
+
 const normalizeOrgSelection = ({ institutionName, carnets, maxParticipants }) => {
   if (!institutionName) {
     return {
@@ -190,7 +198,7 @@ export const selectPlan = async (req, res) => {
           startDate: new Date(),
           paymentMethod: 'manual',
         },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: 'after' }
       );
 
       await sendFreePlanEmail(email, name);
@@ -271,7 +279,7 @@ export const selectPlan = async (req, res) => {
           currency: plan.currency || 'USD',
           ...(orgInfo ? { orgInfo } : {}),
         },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: 'after' }
       );
 
       if (planName === 'ORG') {
@@ -281,6 +289,7 @@ export const selectPlan = async (req, res) => {
       const invoice = await createInvoicePdf({
         subscriptionId: subscription._id.toString(),
         planName,
+        username: getUsernameFromRequest(req),
         name,
         email,
         amountPaid,
@@ -298,7 +307,7 @@ export const selectPlan = async (req, res) => {
       if (planName === 'ORG') {
         await updateUserRole(userId, 'ORG_ROLE', getTokenFromRequest(req));
       }
-      await sendPaymentConfirmationEmail(email, name, planName, invoice.url, invoice.filePath, amountPaid, plan.currency || 'USD');
+      await sendPaymentConfirmationEmail(email, name, planName, invoice.url, null, amountPaid, plan.currency || 'USD');
 
       return res.json({
         success: true,

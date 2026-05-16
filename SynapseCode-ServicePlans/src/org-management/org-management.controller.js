@@ -289,7 +289,7 @@ export const setRoomAIRestrictions = async (req, res) => {
           aiDebugging: true,
         },
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     res.json({

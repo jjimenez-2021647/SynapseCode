@@ -1,5 +1,4 @@
 import express from 'express';
-import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -15,8 +14,7 @@ import healthCheckRouter from '../src/health/health.routes.js';
 
 const app = express();
 
-const invoicesDir = path.resolve('public', 'invoices');
-app.use('/invoices', express.static(invoicesDir));
+// Las facturas se almacenan en Cloudinary (carpeta: "SynapseCode-invoices").
 
 // Middleware de seguridad y parsing
 app.use(express.json({ limit: '10mb' }));
