@@ -9,9 +9,15 @@ import config from '../configs/config.js';
 const PLANS_SERVICE_URL = config.plans_service?.url || process.env.PLANS_SERVICE_URL || 'http://localhost:3013';
 
 const DEFAULT_EXECUTION_LIMITS = {
-  FREE: 50,        // 50 ejecuciones por mes
+  FREE: 50,        // 50 ejecuciones por día
   PRO: null,       // Ilimitadas
   ORG: null        // Ilimitadas
+};
+
+const DEFAULT_EXECUTION_TIME_LIMITS = {
+  FREE: 10,        // 10 segundos máximo
+  PRO: 60,         // 60 segundos máximo
+  ORG: 60          // 60 segundos máximo
 };
 
 export const getExecutionLimit = async (userId, token) => {
@@ -38,6 +44,30 @@ export const getExecutionLimit = async (userId, token) => {
   }
 };
 
+export const getExecutionTimeLimit = async (userId, token) => {
+  try {
+    const response = await axios.get(
+      `${PLANS_SERVICE_URL}/api/v1/subscriptions/current`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 3000
+      }
+    );
+
+    const subscription = response.data?.data;
+    const planName = subscription?.planName || 'FREE';
+    const timeLimit = DEFAULT_EXECUTION_TIME_LIMITS[planName] !== undefined ? DEFAULT_EXECUTION_TIME_LIMITS[planName] : DEFAULT_EXECUTION_TIME_LIMITS.FREE;
+
+    return { planName, timeLimit };
+  } catch (error) {
+    console.warn(`[WARN] No se pudo obtener plan de ServicePlans para límite de tiempo, usando FREE por defecto:`, error.message);
+    return {
+      planName: 'FREE',
+      timeLimit: DEFAULT_EXECUTION_TIME_LIMITS.FREE
+    };
+  }
+};
+
 export const validateExecutionUsage = async (userId, token, ExecutionModel) => {
   try {
     const { planName, limit } = await getExecutionLimit(userId, token);
@@ -46,18 +76,19 @@ export const validateExecutionUsage = async (userId, token, ExecutionModel) => {
       return { valid: true, planName };
     }
 
+    // Calcular el inicio del día actual a las 00:00:00
     const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
 
     const usedCount = await ExecutionModel.countDocuments({
       userId,
-      createdAt: { $gte: monthStart }
+      createdAt: { $gte: dayStart }
     });
 
     if (usedCount >= limit) {
       return {
         valid: false,
-        message: `Plan ${planName}: Límite de ${limit} ejecuciones por mes alcanzado. Has usado ${usedCount} de ${limit} este mes.`,
+        message: `Plan ${planName}: Límite de ${limit} ejecuciones por día alcanzado. Has usado ${usedCount} de ${limit} hoy.`,
         planName,
         limit,
         used: usedCount
@@ -82,25 +113,25 @@ export const getExecutionUsageInfo = async (userId, token, ExecutionModel) => {
     const { planName, limit } = await getExecutionLimit(userId, token);
     
     const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
     
     const usedCount = await ExecutionModel.countDocuments({
       userId,
-      createdAt: { $gte: monthStart }
+      createdAt: { $gte: dayStart }
     });
 
     return {
       planName,
-      monthlyLimit: limit,
+      dailyLimit: limit,
       used: usedCount,
       remaining: limit === null ? -1 : (limit - usedCount),
-      currentMonth: monthStart.toISOString().split('T')[0]
+      currentDay: dayStart.toISOString().split('T')[0]
     };
   } catch (error) {
     console.error('[ERROR] Error getting execution info:', error.message);
     return {
       planName: 'UNKNOWN',
-      monthlyLimit: DEFAULT_EXECUTION_LIMITS.FREE,
+      dailyLimit: DEFAULT_EXECUTION_LIMITS.FREE,
       used: 0,
       remaining: DEFAULT_EXECUTION_LIMITS.FREE,
       error: true

@@ -1,6 +1,14 @@
 'use strict';
 import { Schema, model } from 'mongoose';
-const EXECUTION_LANGUAGES = ['JAVA', 'PYTHON', 'JAVASCRIPT', 'HTML_CSS', 'CSHARP'];
+const EXECUTION_LANGUAGES = [
+    'JAVA', 'PYTHON', 'JAVASCRIPT', 'HTML_CSS', 'CSHARP',
+    'TYPESCRIPT', 'GO', 'RUST', 'CPP', 'C',
+    'BASH', 'SQL', 'PHP', 'RUBY', 'KOTLIN',
+    'SWIFT', 'R', 'HASKELL', 'DART', 'SCALA',
+    'ELIXIR', 'CLOJURE', 'OBJECTIVEC', 'FSHARP', 'GROOVY',
+    'ERLANG', 'PERL', 'PASCAL', 'LUA', 'ASSEMBLY',
+    'FORTRAN', 'PROLOG', 'JULIA'
+];
 const EXECUTION_STATUS = ['EXITOSO', 'ERROR_COMPILACION', 'ERROR_RUNTIME', 'TIMEOUT', 'MEMORIA_EXCEDIDA'];
 const CodeExecutionSchema = new Schema(
     {

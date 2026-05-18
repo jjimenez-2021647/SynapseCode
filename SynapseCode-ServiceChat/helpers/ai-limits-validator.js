@@ -1,6 +1,6 @@
 /**
  * Validador de límites de IA desde ServicePlans
- * Valida límites de explicaciones con IA por mes
+ * Valida límites de explicaciones con IA por día
  */
 
 import axios from 'axios';
@@ -10,8 +10,8 @@ const PLANS_SERVICE_URL = config.plans_service?.url || process.env.PLANS_SERVICE
 
 // Definir límites localmente como fallback
 const DEFAULT_AI_LIMITS = {
-  FREE: 10,        // 10 explicaciones por mes
-  PRO: 20,         // 20 explicaciones por mes
+  FREE: 3,         // 3 explicaciones por día
+  PRO: null,       // Ilimitadas
   ORG: null        // Ilimitadas
 };
 
@@ -46,7 +46,7 @@ export const getAIExplanationsLimit = async (userId, token) => {
 };
 
 /**
- * Valida si usuario puede hacer más explicaciones de IA este mes
+ * Valida si usuario puede hacer más explicaciones de IA hoy
  * @param {string} userId - ID del usuario
  * @param {string} token - JWT token
  * @param {object} Chat - Modelo de Chat de Mongoose
@@ -57,24 +57,24 @@ export const validateAIExplanationUsage = async (userId, token, Chat) => {
     const { planName, limit } = await getAIExplanationsLimit(userId, token);
 
     if (limit === null) {
-      // ORG sin límite
+      // PRO/ORG sin límite
       return { valid: true, planName };
     }
 
-    // Contar explicaciones de IA de este mes
+    // Contar explicaciones de IA de hoy
     const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
 
     const usedCount = await Chat.countDocuments({
       userId,
       chatType: 'CHAT_IA',
-      createdAt: { $gte: monthStart }
+      createdAt: { $gte: dayStart }
     });
 
     if (usedCount >= limit) {
       return {
         valid: false,
-        message: `Plan ${planName}: Límite de ${limit} explicaciones de IA por mes alcanzado. Has usado ${usedCount} de ${limit} este mes.`,
+        message: `Plan ${planName}: Límite de ${limit} explicaciones de IA por día alcanzado. Has usado ${usedCount} de ${limit} hoy.`,
         planName,
         limit,
         used: usedCount
@@ -108,26 +108,26 @@ export const getAIUsageInfo = async (userId, token, Chat) => {
     const { planName, limit } = await getAIExplanationsLimit(userId, token);
     
     const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
     
     const usedCount = await Chat.countDocuments({
       userId,
       chatType: 'CHAT_IA',
-      createdAt: { $gte: monthStart }
+      createdAt: { $gte: dayStart }
     });
 
     return {
       planName,
-      monthlyLimit: limit,
+      dailyLimit: limit,
       used: usedCount,
       remaining: limit === null ? -1 : (limit - usedCount),
-      currentMonth: monthStart.toISOString().split('T')[0]
+      currentDay: dayStart.toISOString().split('T')[0]
     };
   } catch (error) {
     console.error('[ERROR] Error getting AI usage info:', error.message);
     return {
       planName: 'UNKNOWN',
-      monthlyLimit: DEFAULT_AI_LIMITS.FREE,
+      dailyLimit: DEFAULT_AI_LIMITS.FREE,
       used: 0,
       remaining: DEFAULT_AI_LIMITS.FREE,
       error: true

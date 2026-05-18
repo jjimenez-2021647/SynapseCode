@@ -4,7 +4,15 @@ import { generateNumberChat } from '../../helpers/chat.helper.js';
 import { generatePasswordRoom } from '../../helpers/rooms.helpers.js';
 
 const ROOM_TYPES = ['PUBLICA', 'PRIVADA'];
-const ROOM_LANGUAGES = ['JAVA', 'PYTHON', 'JAVASCRIPT', 'HTML_CSS', 'CSHARP'];
+const ROOM_LANGUAGES = [
+    'JAVA', 'PYTHON', 'JAVASCRIPT', 'HTML_CSS', 'CSHARP',
+    'TYPESCRIPT', 'GO', 'RUST', 'CPP', 'C',
+    'BASH', 'SQL', 'PHP', 'RUBY', 'KOTLIN',
+    'SWIFT', 'R', 'HASKELL', 'DART', 'SCALA',
+    'ELIXIR', 'CLOJURE', 'OBJECTIVEC', 'FSHARP', 'GROOVY',
+    'ERLANG', 'PERL', 'PASCAL', 'LUA', 'ASSEMBLY',
+    'FORTRAN', 'PROLOG', 'JULIA'
+];
 const ROOM_STATUSES = ['ACTIVA', 'PAUSADA', 'CERRADA', 'ARCHIVADA'];
 const PLAN_NAMES = ['FREE', 'PRO', 'ORG'];
 
@@ -73,7 +81,28 @@ const RoomSchema = new Schema(
             required: [true, 'Debe definir el maximo de usuarios'],
             default: 10,
             min: [2, 'El maximo de usuarios no puede ser menor a 2'],
-            max: [12, 'El maximo de usuarios no puede ser mayor a 12'],
+            validate: {
+                validator: function(value) {
+                    // Si no hay hostPlan definido aún, permitir la validación
+                    // La validación final ocurrirá en el controller según el plan
+                    if (!this.hostPlan || this.hostPlan === 'FREE') {
+                        return value <= 5;
+                    }
+                    if (this.hostPlan === 'PRO') {
+                        return value <= 20;
+                    }
+                    if (this.hostPlan === 'ORG') {
+                        return value <= 10000; // Permitir hasta 10000 usuarios (cantidad de estudiantes en factura)
+                    }
+                    return value <= 12; // fallback
+                },
+                message: function() {
+                    const plan = this.hostPlan || 'FREE';
+                    const limits = { FREE: 5, PRO: 20, ORG: 10000 };
+                    const max = limits[plan] || 12;
+                    return `El maximo de usuarios para plan ${plan} es ${max}`;
+                }
+            }
         },
         connectedUsers: {
             type: [

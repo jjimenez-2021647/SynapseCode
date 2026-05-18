@@ -79,29 +79,66 @@ export const getUserPlanInfoByUserId = async (userId) => {
 
 /**
  * Valida si usuario puede crear una nueva sala
+ * Cuenta: salas donde es anfitrión + participaciones activas
  * @param {string} userId - ID del usuario
  * @param {string} token - JWT token
- * @param {number} currentActiveRooms - Número de salas activas actuales
- * @returns {Promise<{valid: boolean, message?: string}>}
+ * @param {Object} models - { Room, RoomParticipation } modelos de mongoose
+ * @returns {Promise<{valid: boolean, message?: string, planName?: string, limit?: number, current?: number}>}
  */
-export const validateRoomCreation = async (userId, token, currentActiveRooms) => {
-  const { planName, limits } = await getUserPlanInfo(userId, token);
+export const validateRoomCreation = async (userId, token, models) => {
+  try {
+    const { Room, RoomParticipation } = models;
+    const { planName, limits } = await getUserPlanInfo(userId, token);
 
-  if (limits.maxActiveRooms === null) {
     // PRO y ORG no tienen límite
-    return { valid: true, planName };
-  }
+    if (limits.maxActiveRooms === null) {
+      return { valid: true, planName };
+    }
 
-  if (currentActiveRooms >= limits.maxActiveRooms) {
+    // Contar salas donde es anfitrión (ACTIVA)
+    const hostedRoomsCount = await Room.countDocuments({
+      hostId: userId,
+      roomStatus: 'ACTIVA'
+    });
+
+    // Contar salas donde es participante conectado (EXCLUYENDO las del host/ANFITRION)
+    // Las participaciones ANFITRION ya están contadas en hostedRooms
+    const participantRoomsCount = await RoomParticipation.countDocuments({
+      userId,
+      connectionStatus: 'CONECTADO',
+      role: { $ne: 'ANFITRION' }  // Excluir participaciones del anfitrión
+    });
+
+    const totalActiveRooms = hostedRoomsCount + participantRoomsCount;
+
+    // Si intenta agregar una más, verifica si excede el límite
+    if ((totalActiveRooms + 1) > limits.maxActiveRooms) {
+      return {
+        valid: false,
+        message: `Plan ${planName}: Límite de ${limits.maxActiveRooms} salas activas alcanzado. Ya tienes ${totalActiveRooms} (${hostedRoomsCount} como anfitrión, ${participantRoomsCount} como participante).`,
+        planName,
+        limit: limits.maxActiveRooms,
+        current: totalActiveRooms,
+        hostedRooms: hostedRoomsCount,
+        participantRooms: participantRoomsCount
+      };
+    }
+
+    return { 
+      valid: true, 
+      planName,
+      current: totalActiveRooms,
+      hostedRooms: hostedRoomsCount,
+      participantRooms: participantRoomsCount
+    };
+  } catch (error) {
+    console.error('[ERROR] validateRoomCreation error:', error.message);
     return {
       valid: false,
-      message: `Plan ${planName}: Límite de ${limits.maxActiveRooms} salas activas alcanzado. Tienes ${currentActiveRooms}.`,
-      planName,
-      limit: limits.maxActiveRooms
+      message: 'Error validando creación de sala: ' + error.message,
+      planName: 'FREE'
     };
   }
-
-  return { valid: true, planName };
 };
 
 /**
@@ -157,5 +194,120 @@ export const getPlanLimits = async (userId, token) => {
       limits: DEFAULT_PLAN_LIMITS.FREE,
       status: 'error'
     };
+  }
+};
+
+/**
+ * Valida si usuario puede acceder a más salas (como anfitrión + participante)
+ * Cuenta salas activas: creadas (hostId) + participaciones activas
+ * @param {string} userId - ID del usuario
+ * @param {string} token - JWT token
+ * @param {Object} models - { Room, RoomParticipation } modelos de mongoose
+ * @returns {Promise<{valid: boolean, message?: string, currentRooms?: number, limit?: number, planName?: string}>}
+ */
+/**
+ * Valida si usuario puede acceder a más salas (como anfitrión + participante)
+ * Cuenta salas activas: creadas (hostId) + participaciones activas
+ * @param {string} userId - ID del usuario
+ * @param {string} token - JWT token
+ * @param {Object} models - { Room, RoomParticipation } modelos de mongoose
+ * @returns {Promise<{valid: boolean, message?: string, currentRooms?: number, limit?: number, planName?: string}>}
+ */
+export const validateRoomAccess = async (userId, token, models) => {
+  try {
+    const { Room, RoomParticipation } = models;
+    
+    // VALIDACIÓN INICIAL: userId no puede ser null/undefined
+    if (!userId) {
+      console.error('[ERROR] validateRoomAccess: userId es null/undefined');
+      return {
+        valid: false,
+        message: 'Error: userId no identificado en la validación',
+        planName: 'FREE'
+      };
+    }
+
+    const { planName, limits } = await getUserPlanInfo(userId, token);
+
+    // PRO y ORG no tienen límite
+    if (limits.maxActiveRooms === null) {
+      console.log(`[VALIDATE_ROOM_ACCESS] userId=${userId}, planName=${planName}, sin límite (PRO/ORG)`);
+      return { valid: true, planName };
+    }
+
+    // Contar salas donde es anfitrión (ACTIVA)
+    const hostedRoomsCount = await Room.countDocuments({
+      hostId: userId,
+      roomStatus: 'ACTIVA'
+    });
+
+    // Contar salas donde es participante conectado (EXCLUYENDO las del host/ANFITRION)
+    // Las participaciones ANFITRION ya están contadas en hostedRooms
+    const participantRoomsCount = await RoomParticipation.countDocuments({
+      userId,
+      connectionStatus: 'CONECTADO',
+      role: { $ne: 'ANFITRION' }  // Excluir participaciones del anfitrión
+    });
+
+    const totalActiveRooms = hostedRoomsCount + participantRoomsCount;
+    
+    console.log(`[VALIDATE_ROOM_ACCESS] userId=${userId}, planName=${planName}, hostedRooms=${hostedRoomsCount}, participantRooms=${participantRoomsCount}, total=${totalActiveRooms}, limit=${limits.maxActiveRooms}`);
+
+    // Si intenta agregar una más, verifica si excede el límite
+    if ((totalActiveRooms + 1) > limits.maxActiveRooms) {
+      console.warn(`[WARN] userId=${userId} intentó exceder límite: ${totalActiveRooms} + 1 > ${limits.maxActiveRooms}`);
+      return {
+        valid: false,
+        message: `Plan ${planName}: Límite de ${limits.maxActiveRooms} salas activas alcanzado. Ya tienes ${totalActiveRooms} (${hostedRoomsCount} como anfitrión, ${participantRoomsCount} como participante).`,
+        planName,
+        limit: limits.maxActiveRooms,
+        currentRooms: totalActiveRooms,
+        hostedRooms: hostedRoomsCount,
+        participantRooms: participantRoomsCount
+      };
+    }
+
+    console.log(`[VALIDATE_ROOM_ACCESS] userId=${userId} puede acceder (${totalActiveRooms}/${limits.maxActiveRooms})`);
+    return { 
+      valid: true, 
+      planName,
+      currentRooms: totalActiveRooms,
+      hostedRooms: hostedRoomsCount,
+      participantRooms: participantRoomsCount
+    };
+  } catch (error) {
+    console.error('[ERROR] validateRoomAccess error:', error.message);
+    return {
+      valid: false,
+      message: 'Error validando acceso a salas: ' + error.message,
+      planName: 'FREE'
+    };
+  }
+};
+
+/**
+ * Obtiene el máximo de usuarios permitidos por sala según el plan
+ * FREE: 5, PRO: 20, ORG: según orgInfo.maxParticipants
+ * @param {string} userId - ID del usuario
+ * @param {string} token - JWT token
+ * @returns {Promise<{maxUsers: number, planName: string}>}
+ */
+export const getMaxUsersLimit = async (userId, token) => {
+  try {
+    const { planName, subscription } = await getUserPlanInfo(userId, token);
+
+    const maxUsersLimits = {
+      FREE: 5,
+      PRO: 20,
+      ORG: subscription?.orgInfo?.maxParticipants || 100, // Fallback a 100 si no está definido
+    };
+
+    const maxUsers = maxUsersLimits[planName] || 20;
+
+    return { maxUsers, planName };
+  } catch (error) {
+    console.error('[ERROR] getMaxUsersLimit error:', error.message);
+    // Fallback a 20 usuarios
+    return { maxUsers: 20, planName: 'FREE' };
   }
 };

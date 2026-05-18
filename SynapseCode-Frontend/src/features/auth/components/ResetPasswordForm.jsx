@@ -55,7 +55,7 @@ export const ResetPasswordForm = ({ token, onSuccess }) => {
         hasError ? "border-error" : "border-border"
     )
     const iconClass = "absolute left-[0.75rem] top-1/2 flex -translate-y-1/2 items-center text-muted-foreground"
-    const eyeButtonClass = "absolute right-[0.75rem] top-1/2 flex -translate-y-1/2 cursor-pointer border-0 bg-transparent p-0 text-muted-foreground disabled:cursor-not-allowed disabled:opacity-60"
+    const eyeButtonClass = "absolute right-[0.75rem] top-1/2 flex -translate-y-1/2 cursor-pointer border-0 bg-transparent p-0 text-white disabled:cursor-not-allowed disabled:opacity-60 hover:text-white/80 transition-colors"
 
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-[1.75rem]">

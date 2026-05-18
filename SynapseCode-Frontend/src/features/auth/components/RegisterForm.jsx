@@ -4,6 +4,7 @@ import toast from "react-hot-toast"
 import { useRef, useState } from "react"
 import Spinner from "../../../shared/components/ui/Spinner"
 import { useAuthStore } from "../store/authStore"
+import { Eye, EyeOff } from "lucide-react"
 
 export const RegisterForm = ({ onBack, onSuccess }) => {
     const {
@@ -18,6 +19,8 @@ export const RegisterForm = ({ onBack, onSuccess }) => {
     const fileInputRef = useRef(null)
     const [profileImage, setProfileImage] = useState(null)
     const [previewUrl, setPreviewUrl] = useState(null)
+    const [showPassword, setShowPassword] = useState(false)
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
     const handleImageChange = (e) => {
         const file = e.target.files?.[0]
@@ -224,36 +227,56 @@ export const RegisterForm = ({ onBack, onSuccess }) => {
             <div className="grid grid-cols-1 gap-[1.35rem] md:grid-cols-2">
                 <div>
                     <label className={labelClass}>Contrasena</label>
-                    <input
-                        type="password"
-                        placeholder="********"
-                        className={inputClass(errors.password)}
-                        {...register("password", {
-                            required: "La contrasena es obligatoria",
-                            minLength: {
-                                value: 8,
-                                message: "Debe tener al menos 8 caracteres",
-                            },
-                        })}
-                    />
+                    <div className="relative">
+                        <input
+                            type={showPassword ? "text" : "password"}
+                            placeholder="********"
+                            className={inputClass(errors.password)}
+                            {...register("password", {
+                                required: "La contrasena es obligatoria",
+                                minLength: {
+                                    value: 8,
+                                    message: "Debe tener al menos 8 caracteres",
+                                },
+                            })}
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-[0.75rem] top-1/2 -translate-y-1/2 text-white hover:text-white/80 transition-colors"
+                            aria-label={showPassword ? "Ocultar contrasena" : "Mostrar contrasena"}
+                        >
+                            {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </button>
+                    </div>
                     {errors.password && <p className={errorClass}>{errors.password.message}</p>}
                 </div>
 
                 <div>
                     <label className={labelClass}>Confirmar contrasena</label>
-                    <input
-                        type="password"
-                        placeholder="********"
-                        className={inputClass(errors.confirmPassword)}
-                        {...register("confirmPassword", {
-                            required: "Debes confirmar tu contrasena",
-                            validate: {
-                                matchesPassword: (value) =>
-                                    value === getValues("password") ||
-                                    "Las contrasenas no coinciden",
-                            },
-                        })}
-                    />
+                    <div className="relative">
+                        <input
+                            type={showConfirmPassword ? "text" : "password"}
+                            placeholder="********"
+                            className={inputClass(errors.confirmPassword)}
+                            {...register("confirmPassword", {
+                                required: "Debes confirmar tu contrasena",
+                                validate: {
+                                    matchesPassword: (value) =>
+                                        value === getValues("password") ||
+                                        "Las contrasenas no coinciden",
+                                },
+                            })}
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            className="absolute right-[0.75rem] top-1/2 -translate-y-1/2 text-white hover:text-white/80 transition-colors"
+                            aria-label={showConfirmPassword ? "Ocultar contrasena" : "Mostrar contrasena"}
+                        >
+                            {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </button>
+                    </div>
                     {errors.confirmPassword && <p className={errorClass}>{errors.confirmPassword.message}</p>}
                 </div>
             </div>

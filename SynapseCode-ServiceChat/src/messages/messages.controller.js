@@ -2,6 +2,7 @@
 import Message from './messages.model.js';
 import Chat from '../chats/chats.model.js';
 import { validateAIExplanationUsage } from '../../helpers/ai-limits-validator.js';
+import { validateChatHistoryAccess } from '../../helpers/chat-limits-validator.js';
 
 const getRequesterUserId = (req) =>
     req.user?.userId || req.user?.id || req.user?.sub || null;
@@ -108,6 +109,7 @@ export const createMessage = async (req, res) => {
  */
 export const getMessages = async (req, res) => {
     try {
+        const userId = getRequesterUserId(req);
         const { roomId, chatId, numberChat, typeMessage } = req.query;
         const filters = { messageStatus: { $ne: 'ELIMINADO' } };
 
@@ -115,6 +117,22 @@ export const getMessages = async (req, res) => {
         if (chatId) filters.chatId = chatId;
         if (numberChat) filters.numberChat = numberChat;
         if (typeMessage) filters.typeMessage = typeMessage;
+
+        // ✅ Validar límite de historial según plan del usuario
+        if (userId) {
+            try {
+                const token = req.headers['x-token'] || req.headers.authorization?.replace('Bearer ', '');
+                const historyAccess = await validateChatHistoryAccess(userId, token);
+
+                // Si el usuario tiene límite de historial, filtrar mensajes más antiguos
+                if (historyAccess.minimumDate) {
+                    filters.sentAt = { $gte: historyAccess.minimumDate };
+                }
+            } catch (error) {
+                console.warn('[WARN] Validación de límites de chat fallida, continuando:', error.message);
+                // Continuar aunque ServicePlans no esté disponible
+            }
+        }
 
         const messages = await Message.find(filters).sort({ sentAt: 1 }).lean();
 

@@ -19,9 +19,10 @@ export const seedPlans = async () => {
         features: {
           maxActiveRooms: 3,
           maxUsersPerRoom: 5,
-          codeExecutionsLimit: 50,
-          chatHistoryLimit: 100,
-          aiExplanationsLimit: 10,
+          codeExecutionsLimit: 50, // 50 ejecuciones/día
+          maxExecutionTimeSeconds: 10, // 10 segundos máximo por ejecución
+          chatHistoryLimit: 7, // últimos 7 días
+          aiExplanationsLimit: 3, // 3 explicaciones IA/día
           fullVersionHistory: false,
           priorityExecution: false,
           adminPanel: false,
@@ -37,11 +38,12 @@ export const seedPlans = async () => {
         description: 'Plan profesional con características avanzadas',
         currency: 'USD',
         features: {
-          maxActiveRooms: null,
+          maxActiveRooms: null, // ilimitadas
           maxUsersPerRoom: 20,
-          codeExecutionsLimit: null,
-          chatHistoryLimit: null,
-          aiExplanationsLimit: 20,
+          codeExecutionsLimit: null, // ilimitadas
+          maxExecutionTimeSeconds: 60, // 60 segundos máximo por ejecución
+          chatHistoryLimit: null, // historial completo
+          aiExplanationsLimit: null, // ilimitadas
           fullVersionHistory: true,
           priorityExecution: true,
           adminPanel: false,
@@ -57,11 +59,12 @@ export const seedPlans = async () => {
         description: 'Plan empresarial para instituciones',
         currency: 'USD',
         features: {
-          maxActiveRooms: null,
-          maxUsersPerRoom: null,
-          codeExecutionsLimit: null,
-          chatHistoryLimit: null,
-          aiExplanationsLimit: null,
+          maxActiveRooms: null, // ilimitadas
+          maxUsersPerRoom: null, // ilimitadas
+          codeExecutionsLimit: null, // ilimitadas
+          maxExecutionTimeSeconds: 60, // 60 segundos máximo por ejecución
+          chatHistoryLimit: null, // historial completo
+          aiExplanationsLimit: null, // ilimitadas
           fullVersionHistory: true,
           priorityExecution: true,
           adminPanel: true,

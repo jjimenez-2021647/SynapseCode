@@ -11,7 +11,7 @@ import {
 } from '../../helpers/file-tree.helpers.js';
 
 const getRequesterUserId = (req) =>
-    req.user?.userId || req.user?.id || req.user?.sub || null;
+    req.user?.userId || req.user?.id || req.user?.sub || req.userId || null;
 
 // Mapeo de roomLanguage a extensiones permitidas
 const LANGUAGE_EXTENSIONS = {

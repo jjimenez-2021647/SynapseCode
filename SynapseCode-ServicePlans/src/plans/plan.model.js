@@ -31,6 +31,10 @@ const planSchema = new Schema(
         type: Number,
         default: null,
       },
+      maxExecutionTimeSeconds: {
+        type: Number,
+        default: null,
+      },
       chatHistoryLimit: {
         type: Number,
         default: null,

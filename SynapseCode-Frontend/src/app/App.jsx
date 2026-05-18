@@ -15,6 +15,7 @@ export const App = () => {
     <>
       <Toaster
         position="top-center"
+        containerClassName="!z-[999999]"
         toastOptions={{
           style: {
             fontFamily: "inherit",

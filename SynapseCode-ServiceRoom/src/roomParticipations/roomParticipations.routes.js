@@ -10,9 +10,15 @@ import {
     updateParticipationStatus,
     leaveRoomParticipation,
     deleteRoomParticipation,
+    getMyParticipationStatus,
+    cleanupParticipations,
 } from './roomParticipations.controller.js';
 
 const router = Router();
+
+// DIAGNÓSTICO Y LIMPIEZA (rutas específicas PRIMERO)
+router.get('/my/status', validateJWT, getMyParticipationStatus);
+router.post('/my/cleanup', validateJWT, cleanupParticipations);
 
 // CRUD básico
 router.post('/', validateJWT, createRoomParticipation);

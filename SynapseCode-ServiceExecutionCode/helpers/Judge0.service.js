@@ -19,7 +19,7 @@ const LANGUAGE_IDS = {
     PYTHON:       71,  // Python 3.8.1
     JAVA:         62,  // Java OpenJDK 13.0.1
     CSHARP:       51,  // C# Mono 6.6.0
-    HTML_CSS:     63,  // Se ejecuta como JS (solo lógica, no renderiza DOM)
+    HTML_CSS:     54,  // JavaScript alternativo (se ejecuta el JS, HTML/CSS se renderiza en cliente)
     
     // Lenguajes adicionales
     TYPESCRIPT:   74,  // TypeScript 3.7.4
@@ -103,9 +103,10 @@ const mapJudge0Status = (statusId) => {
  * @param {String} language    - Lenguaje del sistema (ej: 'PYTHON')
  * @param {String} code        - Código a ejecutar
  * @param {String} input       - stdin opcional
+ * @param {Number} timeLimit   - Límite de tiempo en segundos (opcional)
  * @returns {Promise<Object>}  - Resultado parseado
  */
-export const executeCode = async (language, code, input = '') => {
+export const executeCode = async (language, code, input = '', timeLimit = null) => {
     const languageId = LANGUAGE_IDS[language];
 
     if (!languageId) {
@@ -115,14 +116,15 @@ export const executeCode = async (language, code, input = '') => {
     const body = JSON.stringify({
         source_code: code,
         language_id: languageId,
-        stdin:        input,
+        stdin: input,
+        ...(timeLimit && { time_limit: timeLimit }), // Agregar límite de tiempo si se especifica
     });
 
     // wait=true → Judge0 espera hasta terminar y devuelve el resultado directo
     const response = await fetch(
         `${JUDGE0_URL}/submissions?base64_encoded=false&wait=true`,
         {
-            method:  'POST',
+            method: 'POST',
             headers: getHeaders(),
             body,
         }
@@ -140,9 +142,13 @@ export const executeCode = async (language, code, input = '') => {
 /**
  * Envía código a Judge0 de forma asíncrona y devuelve el token
  * Útil si quieres hacer polling en vez de esperar
+ * @param {String} language    - Lenguaje del sistema (ej: 'PYTHON')
+ * @param {String} code        - Código a ejecutar
+ * @param {String} input       - stdin opcional
+ * @param {Number} timeLimit   - Límite de tiempo en segundos (opcional)
  * @returns {Promise<String>} - Token de la submission
  */
-export const submitCode = async (language, code, input = '') => {
+export const submitCode = async (language, code, input = '', timeLimit = null) => {
     const languageId = LANGUAGE_IDS[language];
 
     if (!languageId) {
@@ -152,13 +158,14 @@ export const submitCode = async (language, code, input = '') => {
     const body = JSON.stringify({
         source_code: code,
         language_id: languageId,
-        stdin:        input,
+        stdin: input,
+        ...(timeLimit && { time_limit: timeLimit }), // Agregar límite de tiempo si se especifica
     });
 
     const response = await fetch(
         `${JUDGE0_URL}/submissions?base64_encoded=false`,
         {
-            method:  'POST',
+            method: 'POST',
             headers: getHeaders(),
             body,
         }
@@ -225,4 +232,53 @@ const parseJudge0Response = (raw) => {
     };
 };
 
-export default { executeCode, submitCode, getSubmissionResult };
+/**
+ * Retorna la lista completa de lenguajes soportados con su información
+ * @returns {Array} - Array con todos los lenguajes soportados
+ */
+export const getSupportedLanguages = () => {
+    // Mapeo de descripciones para cada lenguaje
+    const languageDescriptions = {
+        JAVASCRIPT:   'Node.js 12.14.0',
+        PYTHON:       'Python 3.8.1',
+        JAVA:         'Java OpenJDK 13.0.1',
+        CSHARP:       'C# Mono 6.6.0',
+        HTML_CSS:     'JavaScript/Node.js',
+        TYPESCRIPT:   'TypeScript 3.7.4',
+        GO:           'Go 1.13.5',
+        RUST:         'Rustc 1.40.0',
+        CPP:          'C++ GCC 9.2.0',
+        C:            'C GCC 9.2.0',
+        BASH:         'Bash 4.4.20',
+        SQL:          'SQLite 3.27.2',
+        PHP:          'PHP 7.4.1',
+        RUBY:         'Ruby 2.7.0',
+        KOTLIN:       'Kotlin 1.3.70',
+        SWIFT:        'Swift 5.1.3',
+        R:            'R 3.6.1',
+        HASKELL:      'GHC 8.8.1',
+        DART:         'Dart 2.7.0',
+        SCALA:        'Scala 2.13.5',
+        ELIXIR:       'Elixir 1.9.4',
+        CLOJURE:      'Clojure 1.10.1',
+        OBJECTIVEC:   'Objective-C Clang 10.0.0',
+        FSHARP:       'F# Mono 6.6.0',
+        GROOVY:       'Groovy 2.5.8',
+        ERLANG:       'Erlang/OTP 22.2',
+        PERL:         'Perl 5.28.1',
+        PASCAL:       'Pascal FPC 3.0.4',
+        LUA:          'Lua 5.3.5',
+        ASSEMBLY:     'Assembly (x86) NASM 2.14.02',
+        FORTRAN:      'Fortran GFortran 9.2.0',
+        PROLOG:       'Prolog GNU Prolog 1.4.5',
+        JULIA:        'Julia 1.3.0',
+    };
+
+    return Object.entries(LANGUAGE_IDS).map(([language, judge0Id]) => ({
+        language,
+        judge0Id,
+        description: languageDescriptions[language] || 'Lenguaje soportado',
+    }));
+};
+
+export default { executeCode, submitCode, getSubmissionResult, getSupportedLanguages };

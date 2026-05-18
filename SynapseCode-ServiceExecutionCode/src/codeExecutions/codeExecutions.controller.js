@@ -1,7 +1,7 @@
 'use strict'
 import CodeExecution from './codeExecutions.model.js';
-import { executeCode, submitCode, getSubmissionResult } from '../../helpers/Judge0.service.js';
-import { validateExecutionUsage } from '../../helpers/execution-limits-validator.js';
+import { executeCode, submitCode, getSubmissionResult, getSupportedLanguages as getLanguagesList } from '../../helpers/Judge0.service.js';
+import { validateExecutionUsage, getExecutionTimeLimit } from '../../helpers/execution-limits-validator.js';
 
 // ─── Limite de ejecuciones por hora ───────────────────────────────────────────
 const HOURLY_LIMIT = 50;
@@ -56,44 +56,7 @@ export const getSupportedLanguages = async (req, res) => {
     return res.status(200).json({
         success: true,
         message: 'Lenguajes soportados',
-        data: [
-            // Lenguajes originales
-            { language: 'JAVASCRIPT', judge0Id: 63, description: 'Node.js 12.14.0' },
-            { language: 'PYTHON', judge0Id: 71, description: 'Python 3.8.1' },
-            { language: 'JAVA', judge0Id: 62, description: 'Java OpenJDK 13.0.1' },
-            { language: 'CSHARP', judge0Id: 51, description: 'C# Mono 6.6.0' },
-            { language: 'HTML_CSS', judge0Id: 63, description: 'JavaScript/Node.js' },
-            
-            // Lenguajes adicionales
-            { language: 'TYPESCRIPT', judge0Id: 74, description: 'TypeScript 3.7.4' },
-            { language: 'GO', judge0Id: 60, description: 'Go 1.13.5' },
-            { language: 'RUST', judge0Id: 73, description: 'Rustc 1.40.0' },
-            { language: 'CPP', judge0Id: 34, description: 'C++ GCC 9.2.0' },
-            { language: 'C', judge0Id: 1, description: 'C GCC 9.2.0' },
-            { language: 'BASH', judge0Id: 81, description: 'Bash 4.4.20' },
-            { language: 'SQL', judge0Id: 82, description: 'SQLite 3.27.2' },
-            { language: 'PHP', judge0Id: 68, description: 'PHP 7.4.1' },
-            { language: 'RUBY', judge0Id: 72, description: 'Ruby 2.7.0' },
-            { language: 'KOTLIN', judge0Id: 75, description: 'Kotlin 1.3.70' },
-            { language: 'SWIFT', judge0Id: 70, description: 'Swift 5.1.3' },
-            { language: 'R', judge0Id: 77, description: 'R 3.6.1' },
-            { language: 'HASKELL', judge0Id: 93, description: 'GHC 8.8.1' },
-            { language: 'DART', judge0Id: 95, description: 'Dart 2.7.0' },
-            { language: 'SCALA', judge0Id: 80, description: 'Scala 2.13.5' },
-            { language: 'ELIXIR', judge0Id: 88, description: 'Elixir 1.9.4' },
-            { language: 'CLOJURE', judge0Id: 90, description: 'Clojure 1.10.1' },
-            { language: 'OBJECTIVEC', judge0Id: 79, description: 'Objective-C Clang 10.0.0' },
-            { language: 'FSHARP', judge0Id: 89, description: 'F# Mono 6.6.0' },
-            { language: 'GROOVY', judge0Id: 91, description: 'Groovy 2.5.8' },
-            { language: 'ERLANG', judge0Id: 92, description: 'Erlang/OTP 22.2' },
-            { language: 'PERL', judge0Id: 76, description: 'Perl 5.28.1' },
-            { language: 'PASCAL', judge0Id: 83, description: 'Pascal FPC 3.0.4' },
-            { language: 'LUA', judge0Id: 84, description: 'Lua 5.3.5' },
-            { language: 'ASSEMBLY', judge0Id: 85, description: 'Assembly (x86) NASM 2.14.02' },
-            { language: 'FORTRAN', judge0Id: 86, description: 'Fortran GFortran 9.2.0' },
-            { language: 'PROLOG', judge0Id: 87, description: 'Prolog GNU Prolog 1.4.5' },
-            { language: 'JULIA', judge0Id: 94, description: 'Julia 1.3.0' },
-        ],
+        data: getLanguagesList(),
     });
 };
 
@@ -121,9 +84,11 @@ export const runCode = async (req, res) => {
             });
         }
 
+        const token = req.headers['x-token'] || req.headers.authorization?.replace('Bearer ', '');
+        let executionTimeLimit = null;
+
         // ✅ Validar límite de ejecuciones por plan (ServicePlans)
         try {
-            const token = req.headers['x-token'] || req.headers.authorization?.replace('Bearer ', '');
             const execValidation = await validateExecutionUsage(userId, token, CodeExecution);
 
             if (!execValidation.valid) {
@@ -136,8 +101,12 @@ export const runCode = async (req, res) => {
                     error: 'PLAN_EXECUTION_LIMIT_EXCEEDED'
                 });
             }
+
+            // ✅ Obtener límite de tiempo de ejecución por plan
+            const timeLimitInfo = await getExecutionTimeLimit(userId, token);
+            executionTimeLimit = timeLimitInfo.timeLimit;
         } catch (error) {
-            console.warn('[WARN] Validación de límites de ejecución fallida, continuando:', error.message);
+            console.warn('[WARN] Validación de límites fallida, continuando con fallback:', error.message);
             // Continuar aunque ServicePlans no esté disponible
         }
 
@@ -151,21 +120,36 @@ export const runCode = async (req, res) => {
             });
         }
 
-        const result = await executeCode(language, code, input || '');
+        // ✅ Ejecutar código con límite de tiempo
+        const result = await executeCode(language, code, input || '', executionTimeLimit);
         const diagnosis = buildExecutionDiagnosis({ language, result });
+
+        // ✅ Validar que el tiempo de ejecución no exceda el límite del plan
+        if (executionTimeLimit && result.executionTimeMs && result.executionTimeMs > (executionTimeLimit * 1000)) {
+            return res.status(400).json({
+                success: false,
+                message: `Tiempo de ejecución (${result.executionTimeMs}ms) excede el límite permitido (${executionTimeLimit * 1000}ms)`,
+                error: 'EXECUTION_TIME_LIMIT_EXCEEDED',
+                data: {
+                    executionTimeMs: result.executionTimeMs,
+                    timeLimitMs: executionTimeLimit * 1000,
+                    planTimeLimit: executionTimeLimit
+                }
+            });
+        }
 
         const codeExecution = await CodeExecution.create({
             roomId: roomId || null,
             fileId: fileId || null,
             userId,
             language: language.toUpperCase(),
-            executionResult: {
-                code,
-                input: input || '',
-                output: result.output || '',
-                errors: result.errors || '',
-                status: result.executionStatus,
-            },
+            executedCode: code,
+            input: input || '',
+            output: result.output || '',
+            errors: result.errors || '',
+            executionTimeMs: result.executionTimeMs || 0,
+            usedMemoryKb: result.usedMemoryKb || 0,
+            executionStatus: result.executionStatus,
             executedAt: new Date(),
         });
 
@@ -219,9 +203,11 @@ export const submitCodeAsync = async (req, res) => {
             });
         }
 
+        const token = req.headers['x-token'] || req.headers.authorization?.replace('Bearer ', '');
+        let executionTimeLimit = null;
+
         // ✅ Validar límite de ejecuciones por plan (ServicePlans)
         try {
-            const token = req.headers['x-token'] || req.headers.authorization?.replace('Bearer ', '');
             const execValidation = await validateExecutionUsage(userId, token, CodeExecution);
 
             if (!execValidation.valid) {
@@ -234,8 +220,12 @@ export const submitCodeAsync = async (req, res) => {
                     error: 'PLAN_EXECUTION_LIMIT_EXCEEDED'
                 });
             }
+
+            // ✅ Obtener límite de tiempo de ejecución por plan
+            const timeLimitInfo = await getExecutionTimeLimit(userId, token);
+            executionTimeLimit = timeLimitInfo.timeLimit;
         } catch (error) {
-            console.warn('[WARN] Validación de límites de ejecución fallida, continuando:', error.message);
+            console.warn('[WARN] Validación de límites fallida, continuando con fallback:', error.message);
             // Continuar aunque ServicePlans no esté disponible
         }
 
@@ -248,12 +238,13 @@ export const submitCodeAsync = async (req, res) => {
             });
         }
 
-        const token = await submitCode(language, code, input || '');
+        // ✅ Enviar código con límite de tiempo
+        const judge0Token = await submitCode(language, code, input || '', executionTimeLimit);
 
         return res.status(202).json({
             success: true,
             message: 'Código enviado a Judge0. Usa el token para consultar el resultado',
-            data: { judge0TokenId: token },
+            data: { judge0TokenId: judge0Token, timeLimitSeconds: executionTimeLimit },
         });
     } catch (error) {
         console.error('submitCodeAsync error:', error);
@@ -287,13 +278,13 @@ export const getResultByToken = async (req, res) => {
                         fileId,
                         userId,
                         language: language.toUpperCase(),
-                        executionResult: {
-                            code,
-                            input: input || '',
-                            output: result.output || '',
-                            errors: result.errors || '',
-                            status: result.executionStatus,
-                        },
+                        executedCode: code,
+                        input: input || '',
+                        output: result.output || '',
+                        errors: result.errors || '',
+                        executionTimeMs: result.executionTimeMs || 0,
+                        usedMemoryKb: result.usedMemoryKb || 0,
+                        executionStatus: result.executionStatus,
                         executedAt: new Date(),
                     });
                 } catch (dbError) {
@@ -309,6 +300,8 @@ export const getResultByToken = async (req, res) => {
                 output: result.output,
                 errors: result.errors,
                 executionStatus: result.executionStatus,
+                executionTimeMs: result.executionTimeMs || 0,
+                usedMemoryKb: result.usedMemoryKb || 0,
                 judge0TokenId: token,
                 diagnosis,
                 stillRunning,

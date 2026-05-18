@@ -6,13 +6,13 @@ import {
     mergePermissions,
     calculateTotalMinutes,
 } from '../../helpers/roomParticipations.helpers.js';
-import { getUserPlanInfo, getUserPlanInfoByUserId } from '../../helpers/plan-limits-validator.js';
+import { getUserPlanInfo, getUserPlanInfoByUserId, validateRoomAccess } from '../../helpers/plan-limits-validator.js';
 
 const mapParticipationRoleToSubRole = (role) =>
     String(role || '').toUpperCase() === 'ANFITRION' ? 'HOST_ROLE' : 'ASSISTANT_ROLE';
 const isAdminRole = (req) => String(req.user?.role || '').toUpperCase() === 'ADMIN_ROLE';
 const getRequesterUserId = (req) =>
-    req.user?.userId || req.user?.id || req.user?.sub || null;
+    req.user?.userId || req.user?.id || req.user?.sub || req.userId || null;
 
 const resolveRoomHostPlan = async (room) => {
     if (room?.hostPlan) return room.hostPlan;
@@ -44,6 +44,17 @@ export const createRoomParticipation = async (req, res) => {
         const userId = getRequesterUserId(req);
         const username = req.user?.username || null;
         const token = req.token;
+
+        // 🔍 LOG DETALLADO PARA DEBUG
+        console.log('[CREATE_PARTICIPATION_DEBUG]', {
+            timestamp: new Date().toISOString(),
+            userId,
+            roomCode,
+            username,
+            req_user_userId: req.user?.userId,
+            req_user_id: req.user?.id,
+            req_user_sub: req.user?.sub,
+        });
 
         if (!roomCode) {
             return res.status(400).json({
@@ -146,6 +157,25 @@ export const createRoomParticipation = async (req, res) => {
                     hostPlan,
                 },
             });
+        }
+
+        // ✅ Validar límite de salas activas por plan del usuario
+        // Si el usuario ya tiene participación activa, no cuenta como nueva
+        if (!existingParticipation) {
+            const accessValidation = await validateRoomAccess(userId, token, { Room, RoomParticipation });
+            
+            if (!accessValidation.valid) {
+                return res.status(403).json({
+                    success: false,
+                    message: accessValidation.message,
+                    error: 'ROOM_LIMIT_EXCEEDED',
+                    planName: accessValidation.planName,
+                    limit: accessValidation.limit,
+                    current: accessValidation.currentRooms,
+                    hostedRooms: accessValidation.hostedRooms,
+                    participantRooms: accessValidation.participantRooms,
+                });
+            }
         }
 
         const payload = {
@@ -688,6 +718,159 @@ export const deleteRoomParticipation = async (req, res) => {
             success: false,
             message: error.message || 'Error eliminando la participación',
             error: 'DELETE_PARTICIPATION_ERROR',
+        });
+    }
+};
+
+/**
+ * DIAGNÓSTICO: Obtener estado detallado de todas mis participaciones
+ */
+export const getMyParticipationStatus = async (req, res) => {
+    try {
+        const userId = getRequesterUserId(req);
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Token inválido: no contiene userId',
+                error: 'UNAUTHORIZED',
+            });
+        }
+
+        // Todas las participaciones del usuario (activas y pasadas)
+        const allParticipations = await RoomParticipation.find({ userId })
+            .populate('roomId', 'roomCode roomName roomStatus hostId')
+            .sort({ joinedAt: -1 })
+            .lean();
+
+        // Filtrar por estado
+        const conectado = allParticipations.filter(p => p.connectionStatus === 'CONECTADO');
+        const desconectado = allParticipations.filter(p => p.connectionStatus === 'DESCONECTADO');
+        const ausente = allParticipations.filter(p => p.connectionStatus === 'AUSENTE');
+
+        // Participaciones problemáticas (CONECTADO pero en sala CERRADA)
+        const problematic = conectado.filter(p => p.roomId?.roomStatus === 'CERRADA');
+
+        return res.status(200).json({
+            success: true,
+            userId,
+            summary: {
+                total: allParticipations.length,
+                conectado: conectado.length,
+                desconectado: desconectado.length,
+                ausente: ausente.length,
+                problematic: problematic.length,
+            },
+            conectado: conectado.map(p => ({
+                participationId: p._id,
+                roomCode: p.roomId?.roomCode,
+                roomName: p.roomId?.roomName,
+                roomStatus: p.roomId?.roomStatus,
+                role: p.role,
+                joinedAt: p.joinedAt,
+                connectionStatus: p.connectionStatus,
+            })),
+            problematic: problematic.map(p => ({
+                participationId: p._id,
+                roomCode: p.roomId?.roomCode,
+                roomName: p.roomId?.roomName,
+                issue: `CONECTADO en sala ${p.roomId?.roomStatus}`,
+                joinedAt: p.joinedAt,
+                leftAt: p.leftAt,
+            })),
+            other: {
+                desconectado,
+                ausente,
+            },
+        });
+    } catch (error) {
+        console.error('getMyParticipationStatus error:', error);
+        return res.status(400).json({
+            success: false,
+            message: error.message || 'Error obteniendo estado de participaciones',
+            error: 'GET_STATUS_ERROR',
+        });
+    }
+};
+
+/**
+ * LIMPIEZA: Desconectar participaciones en estado incorrecto
+ * (ej: CONECTADO en salas CERRADAS o sin leftAt)
+ */
+export const cleanupParticipations = async (req, res) => {
+    try {
+        const userId = getRequesterUserId(req);
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Token inválido: no contiene userId',
+                error: 'UNAUTHORIZED',
+            });
+        }
+
+        const now = new Date();
+        const cleanupLog = {
+            fixed: 0,
+            issues: [],
+        };
+
+        // 1. Participaciones CONECTADO en salas CERRADAS
+        const conectadoEnCerradas = await RoomParticipation.find({
+            userId,
+            connectionStatus: 'CONECTADO',
+        }).populate('roomId', 'roomStatus');
+
+        for (const part of conectadoEnCerradas) {
+            if (part.roomId?.roomStatus === 'CERRADA' && !part.leftAt) {
+                cleanupLog.issues.push(
+                    `Fixed: Participación ${part._id} en sala ${part.roomId?._id} CERRADA - marcada como DESCONECTADO`
+                );
+                
+                part.connectionStatus = 'DESCONECTADO';
+                part.leftAt = now;
+                part.totalMinutes = calculateTotalMinutes(part.joinedAt, now, part.totalMinutes);
+                await part.save();
+                cleanupLog.fixed++;
+            }
+        }
+
+        // 2. Participaciones sin leftAt pero con connectionStatus DESCONECTADO (inconsistente)
+        const inconsistent = await RoomParticipation.find({
+            userId,
+            connectionStatus: 'DESCONECTADO',
+            leftAt: null,
+        });
+
+        for (const part of inconsistent) {
+            cleanupLog.issues.push(
+                `Fixed: Participación ${part._id} - asignado leftAt a ahora (inconsistencia)`
+            );
+            
+            part.leftAt = now;
+            part.totalMinutes = calculateTotalMinutes(part.joinedAt, now, part.totalMinutes);
+            await part.save();
+            cleanupLog.fixed++;
+        }
+
+        // Revalidar contador después de limpieza
+        const activeCount = await RoomParticipation.countDocuments({
+            userId,
+            connectionStatus: 'CONECTADO',
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: `Limpieza completada: ${cleanupLog.fixed} participaciones corregidas`,
+            cleanup: cleanupLog,
+            activeParticipationsAfter: activeCount,
+        });
+    } catch (error) {
+        console.error('cleanupParticipations error:', error);
+        return res.status(400).json({
+            success: false,
+            message: error.message || 'Error limpiando participaciones',
+            error: 'CLEANUP_ERROR',
         });
     }
 };

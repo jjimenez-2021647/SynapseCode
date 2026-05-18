@@ -3,11 +3,13 @@ import Modal from "../../../shared/components/ui/Modal"
 import Button from "../../../shared/components/ui/Button"
 import Input from "../../../shared/components/ui/Input"
 import { createRoom } from "../../../shared/api"
+import { useAuthStore } from "../../auth/store/authStore"
 import { toast } from "react-hot-toast"
-import { Search, Globe, Lock, Users, Zap, Code2 } from "lucide-react"
+import { Search, Globe, Lock, Users, Zap, Code2, Eye, EyeOff, Plus } from "lucide-react"
 import { fetchSupportedLanguages } from "../../../shared/constants/languages"
 
 export const CreateRoomModal = ({ isOpen, onClose, onSuccess }) => {
+    const user = useAuthStore((state) => state.user)
     const [loading, setLoading] = useState(false)
     const [loadingLanguages, setLoadingLanguages] = useState(true)
     const [searchTerm, setSearchTerm] = useState("")
@@ -15,18 +17,34 @@ export const CreateRoomModal = ({ isOpen, onClose, onSuccess }) => {
     const [isMultiLanguage, setIsMultiLanguage] = useState(false)
     const [selectedLangId, setSelectedLangId] = useState(null)
     const [selectedLangIds, setSelectedLangIds] = useState([])
+    const [showPassword, setShowPassword] = useState(false)
+    
+    // Función para obtener el máximo de usuarios según el plan
+    const getMaxUsersPerRoom = () => {
+        const planName = user?.planType || 'FREE';
+        const limits = {
+            FREE: 5,
+            PRO: 20,
+            ORG: 100
+        };
+        return limits[planName] || limits.FREE;
+    }
+
+    const maxUsers = getMaxUsersPerRoom()
     
     const [formData, setFormData] = useState({
         roomName: "",
         roomType: "PUBLICA",
         passwordRoom: "",
-        maxUsers: 8
+        maxUsers: ""
     })
+    const [maxUsersError, setMaxUsersError] = useState("")
 
     // Cargar lenguajes cuando se abre el modal
     useEffect(() => {
         if (isOpen) {
             loadLanguages()
+            setMaxUsersError("")
         }
     }, [isOpen])
 
@@ -36,10 +54,28 @@ export const CreateRoomModal = ({ isOpen, onClose, onSuccess }) => {
             console.log('Iniciando carga de lenguajes...')
             const languages = await fetchSupportedLanguages()
             console.log('Lenguajes cargados:', languages?.length || 0, languages?.slice(0, 3))
-            setAllLanguages(languages || [])
+            
+            // Transformar estructura si viene desde API
+            let transformedLanguages = languages?.map(lang => ({
+                id: lang.judge0Id || lang.id,
+                name: lang.language || lang.name,
+                description: lang.description
+            })) || []
+            
+            // Eliminar duplicados por ID
+            const seenIds = new Set()
+            transformedLanguages = transformedLanguages.filter(lang => {
+                if (seenIds.has(lang.id)) {
+                    return false
+                }
+                seenIds.add(lang.id)
+                return true
+            })
+            
+            setAllLanguages(transformedLanguages)
             
             // Seleccionar JavaScript por defecto (ID 63 en Judge0)
-            const jsLang = languages?.find(lang => lang.id === 63)
+            const jsLang = transformedLanguages?.find(lang => lang.id === 63)
             console.log('JavaScript encontrado:', jsLang)
             if (jsLang) {
                 setSelectedLangId(jsLang.id)
@@ -67,6 +103,27 @@ export const CreateRoomModal = ({ isOpen, onClose, onSuccess }) => {
     const handleSubmit = async (e) => {
         e.preventDefault()
         setLoading(true)
+        
+        // Validar maxUsers según el plan
+        if (!formData.maxUsers || isNaN(formData.maxUsers)) {
+            setMaxUsersError("Debes especificar un número de usuarios")
+            setLoading(false)
+            return
+        }
+
+        if (formData.maxUsers < 2) {
+            setMaxUsersError("Mínimo 2 usuarios por sala")
+            setLoading(false)
+            return
+        }
+
+        if (formData.maxUsers > maxUsers) {
+            setMaxUsersError(`Tu plan permite máximo ${maxUsers} usuarios por sala`)
+            setLoading(false)
+            return
+        }
+
+        setMaxUsersError("")
         
         let languagesToSend;
         
@@ -98,7 +155,7 @@ export const CreateRoomModal = ({ isOpen, onClose, onSuccess }) => {
             ...formData,
             roomLanguage: isMultiLanguage ? languagesToSend : languagesToSend[0],
             isMultiLanguage: isMultiLanguage,
-            maxUsers: Math.min(formData.maxUsers, 12)
+            maxUsers: formData.maxUsers
         }
 
         if (payload.roomType === "PUBLICA") {
@@ -111,7 +168,8 @@ export const CreateRoomModal = ({ isOpen, onClose, onSuccess }) => {
             onSuccess(data)
             onClose()
         } catch (err) {
-            toast.error(err.response?.data?.message || "Error al crear la sala")
+            const errorMsg = err.response?.data?.message || err.message || "Error al crear la sala"
+            toast.error(errorMsg)
         } finally {
             setLoading(false)
         }
@@ -129,7 +187,7 @@ export const CreateRoomModal = ({ isOpen, onClose, onSuccess }) => {
                         <label className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest">Nombre de la sala</label>
                         <Input 
                             required
-                            placeholder="Mi proyecto genial"
+                            placeholder="Mi sala genial"
                             value={formData.roomName}
                             onChange={(e) => setFormData({ ...formData, roomName: e.target.value })}
                             className="bg-black/40 border-white/5 h-12 focus:border-primary/50 transition-all"
@@ -244,39 +302,71 @@ export const CreateRoomModal = ({ isOpen, onClose, onSuccess }) => {
                     {formData.roomType === "PRIVADA" && (
                         <div className="space-y-2 animate-fadeIn">
                             <label className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest">Contraseña segura</label>
-                            <Input 
-                                required
-                                type="password"
-                                placeholder="••••••••"
-                                value={formData.passwordRoom}
-                                onChange={(e) => setFormData({ ...formData, passwordRoom: e.target.value })}
-                                className="bg-black/40 border-white/5 h-12"
-                            />
+                            <div className="relative">
+                                <input
+                                    required
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder="••••••••"
+                                    value={formData.passwordRoom}
+                                    onChange={(e) => setFormData({ ...formData, passwordRoom: e.target.value })}
+                                    className="w-full bg-black/20 border border-primary/50 h-12 rounded-lg px-4 focus:outline-none focus:border-primary transition-all pr-12 text-foreground"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white hover:text-white/80 transition-colors"
+                                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                                >
+                                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                </button>
+                            </div>
                         </div>
                     )}
 
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest">Cupos (Máx. 12)</label>
+                        <label className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest">Cupos (Máx. {maxUsers})</label>
                         <div className="relative">
                             <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40" />
                             <Input 
                                 type="number"
                                 min="2"
-                                max="12"
+                                max={maxUsers}
+                                placeholder="+2"
                                 value={formData.maxUsers}
-                                onChange={(e) => setFormData({ ...formData, maxUsers: Number.parseInt(e.target.value, 10) })}
-                                className="pl-10 bg-black/40 border-white/5 h-12"
+                                onChange={(e) => {
+                                    const value = e.target.value === '' ? '' : Number.parseInt(e.target.value, 10)
+                                    setFormData({ ...formData, maxUsers: value })
+                                    // Validación en tiempo real
+                                    if (value !== '' && !isNaN(value)) {
+                                        if (value < 2) {
+                                            setMaxUsersError("Mínimo 2 usuarios")
+                                        } else if (value > maxUsers) {
+                                            setMaxUsersError(`Máximo ${maxUsers} usuarios para tu plan`)
+                                        } else {
+                                            setMaxUsersError("")
+                                        }
+                                    } else {
+                                        setMaxUsersError("")
+                                    }
+                                }}
+                                className={`pl-10 bg-black/40 border-white/5 h-12 transition-colors ${
+                                    maxUsersError ? 'border-destructive/50 focus:border-destructive' : ''
+                                }`}
                             />
                         </div>
+                        {maxUsersError && (
+                            <p className="text-xs text-destructive mt-1">{maxUsersError}</p>
+                        )}
                     </div>
                 </div>
 
                 <Button 
                     type="submit" 
                     loading={loading}
-                    className="w-full h-14 rounded-xl bg-linear-to-r from-primary to-accent text-background font-black text-sm uppercase tracking-[0.2em] shadow-[0_4px_20px_rgba(0,217,255,0.3)] mt-6"
+                    variant="ghost"
+                    className="w-full h-12 rounded-lg border-2 border-primary !bg-transparent !text-primary font-bold text-xs uppercase tracking-widest transition-all mt-6 hover:!bg-transparent hover:border-primary hover:shadow-[0_0_15px_rgba(0,217,255,0.3)]"
                 >
-                    <Zap className="mr-2 h-4 w-4 fill-current" />
+                    <Plus className="mr-2 h-4 w-4" />
                     Crear Sala
                 </Button>
             </form>

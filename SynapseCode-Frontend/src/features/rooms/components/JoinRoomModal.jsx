@@ -4,12 +4,14 @@ import Button from "../../../shared/components/ui/Button"
 import Input from "../../../shared/components/ui/Input"
 import { joinRoom, joinRoomByCode } from "../../../shared/api"
 import { toast } from "react-hot-toast"
+import { Eye, EyeOff } from "lucide-react"
 
 export const JoinRoomModal = ({ isOpen, onClose, onSuccess, room = null }) => {
     const [loading, setLoading] = useState(false)
     const [code, setCode] = useState("")
     const [password, setPassword] = useState("")
     const [requiresPassword, setRequiresPassword] = useState(false)
+    const [showPassword, setShowPassword] = useState(false)
 
     useEffect(() => {
         if (!isOpen) return
@@ -74,14 +76,24 @@ export const JoinRoomModal = ({ isOpen, onClose, onSuccess, room = null }) => {
                 {requiresPassword && (
                     <div className="space-y-2 animate-fadeIn">
                         <label className="text-xs font-bold uppercase text-muted-foreground">Contrasena</label>
-                        <Input
-                            required
-                            type="password"
-                            placeholder="Contrasena de la sala"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="bg-surface-light border-border/50"
-                        />
+                        <div className="relative">
+                            <input
+                                required
+                                type={showPassword ? "text" : "password"}
+                                placeholder="Contrasena de la sala"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full bg-surface-light border border-border/50 rounded-lg px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all pr-12"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-white hover:text-white/80 transition-colors"
+                                aria-label={showPassword ? "Ocultar contrasena" : "Mostrar contrasena"}
+                            >
+                                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                            </button>
+                        </div>
                     </div>
                 )}
 

@@ -50,9 +50,8 @@ export const FALLBACK_LANGUAGES = [
 export const fetchSupportedLanguages = async () => {
     try {
         const possibleUrls = [
-            `${import.meta.env.VITE_SYNAPSECODE_URL}/code-executions/languages`,
-            'http://localhost:3000/api/v1/code-executions/languages',
-            'http://localhost:3001/api/v1/code-executions/languages',
+            'http://localhost:3010/api/v1/codeExecutions/languages',
+            `${import.meta.env.VITE_SYNAPSECODE_URL}/api/v1/codeExecutions/languages`,
         ].filter(url => url && !url.includes('undefined'));
 
         for (const url of possibleUrls) {

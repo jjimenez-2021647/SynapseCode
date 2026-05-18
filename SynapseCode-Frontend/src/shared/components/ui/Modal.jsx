@@ -22,7 +22,7 @@ export default function Modal({ isOpen, onClose, title, children }) {
                 className="absolute inset-0 bg-background/80 backdrop-blur-sm animate-fadeIn" 
                 onClick={onClose}
             />
-            <div className="synapse-surface relative w-full max-w-lg rounded-2xl border border-border/50 bg-surface p-6 shadow-2xl animate-fade-in">
+            <div className="synapse-surface relative w-full max-w-lg rounded-2xl border border-white/20 bg-black/40 backdrop-blur-md p-6 shadow-2xl animate-fade-in">
                 <div className="mb-6 flex items-center justify-between">
                     <h2 className="text-xl font-bold text-white">{title}</h2>
                     <button 

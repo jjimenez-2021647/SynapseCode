@@ -7,7 +7,7 @@ import { CreateRoomCard } from "../../features/rooms/components/CreateRoomCard"
 import { DashboardHeader } from "../../features/rooms/components/DashboardHeader"
 import { CreateRoomModal } from "../../features/rooms/components/CreateRoomModal"
 import { JoinRoomModal } from "../../features/rooms/components/JoinRoomModal"
-import { Star, LayoutGrid, User, Users } from "lucide-react"
+import { Star, LayoutGrid, User, Users, ChevronLeft, ChevronRight } from "lucide-react"
 import Spinner from "../../shared/components/ui/Spinner"
 import { Navbar } from "../../shared/components/layout/Navbar"
 import { ParticleField } from "../../features/auth/components/landing/ParticleField"
@@ -24,10 +24,16 @@ export const DashboardPage = () => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
     const [isJoinModalOpen, setIsJoinModalOpen] = useState(false)
     const [selectedRoomToJoin, setSelectedRoomToJoin] = useState(null)
+    const [currentPage, setCurrentPage] = useState(1)
 
     useEffect(() => {
         fetchRooms()
     }, [fetchRooms])
+
+    useEffect(() => {
+        // Reset a página 1 cuando cambian búsqueda o categoría
+        setCurrentPage(1)
+    }, [search, category])
 
     useEffect(() => {
         const root = document.documentElement
@@ -63,6 +69,27 @@ export const DashboardPage = () => {
             return true
         })
     }, [rooms, search, category, favorites, user?.id])
+
+    // Lógica de paginación: 5 salas en primera página + 1 crear sala = 6 elementos, 6 salas en otras páginas
+    const roomsPerFirstPage = 5
+    const roomsPerOtherPages = 6
+    
+    let totalPages = 1
+    let remainingRooms = filteredRooms.length - roomsPerFirstPage
+    if (remainingRooms > 0) {
+        totalPages += Math.ceil(remainingRooms / roomsPerOtherPages)
+    }
+    
+    let startIndex, endIndex
+    if (currentPage === 1) {
+        startIndex = 0
+        endIndex = roomsPerFirstPage
+    } else {
+        startIndex = roomsPerFirstPage + (currentPage - 2) * roomsPerOtherPages
+        endIndex = startIndex + roomsPerOtherPages
+    }
+    
+    const paginatedRooms = filteredRooms.slice(startIndex, endIndex)
 
     const handleJoin = async (room) => {
         if (room.roomType === "PRIVADA") {
@@ -135,30 +162,59 @@ export const DashboardPage = () => {
                         <p className="animate-pulse text-sm text-primary">Sincronizando con el servidor...</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                        <CreateRoomCard onClick={() => setIsCreateModalOpen(true)} />
-                        {filteredRooms.length > 0 ? (
-                            filteredRooms.map((room) => (
-                                <RoomCard 
-                                    key={room._id} 
-                                    room={room} 
-                                    onJoin={handleJoin}
-                                />
-                            ))
-                        ) : (
-                            <div className="sm:col-span-2 lg:col-span-2 flex h-80 flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 text-center p-10 bg-surface/10">
-                                <div className="rounded-full bg-white/5 p-6 mb-4">
-                                    <LayoutGrid className="h-10 w-10 text-muted/20" />
+                    <>
+                        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                            {currentPage === 1 && <CreateRoomCard onClick={() => setIsCreateModalOpen(true)} />}
+                            {paginatedRooms.length > 0 ? (
+                                paginatedRooms.map((room) => (
+                                    <RoomCard 
+                                        key={room._id} 
+                                        room={room} 
+                                        onJoin={handleJoin}
+                                    />
+                                ))
+                            ) : (
+                                <div className="sm:col-span-2 lg:col-span-2 flex h-80 flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 text-center p-10 bg-surface/10">
+                                    <div className="rounded-full bg-white/5 p-6 mb-4">
+                                        <LayoutGrid className="h-10 w-10 text-muted/20" />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-white">No hay salas disponibles</h3>
+                                    <p className="mt-2 max-w-sm text-muted-foreground">
+                                        {search 
+                                            ? `No hay resultados para "${search}".` 
+                                            : "Parece que no hay salas activas en esta categoría."}
+                                    </p>
                                 </div>
-                                <h3 className="text-xl font-bold text-white">No hay salas disponibles</h3>
-                                <p className="mt-2 max-w-sm text-muted-foreground">
-                                    {search 
-                                        ? `No hay resultados para "${search}".` 
-                                        : "Parece que no hay salas activas en esta categoría."}
-                                </p>
+                            )}
+                        </div>
+
+                        {/* Paginación */}
+                        {totalPages > 1 && (
+                            <div className="mt-10 flex items-center justify-center gap-4">
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                    disabled={currentPage === 1}
+                                    className="flex items-center gap-2 px-4 py-2 rounded-lg border border-primary/30 text-primary hover:border-primary hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                >
+                                    <ChevronLeft className="h-5 w-5" />
+                                    Anterior
+                                </button>
+                                
+                                <span className="text-muted-foreground text-sm font-medium">
+                                    Página {currentPage} de {totalPages}
+                                </span>
+                                
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="flex items-center gap-2 px-4 py-2 rounded-lg border border-primary/30 text-primary hover:border-primary hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                >
+                                    Siguiente
+                                    <ChevronRight className="h-5 w-5" />
+                                </button>
                             </div>
                         )}
-                    </div>
+                    </>
                 )}
             </main>
 
