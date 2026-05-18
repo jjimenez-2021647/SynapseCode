@@ -17,11 +17,11 @@ export const getUserFromAuthService = async (userId, token) => {
   }
 };
 
-export const updateUserPlan = async (userId, planName, token) => {
+export const updateUserPlan = async (userId, planName, token, orgUserType = null) => {
   try {
     const response = await axios.put(
       `${config.auth_service.url}/api/v1/users/${userId}/plan`,
-      { planName },
+      { planName, orgUserType },
       {
         headers: {
           Authorization: `Bearer ${token}`,

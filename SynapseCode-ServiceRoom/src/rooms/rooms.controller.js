@@ -103,9 +103,25 @@ export const createRoom = async (req, res) => {
 
         // ✅ Obtener límite máximo de usuarios dinámicamente según el plan
         let maxAllowed = 5; // Default para FREE
+        let orgMaxParticipants = null;
         try {
             const usersLimitInfo = await getMaxUsersLimit(hostIdFromToken, token);
             maxAllowed = usersLimitInfo.maxUsers;
+            // Si es ORG, obtener el valor real de orgInfo.maxParticipants
+            if (usersLimitInfo.planName === 'ORG') {
+                // Volver a obtener la suscripción para extraer orgInfo
+                const planInfo = await getUserPlanInfo(hostIdFromToken, token);
+                orgMaxParticipants = planInfo?.subscription?.orgInfo?.maxParticipants;
+                if (!orgMaxParticipants || typeof orgMaxParticipants !== 'number' || orgMaxParticipants < 1) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Debes configurar la cantidad de estudiantes en tu plan ORG antes de crear una sala.',
+                        error: 'ORG_MAX_PARTICIPANTS_UNDEFINED',
+                        planName: 'ORG'
+                    });
+                }
+                maxAllowed = orgMaxParticipants;
+            }
         } catch (error) {
             console.warn('[WARN] No se pudo obtener límite de usuarios, usando default:', error.message);
         }

@@ -27,8 +27,10 @@ export function PricingPage() {
     cvc: "",
   });
   const [orgData, setOrgData] = useState({
+    orgUserType: "PROFESSOR",
     institutionName: "",
     numStudents: "",
+    carnetNumber: "",
   });
 
   const fullName = useMemo(() => {
@@ -171,10 +173,12 @@ export function PricingPage() {
         planName,
         email: profile.email,
         name: profile.name,
+        ...(customerData?.orgUserType && { orgUserType: customerData.orgUserType }),
+        ...(customerData?.carnetNumber && { carnetNumber: customerData.carnetNumber }),
         ...(customerData?.institutionName && { institutionName: customerData.institutionName }),
         ...(customerData?.maxParticipants && { maxParticipants: customerData.maxParticipants }),
         amountPaid:
-          planName === 'ORG'
+          planName === 'ORG' && customerData?.orgUserType !== 'STUDENT'
             ? getOrgAmount()
             : planName === 'PRO'
             ? 20
@@ -195,6 +199,8 @@ export function PricingPage() {
           ? "Plan FREE activado"
           : planName === "PRO"
           ? "Pago verificado. Plan PRO activado"
+          : customerData?.orgUserType === "STUDENT"
+          ? "Carnet validado. Plan ORG estudiante activado"
           : "Pago verificado. Plan ORG activado"
       );
       window.setTimeout(() => {
@@ -273,6 +279,21 @@ export function PricingPage() {
     }
 
     if (planName === "ORG") {
+      if (orgData.orgUserType === "STUDENT") {
+        if (!orgData.carnetNumber.trim()) {
+          showError("Ingresa tu numero de carnet.");
+          return;
+        }
+
+        await activatePlan("ORG", {
+          name: paymentData.name.trim() || fullName || user?.username,
+          email: paymentData.email.trim() || user?.email,
+          orgUserType: "STUDENT",
+          carnetNumber: orgData.carnetNumber.trim().toUpperCase(),
+        });
+        return;
+      }
+
       if (!orgData.institutionName.trim() || !orgData.numStudents || orgData.numStudents < 1) {
         showError("Completa el nombre de la institución y el número de estudiantes.");
         return;
@@ -300,6 +321,7 @@ export function PricingPage() {
       await activatePlan("ORG", {
         name: paymentData.name.trim(),
         email: paymentData.email.trim(),
+        orgUserType: "PROFESSOR",
         institutionName: orgData.institutionName.trim(),
         maxParticipants: parseInt(orgData.numStudents),
       });
@@ -434,6 +456,49 @@ export function PricingPage() {
 
             {selectedPlan.name.toUpperCase() === "ORG" && (
               <>
+                <div className="grid gap-2">
+                  <span className="text-sm font-bold text-slate-200">Tipo de acceso</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { value: "PROFESSOR", label: "Profesor" },
+                      { value: "STUDENT", label: "Estudiante" },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() =>
+                          setOrgData((current) => ({
+                            ...current,
+                            orgUserType: option.value,
+                          }))
+                        }
+                        className={cn(
+                          layout.button,
+                          ui.buttonBase,
+                          orgData.orgUserType === option.value ? ui.buttonPrimary : ui.buttonGhost
+                        )}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {orgData.orgUserType === "STUDENT" && (
+                  <label className="grid gap-2 text-sm font-bold text-slate-200">
+                    Numero de carnet
+                    <input
+                      name="carnetNumber"
+                      value={orgData.carnetNumber}
+                      onChange={handleOrgChange}
+                      className={cn(layout.input, ui.input)}
+                      placeholder="2021647"
+                    />
+                  </label>
+                )}
+
+                {orgData.orgUserType === "PROFESSOR" && (
+                  <>
                 <label className="grid gap-2 text-sm font-bold text-slate-200">
                   Nombre de la institución
                   <input
@@ -463,9 +528,13 @@ export function PricingPage() {
                     Monto a pagar: <strong>${getOrgAmount()}</strong>
                   </p>
                 )}
+                  </>
+                )}
               </>
             )}
 
+            {(selectedPlan.name.toUpperCase() !== "ORG" || orgData.orgUserType === "PROFESSOR") && (
+              <>
             <label className="grid gap-2 text-sm font-bold text-slate-200">
               Nombre
               <input
@@ -527,13 +596,21 @@ export function PricingPage() {
                 />
               </label>
             </div>
+              </>
+            )}
 
             <button
               type="submit"
               disabled={isSubmitting}
               className={cn(layout.button, ui.buttonBase, ui.buttonPrimary, "mt-2 w-full")}
             >
-              {isSubmitting ? "Verificando pago..." : `Pagar y activar ${selectedPlan.name.toUpperCase()}`}
+              {isSubmitting
+                ? orgData.orgUserType === "STUDENT"
+                  ? "Validando carnet..."
+                  : "Verificando pago..."
+                : selectedPlan.name.toUpperCase() === "ORG" && orgData.orgUserType === "STUDENT"
+                ? "Validar carnet y activar ORG"
+                : `Pagar y activar ${selectedPlan.name.toUpperCase()}`}
             </button>
           </form>
           </div>,

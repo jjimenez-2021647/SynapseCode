@@ -17,6 +17,11 @@ const subscriptionSchema = new Schema(
       enum: ['FREE', 'PRO', 'ORG'],
       required: true,
     },
+    orgUserType: {
+      type: String,
+      enum: ['PROFESSOR', 'STUDENT'],
+      default: null,
+    },
     status: {
       type: String,
       enum: ['active', 'pending_payment', 'cancelled', 'expired'],
@@ -54,6 +59,13 @@ const subscriptionSchema = new Schema(
           },
         },
       ],
+    },
+    orgAccess: {
+      sourceSubscriptionId: {
+        type: Schema.Types.ObjectId,
+        ref: 'Subscription',
+      },
+      carnetNumber: String,
     },
     invoiceUrl: String,
     amountPaid: Number,

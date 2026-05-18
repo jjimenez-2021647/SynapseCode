@@ -146,6 +146,12 @@ export const UserProfile = sequelize.define(
             defaultValue: null,
             field: 'plan_type',
         },
+        OrgUserType: {
+            type: DataTypes.ENUM('PROFESSOR', 'STUDENT'),
+            allowNull: true,
+            defaultValue: null,
+            field: 'org_user_type',
+        },
     },
     {
         tableName: 'user_profiles',

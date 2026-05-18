@@ -38,6 +38,7 @@ export const FALLBACK_LANGUAGES = [
     { id: 58, name: 'Groovy' },
     { id: 77, name: 'Julia' },
     { id: 78, name: 'Pascal' },
+    { id: 54, name: 'HTML/CSS' },
     { id: 79, name: 'Fortran' },
     { id: 80, name: 'Objective-C' },
     { id: 81, name: 'Assembly' },

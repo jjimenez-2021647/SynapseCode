@@ -361,7 +361,7 @@ export const applyPhoneChange = async (userId, newPhone) => {
 };
 
 // Profile Update
-export const updateUserProfile = async (userId, { name, surname, planType }) => {
+export const updateUserProfile = async (userId, { name, surname, planType, orgUserType }) => {
     const transaction = await User.sequelize.transaction();
     try {
         // Actualizar datos del usuario (name, surname)
@@ -370,10 +370,17 @@ export const updateUserProfile = async (userId, { name, surname, planType }) => 
             { where: { Id: userId }, transaction }
         );
 
-        // Actualizar planType en UserProfile si se proporciona
+        // Actualizar campos del perfil si se proporcionan
+        const profileUpdates = {};
         if (planType !== undefined) {
+            profileUpdates.PlanType = planType;
+        }
+        if (orgUserType !== undefined) {
+            profileUpdates.OrgUserType = orgUserType;
+        }
+        if (Object.keys(profileUpdates).length > 0) {
             await UserProfile.update(
-                { PlanType: planType },
+                profileUpdates,
                 { where: { UserId: userId }, transaction }
             );
         }

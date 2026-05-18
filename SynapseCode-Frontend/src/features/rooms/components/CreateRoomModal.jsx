@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react"
+import { getCurrentSubscription } from "../../../shared/api/subscriptions"
 import Modal from "../../../shared/components/ui/Modal"
 import Button from "../../../shared/components/ui/Button"
 import Input from "../../../shared/components/ui/Input"
@@ -19,18 +20,33 @@ export const CreateRoomModal = ({ isOpen, onClose, onSuccess }) => {
     const [selectedLangIds, setSelectedLangIds] = useState([])
     const [showPassword, setShowPassword] = useState(false)
     
-    // Función para obtener el máximo de usuarios según el plan
-    const getMaxUsersPerRoom = () => {
-        const planName = user?.planType || 'FREE';
-        const limits = {
-            FREE: 5,
-            PRO: 20,
-            ORG: 100
-        };
-        return limits[planName] || limits.FREE;
-    }
+    // Estado para el límite dinámico de usuarios
+    const [maxUsers, setMaxUsers] = useState(5)
 
-    const maxUsers = getMaxUsersPerRoom()
+    // Obtener el límite dinámico al abrir el modal
+    useEffect(() => {
+        const fetchMaxUsers = async () => {
+            const planName = user?.planType || 'FREE';
+            if (planName === 'ORG') {
+                try {
+                    const resp = await getCurrentSubscription();
+                    const orgMax = resp?.data?.data?.orgInfo?.maxParticipants;
+                    if (typeof orgMax === 'number' && orgMax > 0) {
+                        setMaxUsers(orgMax);
+                    } else {
+                        setMaxUsers(2); // fallback mínimo
+                    }
+                } catch (e) {
+                    setMaxUsers(2);
+                }
+            } else if (planName === 'PRO') {
+                setMaxUsers(20);
+            } else {
+                setMaxUsers(5);
+            }
+        };
+        if (isOpen) fetchMaxUsers();
+    }, [isOpen, user?.planType]);
     
     const [formData, setFormData] = useState({
         roomName: "",

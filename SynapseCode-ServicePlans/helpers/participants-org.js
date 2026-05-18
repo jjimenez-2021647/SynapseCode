@@ -84,6 +84,57 @@ export const validateCarnetForORG = async (subscriptionId, carnetNumber) => {
 };
 
 /**
+ * Buscar un carnet autorizado en cualquier suscripciÃ³n ORG activa.
+ * Se usa cuando un estudiante quiere activar ORG por carnet.
+ * @param {string} carnetNumber
+ * @returns {Promise<{valid: boolean, participant?: object, subscription?: object, message?: string}>}
+ */
+export const findActiveOrgParticipantByCarnet = async (carnetNumber) => {
+  try {
+    const Subscription = (await import('../src/subscriptions/subscription.model.js')).default;
+    const participants = await ParticipantsORG.find({
+      carnetNumber: String(carnetNumber).toUpperCase().trim(),
+      status: { $ne: 'REMOVED' },
+    });
+
+    if (!participants.length) {
+      return {
+        valid: false,
+        message: 'Carnet no autorizado. Debe ser agregado por un profesor con plan ORG activo.',
+      };
+    }
+
+    for (const participant of participants) {
+      const subscription = await Subscription.findOne({
+        _id: participant.subscriptionId,
+        planName: 'ORG',
+        status: 'active',
+        orgUserType: { $ne: 'STUDENT' },
+      });
+
+      if (subscription) {
+        return {
+          valid: true,
+          participant,
+          subscription,
+        };
+      }
+    }
+
+    return {
+      valid: false,
+      message: 'El carnet no pertenece a un plan ORG activo.',
+    };
+  } catch (error) {
+    console.error('[ERROR] Error finding active ORG participant:', error.message);
+    return {
+      valid: false,
+      message: 'Error validando carnet',
+    };
+  }
+};
+
+/**
  * Obtener total de participantes activos en un plan ORG
  * @param {string} subscriptionId - ID de la suscripción ORG
  * @returns {Promise<number>}

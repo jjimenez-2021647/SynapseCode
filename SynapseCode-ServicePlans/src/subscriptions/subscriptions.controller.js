@@ -5,7 +5,11 @@ import {
   sendPaymentConfirmationEmail,
 } from '../../helpers/email-service.js';
 import { updateUserPlan, updateUserRole } from '../../helpers/auth-service-bridge.js';
-import { addParticipantToORG } from '../../helpers/participants-org.js';
+import {
+  activateParticipant,
+  addParticipantToORG,
+  findActiveOrgParticipantByCarnet,
+} from '../../helpers/participants-org.js';
 import { createInvoicePdf } from '../../helpers/invoice-service.js';
 
 const isLocalBillingMode = process.env.NODE_ENV !== 'production';
@@ -170,7 +174,19 @@ export const getUserSubscriptionById = async (req, res) => {
 export const selectPlan = async (req, res) => {
   try {
     const { userId } = req;
-    const { planName, email, name, institutionName, carnets, maxParticipants } = req.body;
+    const {
+      planName,
+      email,
+      name,
+      institutionName,
+      carnets,
+      maxParticipants,
+      orgUserType,
+      carnetNumber,
+    } = req.body;
+    const normalizedOrgUserType = planName === 'ORG'
+      ? String(orgUserType || 'PROFESSOR').trim().toUpperCase()
+      : null;
 
     if (!planName || !email || !name) {
       return res.status(400).json({
@@ -194,6 +210,8 @@ export const selectPlan = async (req, res) => {
           userId,
           planId: plan._id,
           planName: 'FREE',
+          orgUserType: null,
+          orgAccess: null,
           status: 'active',
           startDate: new Date(),
           paymentMethod: 'manual',
@@ -202,7 +220,7 @@ export const selectPlan = async (req, res) => {
       );
 
       await sendFreePlanEmail(email, name);
-      await updateUserPlan(userId, 'FREE', getTokenFromRequest(req));
+      await updateUserPlan(userId, 'FREE', getTokenFromRequest(req), null);
 
       return res.json({
         success: true,
@@ -221,12 +239,80 @@ export const selectPlan = async (req, res) => {
 
       // Check user role for ORG
       if (planName === 'ORG') {
+        if (!['PROFESSOR', 'STUDENT'].includes(normalizedOrgUserType)) {
+          return res.status(400).json({
+            success: false,
+            message: 'orgUserType debe ser PROFESSOR o STUDENT',
+          });
+        }
         if (req.user?.role !== 'USER_ROLE') {
           return res.status(403).json({
             success: false,
             message: 'Solo usuarios con rol USER_ROLE pueden seleccionar plan ORG',
           });
         }
+
+        if (normalizedOrgUserType === 'STUDENT') {
+          if (!carnetNumber) {
+            return res.status(400).json({
+              success: false,
+              message: 'carnetNumber es requerido para ingresar como estudiante ORG',
+            });
+          }
+
+          const carnetValidation = await findActiveOrgParticipantByCarnet(carnetNumber);
+          if (!carnetValidation.valid) {
+            return res.status(403).json({
+              success: false,
+              message: carnetValidation.message,
+              error: 'INVALID_ORG_CARNET',
+            });
+          }
+
+          const existingLinkedUserId = carnetValidation.participant.linkedUserId;
+          if (existingLinkedUserId && existingLinkedUserId !== userId) {
+            return res.status(409).json({
+              success: false,
+              message: 'Este carnet ya estÃ¡ vinculado a otro usuario',
+              error: 'CARNET_ALREADY_LINKED',
+            });
+          }
+
+          const subscription = await Subscription.findOneAndUpdate(
+            { userId },
+            {
+              userId,
+              planId: plan._id,
+              planName: 'ORG',
+              orgUserType: 'STUDENT',
+              status: 'active',
+              startDate: new Date(),
+              paymentMethod: 'manual',
+              amountPaid: 0,
+              currency: plan.currency || 'USD',
+              orgAccess: {
+                sourceSubscriptionId: carnetValidation.subscription._id,
+                carnetNumber: String(carnetNumber).toUpperCase().trim(),
+              },
+            },
+            { upsert: true, returnDocument: 'after' }
+          );
+
+          await activateParticipant(
+            carnetValidation.subscription._id,
+            carnetNumber,
+            userId
+          );
+          await updateUserPlan(userId, 'ORG', getTokenFromRequest(req), 'STUDENT');
+          await updateUserRole(userId, 'ORG_ROLE', getTokenFromRequest(req));
+
+          return res.json({
+            success: true,
+            message: 'Plan ORG activado como estudiante',
+            data: subscription,
+          });
+        }
+
         if (!institutionName || !maxParticipants) {
           return res.status(400).json({
             success: false,
@@ -275,6 +361,8 @@ export const selectPlan = async (req, res) => {
           status: 'active',
           startDate: new Date(),
           paymentMethod: 'manual',
+          orgUserType: planName === 'ORG' ? 'PROFESSOR' : null,
+          orgAccess: null,
           amountPaid,
           currency: plan.currency || 'USD',
           ...(orgInfo ? { orgInfo } : {}),
@@ -303,7 +391,12 @@ export const selectPlan = async (req, res) => {
         { $set: { invoiceUrl: invoice.url } }
       );
 
-      await updateUserPlan(userId, planName, getTokenFromRequest(req));
+      await updateUserPlan(
+        userId,
+        planName,
+        getTokenFromRequest(req),
+        planName === 'ORG' ? 'PROFESSOR' : null
+      );
       if (planName === 'ORG') {
         await updateUserRole(userId, 'ORG_ROLE', getTokenFromRequest(req));
       }

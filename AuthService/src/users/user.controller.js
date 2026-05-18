@@ -331,13 +331,28 @@ export const updateUserPlan = [
     validateJWT,
     asyncHandler(async (req, res) => {
         const { userId } = req.params;
-        const { planName, planType } = req.body || {};
+        const { planName, planType, orgUserType } = req.body || {};
         const nextPlanType = (planName || planType || '').trim().toUpperCase();
+        const nextOrgUserType =
+            orgUserType === null || orgUserType === undefined
+                ? orgUserType
+                : String(orgUserType).trim().toUpperCase();
 
         if (!['FREE', 'PRO', 'ORG'].includes(nextPlanType)) {
             return res.status(400).json({
                 success: false,
                 message: 'planName debe ser uno de: FREE, PRO, ORG',
+            });
+        }
+
+        if (
+            nextOrgUserType !== null &&
+            nextOrgUserType !== undefined &&
+            !['PROFESSOR', 'STUDENT'].includes(nextOrgUserType)
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: 'orgUserType debe ser PROFESSOR o STUDENT',
             });
         }
 
@@ -348,7 +363,10 @@ export const updateUserPlan = [
             }
         }
 
-        const result = await updateProfileHelper(userId, { planType: nextPlanType });
+        const result = await updateProfileHelper(userId, {
+            planType: nextPlanType,
+            orgUserType: nextPlanType === 'ORG' ? nextOrgUserType : null,
+        });
         return res.status(200).json({
             ...result,
             message: `Plan ${nextPlanType} actualizado exitosamente`,
