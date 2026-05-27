@@ -13,11 +13,11 @@ import {
 } from './user-db.js';
 import { buildUserResponse } from '../utils/user-helpers.js';
 import { generatePasswordResetToken } from '../utils/auth-helpers.js';
-import { uploadImage, deleteImage } from './cloudinary-service.js';
+import { uploadImage, deleteImage, getDefaultAvatarPath } from './cloudinary-service.js';
 import { sendUsernameChangeEmail, sendPhoneChangeEmail, sendDeactivateAccountEmail, sendUsernameChangedEmail,
     sendPhoneChangedEmail, sendAccountDeactivatedEmail, sendActivateAccountEmail, sendAccountActivatedEmail } from './email-service.js';
-import crypto from 'crypto';
-import path from 'path';
+import crypto from 'node:crypto';
+import path from 'node:path';
 
 export const getUserProfileHelper = async (userId) => {
     const user = await findUserById(userId);
@@ -29,8 +29,8 @@ export const getUserProfileHelper = async (userId) => {
     return buildUserResponse(user);
 };
 
-// Update profile (name, surname)
-export const updateProfileHelper = async (userId, { name, surname }) => {
+// Update profile (name, surname, planType, orgUserType)
+export const updateProfileHelper = async (userId, { name, surname, planType, orgUserType }) => {
     const user = await findUserById(userId);
     if (!user) {
         const err = new Error('Usuario no encontrado');
@@ -41,6 +41,8 @@ export const updateProfileHelper = async (userId, { name, surname }) => {
     await updateUserProfile(userId, {
         name: name || user.Name,
         surname: surname || user.Surname,
+        planType: planType ?? user.UserProfile?.PlanType,
+        orgUserType,
     });
 
     const updatedUser = await findUserById(userId);
@@ -198,6 +200,31 @@ export const changeImageHelper = async (userId, filePath) => {
     return {
         success: true,
         message: 'Foto de perfil actualizada exitosamente',
+        data: buildUserResponse(updatedUser),
+    };
+};
+
+export const resetProfileImageHelper = async (userId) => {
+    const user = await findUserById(userId);
+    if (!user) {
+        const err = new Error('Usuario no encontrado');
+        err.status = 404;
+        throw err;
+    }
+
+    const currentPicture = user.UserProfile?.ProfilePicture;
+    if (currentPicture) {
+        await deleteImage(currentPicture).catch((err) =>
+            console.warn('No se pudo eliminar la imagen anterior:', err)
+        );
+    }
+
+    await updateProfilePicture(userId, getDefaultAvatarPath());
+
+    const updatedUser = await findUserById(userId);
+    return {
+        success: true,
+        message: 'Foto de perfil restablecida exitosamente',
         data: buildUserResponse(updatedUser),
     };
 };

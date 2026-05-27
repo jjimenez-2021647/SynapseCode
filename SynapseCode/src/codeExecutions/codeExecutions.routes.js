@@ -2,7 +2,15 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { validateJWT } from '../../middlewares/validate-JWT.js';
-import { requireRole }  from '../../middlewares/validate-role.js';
+import { requireRole } from '../../middlewares/validate-role.js';
+import {
+    requireCodeExecutionRoomAccessByBodyFileId,
+    requireCodeExecutionRoomAccessByFileIdParam,
+    requireCodeExecutionRoomAccessByRoomIdParam,
+    requireCodeExecutionRoomAccessByExecutionIdParam,
+    requireCodeExecutionRoomAccessByQueryScope,
+    requireCodeExecutionRoomAccessByResultQuery,
+} from '../../middlewares/validate-code-execution-room-access.js';
 import {
     // Judge0
     getSupportedLanguages,
@@ -11,6 +19,7 @@ import {
     getResultByToken,
     // CRUD
     createCodeExecution,
+    getCodeExecutionsAudit,
     getCodeExecutions,
     getCodeExecutionById,
     getCodeExecutionsByFile,
@@ -25,26 +34,85 @@ const router = Router();
 const formDataParser = multer();
 
 // JUDGE0
-router.get('/languages', getSupportedLanguages); // Pública, sin JWT
-router.post('/run', validateJWT, requireRole('USER_ROLE'), formDataParser.none(), runCode); // Ejecución síncrona (recomendada)
-router.post('/submit', validateJWT, requireRole('USER_ROLE'), formDataParser.none(), submitCodeAsync); // Ejecución asíncrona
-router.get('/result/:token', validateJWT, getResultByToken); // Polling resultado por token
+/**
+ * @swagger
+ * /api/v1/codeExecutions/languages:
+ *   get:
+ *     summary: Obtener lenguajes soportados por Judge0
+ *     tags: [CodeExecutions]
+ *     responses:
+ *       200: { description: Lista de lenguajes }
+ */
+router.get('/languages', getSupportedLanguages); // Publica, sin JWT
+router.get('/audit/executors', validateJWT, requireRole('ADMIN_ROLE'), getCodeExecutionsAudit);
+
+/**
+ * @swagger
+ * /api/v1/codeExecutions/run:
+ *   post:
+ *     summary: Ejecutar código de forma síncrona
+ *     tags: [CodeExecutions]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               language: { type: string, description: "Lenguaje de programación" }
+ *               code: { type: string, description: "Código a ejecutar" }
+ *               input: { type: string, description: "Entrada estándar" }
+ *               fileId: { type: string, description: "ID del archivo" }
+ *     responses:
+ *       200: { description: Resultado de la ejecución }
+ *       400: { description: Error en la ejecución }
+ */
+router.post('/run', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByBodyFileId, formDataParser.none(), runCode); // Ejecucion sincrona (recomendada)
+
+// Ejecucion asincrona (sin documentar en Swagger)
+router.post('/submit', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByBodyFileId, formDataParser.none(), submitCodeAsync);
+
+// Polling resultado por token (sin documentar en Swagger)
+router.get('/result/:token', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByResultQuery, getResultByToken);
 
 // RATE LIMIT
-router.get('/rate-limit', validateJWT, checkRateLimit);
+router.get('/rate-limit', validateJWT, requireRole('USER_ROLE'), checkRateLimit);
 
-// CONSULTAS 
-router.get('/', validateJWT, getCodeExecutions); // Todas (filtros: ?roomId= &fileId= &userId= &executionStatus= &language=)
-router.get('/file/:fileId', validateJWT, getCodeExecutionsByFile); // Historial de un archivo
-router.get('/room/:roomId', validateJWT, getCodeExecutionsByRoom); // Todas las de una sala
-router.get('/:id', validateJWT, getCodeExecutionById);        // Por ID
+// CONSULTAS
+/**
+ * @swagger
+ * /api/v1/codeExecutions:
+ *   get:
+ *     summary: Obtener ejecuciones de código con filtros
+ *     tags: [CodeExecutions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: roomId
+ *         schema: { type: string }
+ *       - in: query
+ *         name: fileId
+ *         schema: { type: string }
+ *       - in: query
+ *         name: executionStatus
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: Lista de ejecuciones }
+ */
+router.get('/', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByQueryScope, getCodeExecutions); // Todas (filtros: ?roomId= &fileId= &userId= &executionStatus= &language=)
+router.get('/file/:fileId', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByFileIdParam, getCodeExecutionsByFile); // Historial de un archivo
+router.get('/room/:roomId', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByRoomIdParam, getCodeExecutionsByRoom); // Todas las de una sala
+router.get('/:id', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByExecutionIdParam, getCodeExecutionById); // Por ID
 
 // CREAR
-router.post('/', validateJWT, requireRole('USER_ROLE'), formDataParser.none(), createCodeExecution);
+router.post('/', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByBodyFileId, formDataParser.none(), createCodeExecution);
 
-// ELIMINAR 
-router.delete('/file/:fileId', validateJWT, requireRole('USER_ROLE'), deleteCodeExecutionsByFile);
-router.delete('/room/:roomId', validateJWT, requireRole('USER_ROLE'), deleteCodeExecutionsByRoom);
-router.delete('/:id', validateJWT, requireRole('USER_ROLE'), deleteCodeExecution);
+// ELIMINAR
+router.delete('/file/:fileId', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByFileIdParam, deleteCodeExecutionsByFile);
+router.delete('/room/:roomId', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByRoomIdParam, deleteCodeExecutionsByRoom);
+router.delete('/:id', validateJWT, requireRole('USER_ROLE'), requireCodeExecutionRoomAccessByExecutionIdParam, deleteCodeExecution);
 
 export default router;

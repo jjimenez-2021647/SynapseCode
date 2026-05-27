@@ -31,9 +31,13 @@ const transporter = createTransporter();
 
 // ─── Token display helper ───────────────────────────────────────────────────
 const tokenButton = (url, buttonText) => `
-    <a href='${url}' style='background-color: #1e616d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;'>
-        ${buttonText}
-    </a>
+    <table border="0" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+      <tr>
+        <td style="background: linear-gradient(90deg, #0099CC 0%, #B5169D 100%); padding: 14px 28px; border-radius: 6px; text-align: center;">
+          <a href='${url}' style='color: white; text-decoration: none; font-weight: 700; font-size: 16px; display: block;'>${buttonText}</a>
+        </td>
+      </tr>
+    </table>
     <p>Si no puedes hacer click en el enlace, copia y pega esta URL en tu navegador:</p>
     <p>${url}</p>
 `;

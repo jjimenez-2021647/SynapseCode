@@ -53,7 +53,6 @@ const RoomParticipationSchema = new Schema(
             default: null,
             trim: true,
         },
-
         // Rol del usuario dentro de la sala
         role: {
             type: String,

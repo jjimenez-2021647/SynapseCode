@@ -15,6 +15,7 @@ import {
     requestPhoneChangeHelper,
     confirmPhoneChangeHelper,
     changeImageHelper,
+    resetProfileImageHelper,
     requestDeactivateAccountHelper,
     confirmDeactivateAccountHelper,
     requestActivateAccountHelper, 
@@ -27,7 +28,7 @@ export const register = asyncHandler(async (req, res) => {
         // Agregar la imagen de perfil si fue subida
         const userData = {
             ...req.body,
-            profilePicture: req.file ? req.file.path.replace(/\\/g, '/') : null,
+            profilePicture: req.file ? req.file.path.replaceAll('\\', '/') : null,
         };
 
         const result = await registerUserHelper(userData);
@@ -260,16 +261,24 @@ export const changePassword = asyncHandler(async (req, res) => {
 export const updateProfile = asyncHandler(async (req, res) => {
     try {
         const userId = req.userId;
-        const { name, surname } = req.body;
+        const { name, surname, planType } = req.body;
 
-        if (!name && !surname) {
+        if (!name && !surname && !planType) {
             return res.status(400).json({
                 success: false,
                 message: 'Debes proporcionar al menos un campo para actualizar',
             });
         }
 
-        const result = await updateProfileHelper(userId, { name, surname });
+        // Validar planType si se proporciona
+        if (planType && !['FREE', 'PRO', 'ORG'].includes(planType)) {
+            return res.status(400).json({
+                success: false,
+                message: 'planType debe ser uno de: FREE, PRO, ORG',
+            });
+        }
+
+        const result = await updateProfileHelper(userId, { name, surname, planType });
         res.status(200).json(result);
     } catch (error) {
         console.error('Error in updateProfile controller:', error);
@@ -388,7 +397,7 @@ export const changeImage = asyncHandler(async (req, res) => {
             });
         }
 
-        const filePath = req.file.path.replace(/\\/g, '/');
+        const filePath = req.file.path.replaceAll('\\', '/');
         const result = await changeImageHelper(userId, filePath);
         res.status(200).json(result);
     } catch (error) {
@@ -396,6 +405,20 @@ export const changeImage = asyncHandler(async (req, res) => {
         res.status(error.status || 400).json({
             success: false,
             message: error.message || 'Error al actualizar foto de perfil',
+        });
+    }
+});
+
+export const resetProfileImage = asyncHandler(async (req, res) => {
+    try {
+        const userId = req.userId;
+        const result = await resetProfileImageHelper(userId);
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error in resetProfileImage controller:', error);
+        res.status(error.status || 400).json({
+            success: false,
+            message: error.message || 'Error al restablecer foto de perfil',
         });
     }
 });

@@ -4,7 +4,6 @@ import Room from '../rooms/rooms.model.js';
 import File from '../files/files.model.js';
 import {
     determineSaveType,
-    wasCodeExecuted,
     getNextVersionByFile,
 } from '../../helpers/code-sessions.helpers.js';
 import { normalizeCodeContent } from '../../helpers/code-normalizer.js';
@@ -52,13 +51,37 @@ const enrichCodeSessions = async (sessions) => {
 export const createCodeSession = async (req, res) => {
     try {
         const { fileId, code, isAutoSave, isBeforeExecution } = req.body;
-        const normalizedCode = normalizeCodeContent(code);
 
-        if (!fileId || normalizedCode === undefined) {
+        if (!fileId) {
             return res.status(400).json({
                 success: false,
-                message: 'fileId y code son obligatorios',
+                message: 'fileId es obligatorio',
                 error: 'MISSING_REQUIRED_FIELDS',
+            });
+        }
+
+        // si no se envía código, lo tomamos del archivo existente más reciente
+        let normalizedCode;
+        if (code === undefined) {
+            const fileForCode = await File.findById(fileId).select('currentCode').lean();
+            if (!fileForCode) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'El archivo no existe',
+                    error: 'FILE_NOT_FOUND',
+                });
+            }
+            normalizedCode = normalizeCodeContent(fileForCode.currentCode || '');
+        } else {
+            normalizedCode = normalizeCodeContent(code);
+        }
+
+        // el código puede ser cadena vacía, permitimos pero normalizado no debe ser undefined
+        if (normalizedCode === undefined) {
+            return res.status(400).json({
+                success: false,
+                message: 'code invalido',
+                error: 'INVALID_CODE',
             });
         }
 
@@ -137,6 +160,14 @@ export const updateCodeSession = async (req, res) => {
         const { language, code, executionResult, isAutoSave, isBeforeExecution } = req.body;
         const normalizedCode = normalizeCodeContent(code);
 
+        if (executionResult !== undefined) {
+            return res.status(400).json({
+                success: false,
+                message: 'executionResult no es editable desde codeSessions',
+                error: 'EXECUTION_RESULT_NOT_EDITABLE',
+            });
+        }
+
         const existingSession = await CodeSession.findById(id);
         if (!existingSession) {
             return res.status(404).json({
@@ -164,17 +195,7 @@ export const updateCodeSession = async (req, res) => {
         if (language)         updateData.language = language.toUpperCase();
         if (normalizedCode !== undefined) updateData.code = normalizedCode;
 
-        if (executionResult) {
-            updateData.wasExecuted      = true;
-            updateData.executionResult  = {
-                output:          executionResult.output          ?? null,
-                errors:          executionResult.errors          ?? null,
-                executionTimeMs: executionResult.executionTimeMs ?? null,
-                memoryUsedKb:    executionResult.memoryUsedKb    ?? null,
-            };
-        } else {
-            updateData.wasExecuted = wasCodeExecuted(existingSession.executionResult);
-        }
+        updateData.wasExecuted = existingSession.wasExecuted;
 
         const codeSession = await CodeSession.findByIdAndUpdate(id, updateData, {
             new: true,

@@ -1,0 +1,12 @@
+{
+  "name": "synapsecode-microservicios",
+  "version": "1.0.0",
+  "description": "Orquestador de microservicios SynapseCode",
+  "private": true,
+  "packageManager": "pnpm@10.29.2",
+  "scripts": {
+    "install:services": "node scripts/install.js",
+    "dev": "node scripts/dev.js",
+    "start": "node scripts/start.js"
+  }
+}

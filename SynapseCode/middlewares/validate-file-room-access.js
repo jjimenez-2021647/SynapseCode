@@ -127,7 +127,8 @@ export const requireFileRoomAccessByParamRoomId = async (req, res, next) => {
     }
 };
 
-export const requireFileRoomAccessByFileIdParam = async (req, res, next) => {
+// Middleware alternativo que permite acceso si el usuario pertenece a la sala o tiene rol ADMIN
+export const requireFileRoomAccessByParamRoomIdOrAdmin = async (req, res, next) => {
     try {
         const userId = normalizeUserId(req);
         if (!userId) {
@@ -136,6 +137,110 @@ export const requireFileRoomAccessByFileIdParam = async (req, res, next) => {
                 message: 'Token invalido: no contiene userId',
                 error: 'INVALID_TOKEN_PAYLOAD',
             });
+        }
+
+        // permitimos admins sin verificar membresía
+        if (String(req.user?.role || '').toUpperCase() === 'ADMIN_ROLE') {
+            return next();
+        }
+
+        const roomId = req.params?.roomId;
+        if (!roomId) {
+            return res.status(400).json({
+                success: false,
+                message: 'roomId es obligatorio',
+                error: 'MISSING_ROOM_ID',
+            });
+        }
+
+        const membership = await ensureMembership(roomId, userId);
+        if (!membership.ok) {
+            return res.status(membership.status).json(membership.payload);
+        }
+
+        return next();
+    } catch (error) {
+        console.error('requireFileRoomAccessByParamRoomIdOrAdmin error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error validando acceso de sala para archivos',
+            error: 'VALIDATE_FILE_ROOM_ACCESS_ERROR',
+        });
+    }
+};
+
+export const requireFileRoomAccessByFileIdParam = async (req, res, next) => {
+    try {
+        const userId = normalizeUserId(req);
+        if (!userId) {
+            console.warn('requireFileRoomAccessByFileIdParam: missing userId');
+            return res.status(401).json({
+                success: false,
+                message: 'Token invalido: no contiene userId',
+                error: 'INVALID_TOKEN_PAYLOAD',
+            });
+        }
+
+        const fileId = req.params?.id;
+        if (!fileId) {
+            console.warn('requireFileRoomAccessByFileIdParam: missing file id');
+            return res.status(400).json({
+                success: false,
+                message: 'id de archivo es obligatorio',
+                error: 'MISSING_FILE_ID',
+            });
+        }
+
+        if (!isValidObjectId(fileId)) {
+            console.warn('requireFileRoomAccessByFileIdParam: invalid ObjectId', fileId);
+            return res.status(400).json({
+                success: false,
+                message: 'id de archivo invalido',
+                error: 'INVALID_FILE_ID',
+            });
+        }
+
+        const roomId = await resolveRoomIdByFileId(fileId);
+        if (!roomId) {
+            console.warn('requireFileRoomAccessByFileIdParam: file not found', fileId);
+            return res.status(404).json({
+                success: false,
+                message: 'Archivo no encontrado',
+                error: 'FILE_NOT_FOUND',
+            });
+        }
+
+        const membership = await ensureMembership(roomId, userId);
+        if (!membership.ok) {
+            return res.status(membership.status).json(membership.payload);
+        }
+
+        return next();
+    } catch (error) {
+        console.error('requireFileRoomAccessByFileIdParam error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error validando acceso de sala para archivos',
+            error: 'VALIDATE_FILE_ROOM_ACCESS_ERROR',
+        });
+    }
+};
+
+// Variante que permite admins o miembros de sala (para borrado permanente/listado)
+export const requireFileRoomAccessByFileIdParamOrAdmin = async (req, res, next) => {
+    try {
+        const userId = normalizeUserId(req);
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Token invalido: no contiene userId',
+                error: 'INVALID_TOKEN_PAYLOAD',
+            });
+        }
+
+        // admin puede proceder sin membresía
+        if (String(req.user?.role || '').toUpperCase() === 'ADMIN_ROLE') {
+            return next();
         }
 
         const fileId = req.params?.id;
@@ -163,7 +268,7 @@ export const requireFileRoomAccessByFileIdParam = async (req, res, next) => {
 
         return next();
     } catch (error) {
-        console.error('requireFileRoomAccessByFileIdParam error:', error);
+        console.error('requireFileRoomAccessByFileIdParamOrAdmin error:', error);
         return res.status(500).json({
             success: false,
             message: 'Error validando acceso de sala para archivos',

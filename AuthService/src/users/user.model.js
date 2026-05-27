@@ -99,6 +99,7 @@ export const User = sequelize.define(
         timestamps: true,
         createdAt: 'created_at',
         updatedAt: 'updated_at',
+        versionKey: false,
     }
 );
 
@@ -138,6 +139,18 @@ export const UserProfile = sequelize.define(
                 },
                 isNumeric: { msg: 'El teléfono solo debe contener números.' },
             },
+        },
+        PlanType: {
+            type: DataTypes.ENUM('FREE', 'PRO', 'ORG'),
+            allowNull: true,
+            defaultValue: null,
+            field: 'plan_type',
+        },
+        OrgUserType: {
+            type: DataTypes.ENUM('PROFESSOR', 'STUDENT'),
+            allowNull: true,
+            defaultValue: null,
+            field: 'org_user_type',
         },
     },
     {

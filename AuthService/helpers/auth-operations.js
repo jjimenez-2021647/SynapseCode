@@ -21,7 +21,12 @@ import { buildUserResponse } from '../utils/user-helpers.js';
 import { sendVerificationEmail } from './email-service.js';
 import { generateJWT } from './generate-jwt.js';
 import path from 'path';
-import { uploadImage } from './cloudinary-service.js';
+import {
+    uploadImage,
+    getFullImageUrl,
+    getDefaultAvatarPath,
+    isDefaultAvatar,
+} from './cloudinary-service.js';
 import { config } from '../configs/config.js';
 
 const getExpirationTime = (timeString) => {
@@ -174,11 +179,19 @@ export const loginUserHelper = async (emailOrUsername, password) => {
         );
         const expiresAt = new Date(Date.now() + expiresInMs);
 
+        const profilePicture = plainUser.UserProfile?.ProfilePicture || null;
         const userDetails = {
             id: plainUser.Id,
+            name: plainUser.Name,
+            surname: plainUser.Surname,
+            email: plainUser.Email,
             username: plainUser.Username,
+            phone: plainUser.UserProfile?.Phone || '',
+            planType: plainUser.UserProfile?.PlanType || null,
+            orgUserType: plainUser.UserProfile?.OrgUserType || null,
             profilePicture:
-                plainUser.UserProfile?.ProfilePicture || null,
+                profilePicture ? getFullImageUrl(profilePicture) : getFullImageUrl(getDefaultAvatarPath()),
+            profilePictureIsDefault: isDefaultAvatar(profilePicture),
             role,
         };
 

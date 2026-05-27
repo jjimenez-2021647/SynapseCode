@@ -1,10 +1,90 @@
 'use strict'
+import mongoose from 'mongoose';
 import Message from './messages.model.js';
-import { uploadToCloudinary } from '../../helpers/cloudinary-service.js';
 import Room from '../rooms/rooms.model.js';
 import Chat from '../chats/chats.model.js';
 import RoomParticipation from '../roomParticipations/roomParticipations.model.js';
-import mongoose from 'mongoose';
+import File from '../files/files.model.js';
+import CodeSession from '../codeSessions/codeSessions.model.js';
+import { uploadToCloudinary } from '../../helpers/cloudinary-service.js';
+import { getNextVersionByFile } from '../../helpers/code-sessions.helpers.js';
+import { generateCodeWithGroq } from '../../helpers/groq.service.js';
+import { normalizeCodeContent } from '../../helpers/code-normalizer.js';
+
+const getRequesterUserId = (req) =>
+    req.user?.userId || req.user?.id || req.user?._id || req.user?.sub || null;
+const isAdminRole = (req) => String(req.user?.role || '').toUpperCase() === 'ADMIN_ROLE';
+
+const normalizeModifyCodeSessions = (value) => {
+    const normalized = String(value || 'NO_MODIFICAR').toUpperCase();
+    return normalized === 'MODIFICAR' ? 'MODIFICAR' : 'NO_MODIFICAR';
+};
+
+const normalizeCodeForSession = (aiContent) => {
+    let raw = String(aiContent || '').trim();
+    if (!raw) return '';
+
+    // Si viene en bloque markdown, extraer solo el codigo interno
+    if (raw.startsWith('```')) {
+        raw = raw.replace(/^```[a-zA-Z0-9_+-]*\s*/u, '').replace(/\s*```$/u, '').trim();
+    }
+
+    raw = normalizeCodeContent(raw).trim();
+
+    // Quitar envolturas de comillas dobles repetidas: "code", "\"code\"", etc.
+    for (let i = 0; i < 3; i += 1) {
+        if (raw.length >= 2 && raw.startsWith('"') && raw.endsWith('"')) {
+            raw = raw.slice(1, -1).trim();
+            continue;
+        }
+        break;
+    }
+
+    return raw;
+};
+
+const resolveChatAndRoom = async ({ idChat, numberChat, roomId }) => {
+    let chat = null;
+
+    if (idChat) {
+        chat = await Chat.findOne({ chatId: String(idChat).trim() }).lean();
+    } else if (numberChat) {
+        chat = await Chat.findOne({ numberChat: String(numberChat).trim() }).lean();
+    }
+
+    let resolvedRoom = null;
+    let resolvedRoomId = roomId;
+
+    if (chat) {
+        resolvedRoomId = String(chat.roomId);
+        resolvedRoom = await Room.findById(chat.roomId).lean();
+    } else if (roomId) {
+        if (mongoose.Types.ObjectId.isValid(String(roomId))) {
+            resolvedRoom = await Room.findById(roomId).lean();
+        } else {
+            resolvedRoom = await Room.findOne({ roomCode: String(roomId).toUpperCase() }).lean();
+        }
+        resolvedRoomId = resolvedRoom ? String(resolvedRoom._id) : roomId;
+    }
+
+    return {
+        chat,
+        room: resolvedRoom,
+        roomId: resolvedRoomId,
+    };
+};
+
+const ensureUserBelongsToRoom = async ({ roomId, userId }) => {
+    if (!roomId || !userId) return false;
+
+    const participation = await RoomParticipation.exists({
+        roomId,
+        userId,
+        connectionStatus: { $ne: 'DESCONECTADO' },
+    });
+
+    return Boolean(participation);
+};
 
 const enrichMessagesWithRoomContext = (messages, room) => {
     const usernamesByUserId = new Map(
@@ -22,64 +102,84 @@ const enrichMessagesWithRoomContext = (messages, room) => {
     }));
 };
 
-/**
-    Crear un nuevo mensaje
-    Valida que el tipo de mensaje sea coherente con el contenido
-    Si es IMAGEN, AUDIO o ARCHIVO, maneja la subida a Cloudinary
-    Solo HOST_ROLE y ASSISTANT_ROLE pueden crear mensajes
- */
+const appendMessageToChat = async (chatId, messageId) => {
+    if (!chatId) return;
+    await Chat.findByIdAndUpdate(
+        chatId,
+        { $addToSet: { messages: messageId } },
+        { new: false }
+    );
+};
+
 export const createMessage = async (req, res) => {
     try {
-    let { roomId, typeMessage, content, numberChat } = req.body;
-        const userId = req.user?.id || req.user?._id;
+        let {
+            idChat,
+            numberChat,
+            typeMessage,
+            content,
+            modifyCodeSessions,
+            fileId,
+        } = req.body;
 
-        if (!roomId || !typeMessage || (!content && !req.file)) {
+        const userId = getRequesterUserId(req);
+        if (!userId) {
+            return res.status(401).json({ message: 'Token invalido: no contiene userId' });
+        }
+
+        if (!numberChat || !typeMessage) {
             return res.status(400).json({
-                message: 'roomId, typeMessage y content son obligatorios',
+                message: 'numberChat y typeMessage son obligatorios',
             });
         }
 
-        // Resolver roomId: si el cliente envía un roomCode (ej: "TYM-SBP-FJR")
-        // intentar buscar la sala por roomCode y usar su _id.
-        let room = null;
-        if (roomId) {
-            const looksLikeObjectId = mongoose.Types.ObjectId.isValid(String(roomId));
-            if (looksLikeObjectId) {
-                room = await Room.findById(roomId).lean();
-            } else {
-                // Tratar roomId como roomCode
-                room = await Room.findOne({ roomCode: String(roomId).toUpperCase() }).lean();
-                if (room) {
-                    roomId = String(room._id);
-                }
-            }
-        }
-
-        // Si no se encontró sala pero tampoco se proporcionó numberChat, error
-        if (!room && !numberChat) {
-            return res.status(404).json({
-                message: 'Sala no encontrada',
+        // Para mensajes con archivo (IMAGEN, AUDIO, ARCHIVO), content es opcional
+        // Para TEXTO, content es requerido
+        const isFileType = ['IMAGEN', 'AUDIO', 'ARCHIVO'].includes(String(typeMessage).toUpperCase());
+        if (!isFileType && !content) {
+            return res.status(400).json({
+                message: 'content es obligatorio para mensajes de tipo TEXTO',
             });
         }
 
-        // Validar que el usuario sea HOST_ROLE o ASSISTANT_ROLE en la sala
-        if (room) {
-            const participation = await RoomParticipation.findOne({
-                roomId: room._id,
-                userId,
-            }).lean();
+        typeMessage = String(typeMessage).toUpperCase();
 
-            if (!participation || !['ANFITRION', 'ASISTENTE'].includes(participation.role)) {
-                return res.status(403).json({
-                    message: 'Solo HOST_ROLE (ANFITRION) y ASSISTANT_ROLE (ASISTENTE) pueden crear mensajes',
-                });
-            }
+        const resolved = await resolveChatAndRoom({ idChat, numberChat });
+        const room = resolved.room;
+        const chat = resolved.chat;
+        const roomId = resolved.roomId;
+
+        if (!chat) {
+            return res.status(404).json({ message: 'Chat no encontrado' });
+        }
+
+        if (!roomId || roomId === 'null' || roomId === 'undefined') {
+            return res.status(400).json({ message: 'Chat sin sala valida' });
+        }
+
+        if (!room) {
+            return res.status(404).json({ message: 'Sala no encontrada' });
+        }
+
+        const belongsToRoom = await ensureUserBelongsToRoom({ roomId, userId });
+        if (!belongsToRoom) {
+            return res.status(403).json({
+                message: 'No tienes permisos para enviar mensajes en esta sala',
+            });
+        }
+
+        const chatType = chat.chatType;
+        const requestedModifyMode = normalizeModifyCodeSessions(modifyCodeSessions);
+
+        if (chatType !== 'CHAT_IA' && requestedModifyMode === 'MODIFICAR') {
+            return res.status(400).json({
+                message: 'modifyCodeSessions=MODIFICAR solo se permite para CHAT_IA',
+            });
         }
 
         let messageContent = content;
-
-        // Si es IMAGEN, AUDIO o ARCHIVO, procesar el archivo
         if (['IMAGEN', 'AUDIO', 'ARCHIVO'].includes(typeMessage)) {
+            console.log('Archivo recibido:', req.file);
             if (!req.file) {
                 return res.status(400).json({
                     message: `Se requiere un archivo para mensajes de tipo ${typeMessage}`,
@@ -87,101 +187,144 @@ export const createMessage = async (req, res) => {
             }
 
             try {
+                console.log('Subiendo archivo a Cloudinary...');
                 const uploadResult = await uploadToCloudinary(req.file, {
                     folder: `synapse-code/messages/${roomId}`,
-                    resource_type: 'auto',
                 });
+                console.log('Upload result:', uploadResult);
                 messageContent = uploadResult.secure_url;
             } catch (uploadError) {
                 console.error('Error uploading to Cloudinary:', uploadError);
-                return res.status(500).json({
-                    message: 'Error al subir el archivo',
-                });
+                const errorMessage = uploadError?.message || uploadError?.toString() || 'Error desconocido al subir archivo';
+                return res.status(500).json({ message: `Error al subir el archivo: ${errorMessage}` });
             }
         }
 
-        // Validar contenido según tipo de mensaje
         if (typeMessage === 'TEXTO') {
-            if (typeof messageContent !== 'string' || messageContent.length === 0) {
+            if (typeof messageContent !== 'string' || messageContent.trim().length === 0) {
                 return res.status(400).json({
-                    message: 'Para mensajes de texto, el contenido debe ser una cadena no vacía',
+                    message: 'Para mensajes de texto, el contenido debe ser una cadena no vacia',
                 });
             }
-            if (messageContent.length > 100) {
+
+            if (messageContent.length > 5000) {
                 return res.status(400).json({
-                    message: 'El contenido no puede exceder 100 caracteres',
+                    message: 'El contenido no puede exceder 5000 caracteres',
                 });
             }
         }
 
-        // Crear el mensaje (incluye numberChat e idChat si fue provisto)
-        const messagePayload = {
+        const userMessage = await Message.create({
             roomId,
             userId,
+            chatId: chat.chatId,
+            numberChat: chat.numberChat,
             typeMessage,
             content: messageContent,
+            modifyCodeSessions: chatType === 'CHAT_IA' ? requestedModifyMode : 'NO_MODIFICAR',
             messageStatus: 'ENVIADO',
             sentAt: new Date(),
-        };
+        });
 
-        if (numberChat) {
-            messagePayload.numberChat = numberChat;
+        await appendMessageToChat(chat._id, userMessage._id);
+
+        await userMessage.populate('roomId');
+
+        if (chatType !== 'CHAT_IA' || typeMessage !== 'TEXTO') {
+            return res.status(201).json({
+                userMessage,
+                aiMessage: null,
+                codeSession: null,
+            });
         }
 
-        if (room?.idChat) {
-            messagePayload.idChat = room.idChat;
-        }
+        const aiContent = await generateCodeWithGroq({
+            prompt: messageContent,
+            languageHint: room.roomLanguage || '',
+        });
 
-        const message = await Message.create(messagePayload);
+        const aiMessage = await Message.create({
+            roomId,
+            userId: 'SYSTEM',
+            chatId: chat.chatId,
+            numberChat: chat.numberChat,
+            typeMessage: 'TEXTO',
+            content: aiContent,
+            modifyCodeSessions: requestedModifyMode,
+            messageStatus: 'ENVIADO',
+            sentAt: new Date(),
+        });
 
-        // Si se creó con numberChat o idChat, añadir referencia al Chat.messages
-        if (message.numberChat) {
-            try {
-                await Chat.findOneAndUpdate(
-                    { numberChat: message.numberChat },
-                    { $addToSet: { messages: message._id } },
-                    { new: true }
-                );
-            } catch (err) {
-                console.error('Error agregando mensaje al Chat.messages:', err);
-                // no bloqueamos la creación del mensaje por un fallo aquí
+        await appendMessageToChat(chat._id, aiMessage._id);
+
+        let createdCodeSession = null;
+        if (requestedModifyMode === 'MODIFICAR') {
+            if (!fileId) {
+                return res.status(400).json({
+                    message: 'fileId es obligatorio cuando modifyCodeSessions es MODIFICAR',
+                    userMessage,
+                    aiMessage,
+                });
             }
-        } else if (message.idChat) {
-            try {
-                await Chat.findByIdAndUpdate(
-                    message.idChat,
-                    { $addToSet: { messages: message._id } },
-                    { new: true }
-                );
-            } catch (err) {
-                console.error('Error agregando mensaje al Chat.messages por idChat:', err);
-                // no bloqueamos la creación del mensaje por un fallo aquí
+
+            const file = await File.findById(fileId).lean();
+            if (!file) {
+                return res.status(404).json({
+                    message: 'El archivo indicado por fileId no existe',
+                    userMessage,
+                    aiMessage,
+                });
             }
+
+            if (String(file.roomId) !== String(roomId)) {
+                return res.status(403).json({
+                    message: 'El archivo no pertenece a la sala del chat IA',
+                    userMessage,
+                    aiMessage,
+                });
+            }
+
+            const cleanCode = normalizeCodeForSession(aiContent);
+            const version = await getNextVersionByFile(fileId);
+
+            createdCodeSession = await CodeSession.create({
+                fileId: file._id,
+                roomId: roomId,
+                language: file.language,
+                code: cleanCode,
+                savedByUserId: userId,
+                version,
+                saveType: 'MANUAL',
+                wasExecuted: false,
+                savedAt: new Date(),
+            });
+
+            await File.findByIdAndUpdate(fileId, {
+                currentCode: cleanCode,
+                lastModifiedByUserId: userId,
+                lastModifiedAt: new Date(),
+            });
         }
 
-        // Poblar referencias
-        await message.populate('roomId');
-
-        return res.status(201).json(message);
+        return res.status(201).json({
+            userMessage,
+            aiMessage,
+            codeSession: createdCodeSession,
+        });
     } catch (error) {
         console.error('createMessage error:', error);
+        const errorMessage = error?.message || error?.toString() || 'Error creando el mensaje';
         return res.status(400).json({
-            message: error.message || 'Error creando el mensaje',
+            message: errorMessage,
         });
     }
 };
 
-/**
-    Obtener todos los mensajes de una sala
-    Ordenados por sentAt en orden ascendente
-    Excluye mensajes eliminados (soft delete)
- */
 export const getRoomMessages = async (req, res) => {
     try {
-        const { roomId } = req.params;
+        const { roomId, numberChat } = req.params;
         const { page = 1, limit = 50 } = req.query;
 
-        // Validar que la sala exista
         const room = await Room.findById(roomId);
         if (!room) {
             return res.status(404).json({
@@ -189,30 +332,50 @@ export const getRoomMessages = async (req, res) => {
             });
         }
 
+        const chat = await Chat.findOne({ numberChat, roomId }).lean();
+        if (!chat) {
+            return res.status(404).json({
+                message: 'Chat no encontrado en la sala',
+            });
+        }
+
+        // membership / admin check
+        const userId = getRequesterUserId(req);
+        const requesterIsAdmin = isAdminRole(req);
+        const belongs = await ensureUserBelongsToRoom({ roomId, userId });
+        if (!belongs && !requesterIsAdmin) {
+            return res.status(403).json({ message: 'No tienes permiso para ver los mensajes de esta sala' });
+        }
+
         const skipAmount = (page - 1) * limit;
 
         const messages = await Message.find({
             roomId,
+            numberChat,
             messageStatus: { $ne: 'ELIMINADO' },
+            typeMessage: { $ne: 'SISTEMA' },
         })
             .sort({ sentAt: 1 })
             .skip(skipAmount)
-            .limit(parseInt(limit))
+            .limit(parseInt(limit, 10))
             .lean();
 
         const enrichedMessages = enrichMessagesWithRoomContext(messages, room);
+
         const totalMessages = await Message.countDocuments({
             roomId,
+            numberChat,
             messageStatus: { $ne: 'ELIMINADO' },
+            typeMessage: { $ne: 'SISTEMA' },
         });
 
         return res.status(200).json({
             messages: enrichedMessages,
             pagination: {
-                currentPage: parseInt(page),
+                currentPage: parseInt(page, 10),
                 totalPages: Math.ceil(totalMessages / limit),
                 totalMessages,
-                limit: parseInt(limit),
+                limit: parseInt(limit, 10),
             },
         });
     } catch (error) {
@@ -223,7 +386,6 @@ export const getRoomMessages = async (req, res) => {
     }
 };
 
-// Obtener un mensaje especifico por id
 export const getMessageById = async (req, res) => {
     try {
         const { messageId } = req.params;
@@ -236,13 +398,32 @@ export const getMessageById = async (req, res) => {
             });
         }
 
+        // membership check: only participants or admins can read
+        const userId = getRequesterUserId(req);
+        const requesterIsAdmin = isAdminRole(req);
+        const belongs = await ensureUserBelongsToRoom({ roomId: message.roomId, userId });
+        if (!belongs && !requesterIsAdmin) {
+            return res.status(403).json({
+                message: 'No tienes permiso para ver este mensaje',
+            });
+        }
+
         if (message.messageStatus === 'ELIMINADO') {
             return res.status(404).json({
                 message: 'Este mensaje ha sido eliminado',
             });
         }
 
-        return res.status(200).json(message);
+        // Build response object, filtering modifyCodeSessions for non-CHAT_IA messages
+        const messageResponse = message;
+        const chatType = message.chatType || 'CHAT_SALA'; // default to CHAT_SALA
+        
+        // Only include modifyCodeSessions if chat is CHAT_IA
+        if (chatType !== 'CHAT_IA') {
+            delete messageResponse.modifyCodeSessions;
+        }
+
+        return res.status(200).json(messageResponse);
     } catch (error) {
         console.error('getMessageById error:', error);
         return res.status(400).json({
@@ -251,16 +432,11 @@ export const getMessageById = async (req, res) => {
     }
 };
 
-/**
-    Editar un mensaje existente
-    Solo permite edición dentro de 30 minutos desde su creación
-    Solo el autor del mensaje puede editarlo
- */
 export const editMessage = async (req, res) => {
     try {
         const { messageId } = req.params;
         const { content } = req.body;
-        const userId = req.user?.id || req.user?._id;
+        const userId = getRequesterUserId(req);
 
         if (!content) {
             return res.status(400).json({
@@ -276,32 +452,50 @@ export const editMessage = async (req, res) => {
             });
         }
 
-        // Verificar que el usuario sea el autor del mensaje
+        // must be the author and still belong to room
         if (message.userId !== userId) {
             return res.status(403).json({
                 message: 'No tienes permiso para editar este mensaje',
             });
         }
+        const stillInRoom = await ensureUserBelongsToRoom({ roomId: message.roomId, userId });
+        if (!stillInRoom) {
+            return res.status(403).json({
+                message: 'Ya no perteneces a la sala asociada a este mensaje',
+            });
+        }
 
-        // Verificar que el mensaje no haya sido eliminado
         if (message.messageStatus === 'ELIMINADO') {
             return res.status(400).json({
                 message: 'No se puede editar un mensaje eliminado',
             });
         }
 
-        // Verificar que esté dentro de 30 minutos
-        if (!message.canBeEdited()) {
+        // Only TEXTO messages can be edited
+        if (message.typeMessage !== 'TEXTO') {
             return res.status(400).json({
-                message: 'Solo puedes editar mensajes dentro de 30 minutos después de su envío',
+                message: `Los mensajes de tipo ${message.typeMessage} no pueden ser editados, solo eliminados`,
             });
         }
 
-        // Validar contenido según tipo de mensaje
+        // Only CHAT_SALA messages can be edited, not CHAT_IA
+        const chatType = message.chatType || 'CHAT_SALA';
+        if (chatType === 'CHAT_IA') {
+            return res.status(400).json({
+                message: 'Los mensajes de CHAT_IA no pueden ser editados, solo eliminados',
+            });
+        }
+
+        if (!message.canBeEdited()) {
+            return res.status(400).json({
+                message: 'Solo puedes editar mensajes dentro de 30 minutos despues de su envio',
+            });
+        }
+
         if (message.typeMessage === 'TEXTO') {
             if (typeof content !== 'string' || content.length === 0) {
                 return res.status(400).json({
-                    message: 'Para mensajes de texto, el contenido debe ser una cadena no vacía',
+                    message: 'Para mensajes de texto, el contenido debe ser una cadena no vacia',
                 });
             }
             if (content.length > 5000) {
@@ -311,7 +505,6 @@ export const editMessage = async (req, res) => {
             }
         }
 
-        // Actualizar el mensaje
         message.content = content;
         message.isEdited = true;
         message.editedAt = new Date();
@@ -328,16 +521,11 @@ export const editMessage = async (req, res) => {
     }
 };
 
-/**
-    Eliminar un mensaje (soft delete)
-    Solo permite eliminación dentro de 30 minutos desde su creación
-    Solo el autor del mensaje puede eliminarlo
-    Cambia el estado a ELIMINADO en lugar de eliminar físicamente
- */
 export const deleteMessage = async (req, res) => {
     try {
         const { messageId } = req.params;
-        const userId = req.user?.id || req.user?._id;
+        const userId = getRequesterUserId(req);
+        const requesterIsAdmin = isAdminRole(req);
 
         const message = await Message.findById(messageId);
 
@@ -347,30 +535,36 @@ export const deleteMessage = async (req, res) => {
             });
         }
 
-        // Verificar que el usuario sea el autor del mensaje
-        if (message.userId !== userId) {
+        if (!requesterIsAdmin && message.userId !== userId) {
             return res.status(403).json({
                 message: 'No tienes permiso para eliminar este mensaje',
             });
         }
+        if (!requesterIsAdmin) {
+            const stillInRoom = await ensureUserBelongsToRoom({ roomId: message.roomId, userId });
+            if (!stillInRoom) {
+                return res.status(403).json({
+                    message: 'Ya no perteneces a la sala asociada a este mensaje',
+                });
+            }
+        }
 
-        // Verificar que no esté ya eliminado
         if (message.messageStatus === 'ELIMINADO') {
             return res.status(400).json({
                 message: 'Este mensaje ya ha sido eliminado',
             });
         }
 
-        // Verificar que esté dentro de 30 minutos
-        if (!message.canBeDeleted()) {
+        if (!requesterIsAdmin && !message.canBeDeleted()) {
             return res.status(400).json({
-                message: 'Solo puedes eliminar mensajes dentro de 30 minutos después de su envío',
+                message: 'Solo puedes eliminar mensajes dentro de 30 minutos despues de su envio',
             });
         }
 
-        // Soft delete: cambiar estado a ELIMINADO
         message.messageStatus = 'ELIMINADO';
-        message.content = '[Mensaje eliminado]';
+        message.content = requesterIsAdmin
+            ? '[Mensaje eliminado por moderacion administrativa]'
+            : '[Mensaje eliminado]';
         await message.save();
 
         return res.status(200).json({
@@ -385,9 +579,6 @@ export const deleteMessage = async (req, res) => {
     }
 };
 
-/**
-    Obtener mensajes del sistema de una sala
- */
 export const getSystemMessages = async (req, res) => {
     try {
         const { roomId } = req.params;
@@ -418,10 +609,6 @@ export const getSystemMessages = async (req, res) => {
     }
 };
 
-/**
-    Crear un mensaje del sistema automáticamente
-    Utiliza templates predefinidos
- */
 export const createSystemMessage = async (req, res) => {
     try {
         const { roomId, templateKey, values } = req.body;

@@ -3,17 +3,22 @@ import CodeExecution from './codeExecutions.model.js';
 import Room from '../rooms/rooms.model.js';
 import File from '../files/files.model.js';
 import CodeSession from '../codeSessions/codeSessions.model.js';
-import { executeCode, submitCode, getSubmissionResult } from '../../helpers/Judge0.service.js';
+import { executeCode, submitCode, getSubmissionResult, getAllJudge0Languages } from '../../helpers/Judge0.service.js';
 
 // ─── Limite de ejecuciones por hora ───────────────────────────────────────────
 const HOURLY_LIMIT = 50;
 
 const checkUserRateLimit = async (userId) => {
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    // Ventana fija por hora: reinicia a las horas exactas (00:00, 01:00, 02:00, etc.)
+    const now = new Date();
+    const currentHourStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), 0, 0, 0);
+    const nextHourStart = new Date(currentHourStart.getTime() + 60 * 60 * 1000);
+    
     const count = await CodeExecution.countDocuments({
         userId,
-        executedAt: { $gte: oneHourAgo },
+        executedAt: { $gte: currentHourStart, $lt: nextHourStart },
     });
+    
     return { count, limitReached: count >= HOURLY_LIMIT };
 };
 
@@ -68,17 +73,29 @@ const enrichCodeExecutions = async (executions) => {
  * GET /code-executions/languages  — público, sin JWT
  */
 export const getSupportedLanguages = async (req, res) => {
-    return res.status(200).json({
-        success: true,
-        message: 'Lenguajes soportados',
-        data: [
-            { language: 'JAVASCRIPT', judge0Id: 63, description: 'Node.js 12.14.0'        },
-            { language: 'PYTHON',     judge0Id: 71, description: 'Python 3.8.1'            },
-            { language: 'JAVA',       judge0Id: 62, description: 'Java OpenJDK 13'         },
-            { language: 'CSHARP',     judge0Id: 51, description: 'C# Mono 6.6.0'           },
-            { language: 'HTML_CSS',   judge0Id: 63, description: 'Ejecutado como Node.js'  },
-        ],
-    });
+    try {
+        const allLanguages = await getAllJudge0Languages();
+        
+        return res.status(200).json({
+            success: true,
+            message: 'Lenguajes soportados',
+            data: allLanguages,
+        });
+    } catch (error) {
+        console.error('Error obteniendo lenguajes:', error);
+        
+        // Fallback a lenguajes por defecto si hay error
+        return res.status(200).json({
+            success: true,
+            message: 'Lenguajes soportados (fallback)',
+            data: [
+                { id: 63, name: 'JavaScript (Node.js 12.14.0)' },
+                { id: 71, name: 'Python (3.8.1)' },
+                { id: 62, name: 'Java (OpenJDK 13.0.1)' },
+                { id: 51, name: 'C# (Mono 6.6.0)' },
+            ],
+        });
+    }
 };
 
 /**
@@ -436,6 +453,42 @@ export const getCodeExecutions = async (req, res) => {
             success: false,
             message: 'Error obteniendo ejecuciones de codigo',
             error: 'GET_EXECUTIONS_ERROR',
+        });
+    }
+};
+
+export const getCodeExecutionsAudit = async (_req, res) => {
+    try {
+        const executions = await CodeExecution.find({})
+            .sort({ executedAt: -1 })
+            .lean();
+        const data = await enrichCodeExecutions(executions);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Auditoria de ejecuciones obtenida exitosamente',
+            count: data.length,
+            data: data.map((execution) => ({
+                executionId: execution._id,
+                roomId: execution.roomId,
+                roomCode: execution.roomCode || null,
+                roomName: execution.roomName || null,
+                fileId: execution.fileId,
+                fullFileName: execution.fullFileName || null,
+                executedByUserId: execution.userId,
+                executedByUsername: execution.username || null,
+                language: execution.language,
+                executionStatus: execution.executionStatus,
+                executedAt: execution.executedAt,
+                judge0TokenId: execution.judge0TokenId || null,
+            })),
+        });
+    } catch (error) {
+        console.error('getCodeExecutionsAudit error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error obteniendo auditoria de ejecuciones',
+            error: 'GET_CODE_EXECUTIONS_AUDIT_ERROR',
         });
     }
 };

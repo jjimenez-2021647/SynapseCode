@@ -4,6 +4,7 @@ import { Schema, model } from 'mongoose';
 // Enum values
 const MESSAGE_TYPES = ['TEXTO', 'IMAGEN', 'AUDIO', 'ARCHIVO', 'SISTEMA'];
 const MESSAGE_STATUSES = ['ENVIADO', 'EDITADO', 'ELIMINADO'];
+const MODIFY_CODE_SESSION_VALUES = ['MODIFICAR', 'NO_MODIFICAR'];
 
 // Possible SISTEMA message templates
 const SYSTEM_MESSAGE_TEMPLATES = {
@@ -56,12 +57,12 @@ const MessageSchema = new Schema(
             validate: {
                 validator: function (value) {
                     // Validar máximo de caracteres solo para mensajes de texto
-                    if (this.typeMessage === 'TEXTO' && value.length > 100) {
+                    if (this.typeMessage === 'TEXTO' && value.length > 5000) {
                         return false;
                     }
                     return value.length > 0;
                 },
-                message: 'El contenido no puede exceder 100 caracteres para mensajes de texto',
+                message: 'El contenido no puede exceder 5000 caracteres para mensajes de texto',
             },
         },
 
@@ -103,16 +104,28 @@ const MessageSchema = new Schema(
             default: null,
         },
 
-        // Referencia al Chat al que pertenece el mensaje
-        idChat: {
-            type: Schema.Types.ObjectId,
-            ref: 'Chat',
+        // Id logico del chat (cht_xxx)
+        chatId: {
+            type: String,
             required: false,
+            trim: true,
             default: null,
+        },
+
+        // Solo aplica para CHAT_IA para decidir si debe crear version en CodeSession
+        modifyCodeSessions: {
+            type: String,
+            required: false,
+            enum: {
+                values: MODIFY_CODE_SESSION_VALUES,
+                message: 'Valor invalido para modifyCodeSessions',
+            },
+            default: 'NO_MODIFICAR',
         },
     },
     {
         timestamps: true,
+        versionKey: false,
     }
 );
 
@@ -121,7 +134,7 @@ MessageSchema.index({ roomId: 1, sentAt: 1 });
 MessageSchema.index({ userId: 1 });
 MessageSchema.index({ messageStatus: 1 });
 MessageSchema.index({ numberChat: 1, sentAt: 1 });
-MessageSchema.index({ idChat: 1, sentAt: 1 });
+MessageSchema.index({ chatId: 1, sentAt: 1 });
 
 // Validación personalizada: si está editado, fechaEdicion es obligatoria
 // Usar throw en lugar de callback next() para evitar incompatibilidades
@@ -170,4 +183,4 @@ MessageSchema.statics.createSystemMessage = async function (roomId, templateKey,
 const Message = model('Message', MessageSchema);
 
 export default Message;
-export { MESSAGE_TYPES, MESSAGE_STATUSES, SYSTEM_MESSAGE_TEMPLATES };
+export { MESSAGE_TYPES, MESSAGE_STATUSES, SYSTEM_MESSAGE_TEMPLATES, MODIFY_CODE_SESSION_VALUES };

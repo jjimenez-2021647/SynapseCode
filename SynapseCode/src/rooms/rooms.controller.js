@@ -7,17 +7,76 @@ import CodeSession from '../codeSessions/codeSessions.model.js';
 import CodeExecution from '../codeExecutions/codeExecutions.model.js';
 import RoomParticipation from '../roomParticipations/roomParticipations.model.js';
 import generateUniqueRoomCode from '../../helpers/rooms.helpers.js';
-import { getRoleDefaultPermissions } from '../../helpers/roomParticipations.helpers.js';
+import { getRoleDefaultPermissions, calculateTotalMinutes } from '../../helpers/roomParticipations.helpers.js';
 
 const getRequesterUserId = (req) =>
     req.user?.userId || req.user?.id || req.user?.sub || null;
 
+// Lenguajes soportados (igual al modelo)
+const ROOM_LANGUAGES = ['JAVA', 'PYTHON', 'JAVASCRIPT', 'HTML_CSS', 'CSHARP'];
+
 const isUserRole = (req) => String(req.user?.role || '').toUpperCase() === 'USER_ROLE';
+const isAdminRole = (req) => String(req.user?.role || '').toUpperCase() === 'ADMIN_ROLE';
+const isUserOrAdminRole = (req) => isUserRole(req) || isAdminRole(req);
+
+const attachChatsToRoom = (room, chats) => {
+    const roomData = typeof room.toObject === 'function' ? room.toObject() : room;
+    const roomChats = (chats || []).map((chat) => ({
+        chatId: chat.chatId,
+        numberChat: chat.numberChat,
+        chatType: chat.chatType,
+    }));
+
+    return {
+        ...roomData,
+        chats: roomChats,
+    };
+};
+
+const buildMessagesForRoom = async (room, roomChats) => {
+    const chatNumbers = (roomChats || []).map((chat) => chat.numberChat).filter(Boolean);
+    if (!chatNumbers.length && room?.numberChat) {
+        chatNumbers.push(room.numberChat);
+    }
+    const messages = chatNumbers.length
+        ? await Message.find({
+            numberChat: { $in: chatNumbers },
+            messageStatus: { $ne: 'ELIMINADO' },
+        }).sort({ sentAt: 1 }).lean()
+        : [];
+
+    const usernamesByUserId = new Map((room.connectedUsers || []).map((u) => [u.userId, u.username]));
+
+    return (messages || []).map((m) => {
+        const base = {
+            numberChat: m.numberChat,
+            chatId: m.chatId || null,
+            userId: m.userId,
+            userName: m.userId === 'SYSTEM' ? 'SYSTEM' : usernamesByUserId.get(m.userId) || null,
+            content: m.content,
+            sentAt: m.sentAt,
+            modifyCodeSessions: m.modifyCodeSessions || 'NO_MODIFICAR',
+        };
+        if (m.isEdited) base.isEdited = true;
+        return base;
+    });
+};
 
 export const createRoom = async (req, res) => {
     try {
         const payload = { ...req.body };
         const hostIdFromToken = getRequesterUserId(req);
+
+        // Validación: Si es multi-language, roomLanguage debe tener al menos 1 elemento
+        if (payload.isMultiLanguage === true) {
+            if (!Array.isArray(payload.roomLanguage) || payload.roomLanguage.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'En modo multi-lenguaje, debe haber al menos un lenguaje seleccionado',
+                    error: 'EMPTY_MULTILANGUAGE_ARRAY',
+                });
+            }
+        }
 
         if (!isUserRole(req)) {
             return res.status(403).json({
@@ -31,7 +90,6 @@ export const createRoom = async (req, res) => {
             });
         }
 
-        // El host siempre se toma del token para evitar suplantacion por body
         payload.hostId = hostIdFromToken;
         payload.connectedUsers = [
             {
@@ -47,15 +105,8 @@ export const createRoom = async (req, res) => {
             payload.roomCode = String(payload.roomCode).toUpperCase();
         }
 
-        // Crear el chat automáticamente para la sala
-        const chat = await Chat.create({});
-
-        // Asignar el ID del chat a la sala
-        payload.idChat = chat._id;
-
         const room = await Room.create(payload);
 
-        // Quien crea la sala pasa a ser anfitrión (HOST): se crea su participación con rol ANFITRION y todos los privilegios
         await RoomParticipation.create({
             roomId: room._id,
             userId: room.hostId,
@@ -64,7 +115,18 @@ export const createRoom = async (req, res) => {
             permissions: getRoleDefaultPermissions('ANFITRION'),
         });
 
-        return res.status(201).json(room);
+        const salaChat = await Chat.create({
+            roomId: room._id,
+            chatType: 'CHAT_SALA',
+            numberChat: room.numberChat,
+        });
+
+        const iaChat = await Chat.create({
+            roomId: room._id,
+            chatType: 'CHAT_IA',
+        });
+
+        return res.status(201).json(attachChatsToRoom(room, [salaChat, iaChat]));
     } catch (error) {
         console.error('createRoom error:', error);
         return res.status(400).json({ message: error.message || 'Error creando la sala' });
@@ -73,62 +135,52 @@ export const createRoom = async (req, res) => {
 
 export const updateRoom = async (req, res) => {
     try {
-        // obtiene el id de quien hizo la peticion con el token
         const requesterUserId = getRequesterUserId(req);
-        //obtienen el id que vienen en la ruta
         const codeParam = req.params.code || req.params.id;
 
-        //si el token no trae el userId manda a decir que no sirve 
         if (!requesterUserId) {
             return res.status(401).json({ message: 'Token invalido: no contiene userId' });
         }
 
-        //busca la sala por su codigo y si no la encuentra por su id
         let room = await Room.findOne({ roomCode: String(codeParam).toUpperCase() });
         if (!room && String(codeParam || '').match(/^[a-f\d]{24}$/i)) {
             room = await Room.findById(codeParam);
         }
 
-        // y si no hay nada manda a decir que no se encuentra la sala 
         if (!room) {
             return res.status(404).json({ message: 'Sala no encontrada' });
         }
 
-        //verificamos que si el role del token es user_role y si no es user tira error
         if (room.hostId !== requesterUserId) {
             return res.status(403).json({
                 message: 'Solo el HOST_ROLE de la sala puede editarla',
             });
         }
-         //definimos que campos se pueden actualizar de la sala
+
         const allowedFields = new Set([
             'roomName',
             'roomType',
             'roomLanguage',
+            'isMultiLanguage',
             'maxUsers',
             'currentCode',
             'lastActivity',
             'roomStatus',
         ]);
 
-        // convierte nuestro body en un array 
-        //luego filtra el array para darnos los campos que si se pueden modificar 
         const updates = Object.fromEntries(
             Object.entries(req.body || {}).filter(([key]) => allowedFields.has(key))
         );
 
-        // nos indica si el objeto esta vacio 
         if (!Object.keys(updates).length) {
             return res.status(400).json({
                 message: 'No se proporcionaron campos validos para actualizar la sala',
             });
         }
 
-        //asignamos a la sala los campos que se modificaron y lo guardamos en room
         Object.assign(room, updates);
         await room.save();
 
-        //devolvemos nuestro room con todo ya modificado 
         return res.status(200).json(room);
     } catch (error) {
         console.error('updateRoomByCode error:', error);
@@ -138,19 +190,15 @@ export const updateRoom = async (req, res) => {
 
 export const getRoom = async (req, res) => {
     try {
-        // si el rol de usurio en el token no es user_role no puede listar
-        if (!isUserRole(req)) {
+        if (!isUserOrAdminRole(req)) {
             return res.status(403).json({
-                message: 'Solo USER_ROLE puede listar y buscar salas',
+                message: 'Solo USER_ROLE o ADMIN_ROLE puede listar y buscar salas',
             });
         }
 
-        // tenemos los valore spor medio del query para filtrarlos
-        // y si no se ponen entonces se lista todo
         const { q, roomName, roomCode, roomType, roomStatus } = req.query;
         const filters = {};
 
-        // este nos ayuda a filtrar por nombre de sala o codigo de sala sin importar masyusculas o minsculas
         if (q) {
             const safeQuery = String(q).trim();
             if (safeQuery) {
@@ -161,53 +209,28 @@ export const getRoom = async (req, res) => {
             }
         }
 
-        //filtra por nombre de SAla
-        if (roomName) filters.roomName = { 
-            $regex: String(roomName).trim(), $options: 'i' 
-        };
-        //filtra por codigo de sala
-        if (roomCode) filters.roomCode = String(roomCode)
-            .toUpperCase();
-        //filtra por tipo de sala
-        if (roomType) filters.roomType = String(roomType)
-            .toUpperCase();
-        //filtra por el estatus de la sala
-        if (roomStatus) filters.roomStatus = String(roomStatus)
-            .toUpperCase();
+        if (roomName) filters.roomName = { $regex: String(roomName).trim(), $options: 'i' };
+        if (roomCode) filters.roomCode = String(roomCode).toUpperCase();
+        if (roomType) filters.roomType = String(roomType).toUpperCase();
+        if (roomStatus) filters.roomStatus = String(roomStatus).toUpperCase();
 
-        //busca las salas si es que se aplico algun fultro
         const rooms = await Room.find(filters).lean();
+        const roomIds = rooms.map((room) => room._id);
+        const chats = roomIds.length ? await Chat.find({ roomId: { $in: roomIds } }).lean() : [];
 
-        // Adjuntar mensajes por numberChat en cada sala
+        const chatsByRoomId = new Map();
+        for (const chat of chats) {
+            const key = String(chat.roomId);
+            const list = chatsByRoomId.get(key) || [];
+            list.push(chat);
+            chatsByRoomId.set(key, list);
+        }
+
         const roomsWithMessages = await Promise.all(
             rooms.map(async (room) => {
-                const messages = await Message.find({
-                    numberChat: room.numberChat,
-                    messageStatus: { $ne: 'ELIMINADO' },
-                })
-                    .sort({ sentAt: 1 })
-                    .lean();
-
-                // Crear mapa userId -> username para la sala
-                const usernamesByUserId = new Map((room.connectedUsers || []).map((u) => [u.userId, u.username]));
-
-                //mandamos a traer lo que queremos que salga en mensajes
-                const mapped = (messages || []).map((m) => {
-                    const base = {
-                        numberChat: m.numberChat,
-                        userId: m.userId,
-                        userName: m.userId === 'SYSTEM' ? 'SYSTEM' : usernamesByUserId.get(m.userId) || null,
-                        content: m.content,
-                        sentAt: m.sentAt,
-                    };
-                    if (m.isEdited) base.isEdited = true;
-                    return base;
-                });
-                // lo mandamos a traer nuevamente en el room pero con los mensajes ya incluidos
-                return {
-                    ...room,
-                    messages: mapped,
-                };
+                const roomChats = chatsByRoomId.get(String(room._id)) || [];
+                const mapped = await buildMessagesForRoom(room, roomChats);
+                return attachChatsToRoom({ ...room, messages: mapped }, roomChats);
             })
         );
 
@@ -220,9 +243,9 @@ export const getRoom = async (req, res) => {
 
 export const getRoomByCode = async (req, res) => {
     try {
-        if (!isUserRole(req)) {
+        if (!isUserOrAdminRole(req)) {
             return res.status(403).json({
-                message: 'Solo USER_ROLE puede listar y buscar salas',
+                message: 'Solo USER_ROLE o ADMIN_ROLE puede listar y buscar salas',
             });
         }
 
@@ -233,43 +256,54 @@ export const getRoomByCode = async (req, res) => {
             return res.status(404).json({ message: 'Sala no encontrada' });
         }
 
-        // unimos los mensajes de la sala con el numberchat para que se muestren en la salA
-        const messages = await Message.find({
-            numberChat: room.numberChat,
-            messageStatus: { $ne: 'ELIMINADO' },
-        })
-            .sort({ sentAt: 1 })
-            .lean();
+        const roomChats = await Chat.find({ roomId: room._id }).lean();
+        const mapped = await buildMessagesForRoom(room, roomChats);
 
-        const usernamesByUserId = new Map((room.connectedUsers || []).map((u) => [u.userId, u.username]));
-
-        const mapped = (messages || []).map((m) => {
-            const base = {
-                numberChat: m.numberChat,
-                userId: m.userId,
-                userName: m.userId === 'SYSTEM' ? 'SYSTEM' : usernamesByUserId.get(m.userId) || null,
-                content: m.content,
-                sentAt: m.sentAt,
-            };
-            if (m.isEdited) base.isEdited = true;
-            return base;
-        });
-
-        return res.status(200).json({
-            ...room,
-            messages: mapped,
-        });
+        return res.status(200).json(attachChatsToRoom({ ...room, messages: mapped }, roomChats));
     } catch (error) {
         console.error('getRoomByCode error:', error);
         return res.status(400).json({ message: error.message || 'Error obteniendo la sala por codigo' });
     }
 };
 
+export const getRoomCreatorsAudit = async (_req, res) => {
+    try {
+        const rooms = await Room.find({})
+            .select('roomCode roomName hostId createdAt roomStatus roomType roomLanguage')
+            .sort({ createdAt: -1 })
+            .lean();
 
+        const data = rooms.map((room) => ({
+            roomId: room._id,
+            roomCode: room.roomCode,
+            roomName: room.roomName,
+            createdByUserId: room.hostId,
+            createdAt: room.createdAt || null,
+            roomStatus: room.roomStatus,
+            roomType: room.roomType,
+            roomLanguage: room.roomLanguage || null,
+        }));
+
+        return res.status(200).json({
+            success: true,
+            message: 'Auditoria de creacion de salas obtenida exitosamente',
+            count: data.length,
+            data,
+        });
+    } catch (error) {
+        console.error('getRoomCreatorsAudit error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error obteniendo auditoria de creadores de salas',
+            error: 'GET_ROOM_CREATORS_AUDIT_ERROR',
+        });
+    }
+};
 
 export const deleteRoom = async (req, res) => {
     try {
         const requesterUserId = getRequesterUserId(req);
+        const requesterIsAdmin = isAdminRole(req);
         const { code } = req.params;
 
         if (!requesterUserId) {
@@ -282,34 +316,28 @@ export const deleteRoom = async (req, res) => {
             return res.status(404).json({ message: 'Sala no encontrada' });
         }
 
-        if (room.hostId !== requesterUserId) {
+        if (!requesterIsAdmin && room.hostId !== requesterUserId) {
             return res.status(403).json({
                 message: 'Solo el HOST_ROLE duenio de la sala puede eliminarla',
             });
         }
 
-        // elimina todos los datos o registros guardados en la db que se relacione con la sala
         const [messagesResult, chatResult, filesResult, sessionsResult, executionsResult, participationsResult] =
             await Promise.all([
                 Message.deleteMany({
-                    $or: [{ roomId: room._id }, { numberChat: room.numberChat }, { idChat: room.idChat }],
+                    $or: [{ roomId: room._id }, { numberChat: room.numberChat }],
                 }),
-                Chat.deleteMany({
-                    $or: [{ numberChat: room.numberChat }, { _id: room.idChat }],
-                }),
+                Chat.deleteMany({ roomId: room._id }),
                 File.deleteMany({ roomId: room._id }),
                 CodeSession.deleteMany({ roomId: room._id }),
                 CodeExecution.deleteMany({ roomId: room._id }),
                 RoomParticipation.deleteMany({ roomId: room._id }),
             ]);
 
-        //eliminamos la sala
         await Room.deleteOne({ _id: room._id });
 
-        //retornamos el mensaje de que si se elimino la sala 
         return res.status(200).json({
             message: 'Sala eliminada correctamente con sus registros relacionados',
-            // nos muestra que es lo que se elimino o cuanto si uno o cuantos 
             deleted: {
                 roomId: String(room._id),
                 roomCode: room.roomCode,
@@ -324,5 +352,154 @@ export const deleteRoom = async (req, res) => {
     } catch (error) {
         console.error('deleteRoomByCode error:', error);
         return res.status(400).json({ message: error.message || 'Error eliminando la sala por codigo' });
+    }
+};
+
+export const deactivateRoom = async (req, res) => {
+    try {
+        const requesterUserId = getRequesterUserId(req);
+        const requesterIsAdmin = isAdminRole(req);
+        const { code } = req.params;
+
+        if (!requesterUserId) {
+            return res.status(401).json({ message: 'Token invalido: no contiene userId' });
+        }
+
+        const room = await Room.findOne({ roomCode: String(code).toUpperCase() });
+
+        if (!room) {
+            return res.status(404).json({ message: 'Sala no encontrada' });
+        }
+
+        if (!requesterIsAdmin && room.hostId !== requesterUserId) {
+            return res.status(403).json({
+                message: 'Solo el HOST_ROLE duenio de la sala puede finalizarla',
+            });
+        }
+
+        room.roomStatus = 'CERRADA';
+        room.connectedUsers = [];
+        room.lastActivity = {
+            date: new Date(),
+            action: requesterIsAdmin
+                ? 'Sala finalizada/desactivada por moderacion administrativa'
+                : 'Sala finalizada/desactivada por anfitrion',
+            performedBy: {
+                userId: requesterUserId,
+                username: req.user?.username || null,
+            },
+        };
+        await room.save();
+
+        const activeParticipations = await RoomParticipation.find({
+            roomId: room._id,
+            connectionStatus: 'CONECTADO',
+        });
+
+        const now = new Date();
+        const updatePromises = activeParticipations.map(async (part) => {
+            part.leftAt = now;
+            part.connectionStatus = 'DESCONECTADO';
+            part.totalMinutes = calculateTotalMinutes(part.joinedAt, now, part.totalMinutes);
+            return part.save();
+        });
+
+        await Promise.all(updatePromises);
+
+        return res.status(200).json({
+            message: 'Sala finalizada y desactivada correctamente. Todos los miembros han sido desconectados.',
+            roomId: room._id,
+            roomStatus: room.roomStatus,
+        });
+    } catch (error) {
+        console.error('deactivateRoom error:', error);
+        return res.status(400).json({ message: error.message || 'Error desactivando la sala' });
+    }
+};
+
+export const getRoomFileChanges = async (req, res) => {
+    try {
+        const { code: roomCode, fileId } = req.params;
+        const requesterUserId = getRequesterUserId(req);
+
+        if (!requesterUserId) {
+            return res.status(401).json({ message: 'Token invalido: no contiene userId' });
+        }
+
+        if (!isUserOrAdminRole(req)) {
+            return res.status(403).json({
+                message: 'Solo USER_ROLE o ADMIN_ROLE puede acceder',
+            });
+        }
+
+        // Obtener sala por código
+        const room = await Room.findOne({ roomCode: String(roomCode).toUpperCase() });
+        if (!room) {
+            return res.status(404).json({ message: 'Sala no encontrada' });
+        }
+
+        // Obtener archivo
+        const file = await File.findById(fileId);
+        if (!file || String(file.roomId) !== String(room._id)) {
+            return res.status(404).json({ message: 'Archivo no encontrado en esta sala' });
+        }
+
+        // Verificar que el usuario pertenece a la sala (excepto admins)
+        if (!isAdminRole(req)) {
+            const participation = await RoomParticipation.findOne({
+                roomId: room._id,
+                userId: requesterUserId,
+            });
+            if (!participation) {
+                return res.status(403).json({
+                    message: 'Debes pertenecer a la sala para ver los cambios',
+                });
+            }
+        }
+
+        // Obtener últimas code sessions del archivo (máximo 20)
+        const codeSessions = await CodeSession.find({ fileId })
+            .sort({ savedAt: -1 })
+            .limit(20)
+            .lean();
+
+        // Obtener información de los usuarios que guardaron
+        const userIds = [...new Set(codeSessions.map((cs) => cs.savedByUserId))];
+        const participants = await RoomParticipation.find({
+            roomId: room._id,
+            userId: { $in: userIds },
+        }).select('userId username').lean();
+
+        const usernamesMap = new Map(participants.map((p) => [p.userId, p.username]));
+
+        // Enriquecer las sesiones
+        const enrichedSessions = codeSessions.map((session) => ({
+            sessionId: session._id,
+            version: session.version,
+            language: session.language,
+            saveType: session.saveType,
+            wasExecuted: session.wasExecuted,
+            savedByUserId: session.savedByUserId,
+            savedByUsername: usernamesMap.get(session.savedByUserId) || session.savedByUserId,
+            savedAt: session.savedAt,
+            codePreview: session.code ? session.code.substring(0, 100) + (session.code.length > 100 ? '...' : '') : '',
+            codeLength: session.code?.length || 0,
+        }));
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                roomCode: room.roomCode,
+                roomName: room.roomName,
+                fileName: file.fileName,
+                fileExtension: file.fileExtension,
+                language: file.language,
+                changes: enrichedSessions,
+                totalChanges: enrichedSessions.length,
+            },
+        });
+    } catch (error) {
+        console.error('getRoomFileChanges error:', error);
+        return res.status(400).json({ message: error.message || 'Error obteniendo cambios del archivo' });
     }
 };

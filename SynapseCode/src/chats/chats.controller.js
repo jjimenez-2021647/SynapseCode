@@ -7,10 +7,14 @@ export const createChat = async (req, res) => {
     try {
         //permite que el usuario ingrese un numero de chat personalizado
         // y si no quiere se crea uno por default
-        const { numberChat: providedNumber } = req.body;
+        const { numberChat: providedNumber, roomId, chatType } = req.body;
+
+        if (!roomId || !chatType) {
+            return res.status(400).json({ message: 'roomId y chatType son obligatorios' });
+        }
 
         //creamos el chat con el numero ya generado 
-        const chat = await Chat.create({ numberChat: providedNumber });
+        const chat = await Chat.create({ numberChat: providedNumber, roomId, chatType });
 
         //retornamos nuestro chat creado con el numero de chat generado o creado por nosotros
         return res.status(201).json(chat);

@@ -52,6 +52,23 @@ export const createFile = async (req, res) => {
             });
         }
 
+        // Verificar que la sala esté ACTIVA
+        const room = await Room.findById(roomId);
+        if (!room) {
+            return res.status(404).json({
+                success: false,
+                message: 'Sala no encontrada',
+                error: 'ROOM_NOT_FOUND',
+            });
+        }
+        if (room.roomStatus !== 'ACTIVA') {
+            return res.status(403).json({
+                success: false,
+                message: 'No se pueden crear archivos en salas que no estén activas',
+                error: 'ROOM_NOT_ACTIVE',
+            });
+        }
+
         // Validar nombre del archivo
         const nameValidation = validateFileName(fileName);
         if (!nameValidation.valid) {
@@ -190,7 +207,29 @@ export const getFilesByRoom = async (req, res) => {
         });
     }
 };
+// Obtener archivos creados por el usuario autenticado
+export const getFilesByUser = async (req, res) => {
+    try {
+        const userId = req.user.userId;
 
+        const files = await File.find({ createdByUserId: userId, isActive: true }).sort({ createdAt: -1 }).lean();
+        const data = await enrichFilesWithRoom(files);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Archivos del usuario obtenidos exitosamente',
+            count: data.length,
+            data,
+        });
+    } catch (error) {
+        console.error('getFilesByUser error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error obteniendo archivos del usuario',
+            error: 'GET_FILES_BY_USER_ERROR',
+        });
+    }
+};
 // Obtener un archivo por ID
 export const getFileById = async (req, res) => {
     try {
@@ -223,47 +262,21 @@ export const getFileById = async (req, res) => {
     }
 };
 
-// Actualizar el contenido del archivo (crea una nueva sesión de código)
+// Actualizar nombre y extensión del archivo (regenera código si cambia extensión)
 export const updateFileContent = async (req, res) => {
     try {
         const { id } = req.params;
-        const { currentCode } = req.body;
-        const normalizedCurrentCode = normalizeCodeContent(currentCode);
+        const { fileName, fileExtension } = req.body;
 
-        if (normalizedCurrentCode === undefined) {
+        if (!fileName && !fileExtension) {
             return res.status(400).json({
                 success: false,
-                message: 'currentCode es obligatorio',
-                error: 'MISSING_CURRENT_CODE',
+                message: 'Debe proporcionar fileName o fileExtension para actualizar',
+                error: 'MISSING_UPDATE_FIELDS',
             });
         }
 
-        // Validar tamaño del código
-        const sizeValidation = validateCodeSize(normalizedCurrentCode);
-        if (!sizeValidation.valid) {
-            return res.status(400).json({
-                success: false,
-                message: sizeValidation.message,
-                error: 'CODE_SIZE_EXCEEDED',
-            });
-        }
-
-        // Obtener userId del token
-        const lastModifiedByUserId = req.user.userId;
-
-        const file = await File.findByIdAndUpdate(
-            id,
-            {
-                currentCode: normalizedCurrentCode,
-                lastModifiedByUserId,
-                lastModifiedAt: new Date(),
-            },
-            {
-                new: true,
-                runValidators: true,
-            }
-        );
-
+        const file = await File.findById(id);
         if (!file) {
             return res.status(404).json({
                 success: false,
@@ -272,17 +285,93 @@ export const updateFileContent = async (req, res) => {
             });
         }
 
+        const updates = {};
+        let newLanguage = file.language;
+        let newCode = file.currentCode;
+
+        // Si cambia el nombre
+        if (fileName && fileName.trim() !== file.fileName) {
+            const nameValidation = validateFileName(fileName);
+            if (!nameValidation.valid) {
+                return res.status(400).json({
+                    success: false,
+                    message: nameValidation.message,
+                    error: 'INVALID_FILE_NAME',
+                });
+            }
+            updates.fileName = fileName.trim();
+        }
+
+        // Si cambia la extensión
+        if (fileExtension && fileExtension.toLowerCase() !== file.fileExtension) {
+            const extensionValidation = validateFileExtension(fileExtension);
+            if (!extensionValidation.valid) {
+                return res.status(400).json({
+                    success: false,
+                    message: extensionValidation.message,
+                    error: 'INVALID_FILE_EXTENSION',
+                });
+            }
+
+            // Detectar nuevo lenguaje
+            newLanguage = detectLanguageFromExtension(fileExtension);
+
+            // Generar nuevo código por defecto
+            newCode = buildDefaultCodeTemplate({
+                language: newLanguage,
+                fileName: updates.fileName || file.fileName,
+                fileExtension: fileExtension.toLowerCase(),
+            });
+
+            updates.fileExtension = fileExtension.toLowerCase();
+            updates.language = newLanguage;
+            updates.currentCode = newCode;
+        }
+
+        // Si no cambió extensión pero cambió nombre, actualizar solo nombre
+        if (fileName && !fileExtension) {
+            updates.fileName = fileName.trim();
+        }
+
+        updates.lastModifiedByUserId = req.user.userId;
+        updates.lastModifiedAt = new Date();
+
+        const updatedFile = await File.findByIdAndUpdate(id, updates, {
+            new: true,
+            runValidators: true,
+        });
+
+        // Si cambió la extensión, crear nueva codeSession con el código regenerado
+        if (fileExtension && fileExtension.toLowerCase() !== file.fileExtension) {
+            try {
+                await CodeSession.create({
+                    fileId: updatedFile._id,
+                    roomId: updatedFile.roomId,
+                    language: newLanguage,
+                    code: newCode,
+                    savedByUserId: req.user.userId,
+                    version: (await CodeSession.countDocuments({ fileId: updatedFile._id })) + 1,
+                    saveType: 'AUTO_REGENERATE',
+                    wasExecuted: false,
+                    savedAt: new Date(),
+                });
+            } catch (sessionError) {
+                console.error('Error creando codeSession al cambiar extensión:', sessionError);
+                // No bloquear la actualización del archivo
+            }
+        }
+
         return res.status(200).json({
             success: true,
-            message: 'Contenido del archivo actualizado exitosamente',
-            data: file,
+            message: 'Archivo actualizado exitosamente',
+            data: updatedFile,
         });
     } catch (error) {
         console.error('updateFileContent error:', error);
         return res.status(400).json({
             success: false,
-            message: error.message || 'Error actualizando el contenido del archivo',
-            error: 'UPDATE_FILE_CONTENT_ERROR',
+            message: error.message || 'Error actualizando el archivo',
+            error: 'UPDATE_FILE_ERROR',
         });
     }
 };

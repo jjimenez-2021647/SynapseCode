@@ -45,17 +45,21 @@ const RoomSchema = new Schema(
             default: null,
         },
 
-        // lenguaje de progra que se va a usar en la sala
+        // lenguaje(s) de programación que se va a usar en la sala
+        // Puede ser String (mono-lenguaje) o Array<Number/String> (multi-lenguaje con IDs de Judge0)
         roomLanguage: {
-            type: String,
+            type: Schema.Types.Mixed,
             required: false,
             default: null,
-            enum: {
-                values: ROOM_LANGUAGES,
-                message: 'Lenguaje por defecto invalido',
-            },
-            uppercase: true,
-            set: (value) => (value === 'C#' ? 'CSHARP' : value),
+            description: 'String para mono-lenguaje o Array de IDs/nombres para multi-lenguaje',
+        },
+
+        // Indica si la sala soporta múltiples lenguajes
+        isMultiLanguage: {
+            type: Boolean,
+            required: false,
+            default: false,
+            description: 'true si la sala permite múltiples lenguajes, false si es mono-lenguaje',
         },
 
         // se refiere al usuario que creo la sala pero se vuelve con un sub role tipo anfrition
@@ -159,14 +163,6 @@ const RoomSchema = new Schema(
             required: true,
             unique: true,
             trim: true,
-            default: null,
-        },
-
-        // ID del chat asociado a la sala
-        idChat: {
-            type: Schema.Types.ObjectId,
-            ref: 'Chat',
-            required: false,
             default: null,
         },
     },

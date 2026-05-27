@@ -17,7 +17,8 @@ const storage = new CloudinaryStorage({
     cloudinary,
     params: {
         folder: process.env.CLOUDINARY_FOLDER,
-        allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+        allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'mp3', 'wav', 'ogg', 'm4a', 'aac', 'pdf', 'doc', 'docx', 'txt', 'xlsx', 'zip'],
+        resource_type: 'auto',
     }
 });
 
