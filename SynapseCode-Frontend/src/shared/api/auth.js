@@ -25,3 +25,32 @@ export const resetPassword = async (token, newPassword) => {
 export const getProfile = async () => {
     return await axiosAuth.get("/auth/profile")
 }
+<<<<<<< HEAD
+=======
+
+export const updateProfile = async (data) => {
+    return await axiosAuth.put("/auth/profile", data)
+}
+
+export const updateProfileImage = async (formData) => {
+    return await axiosAuth.put("/auth/profile/image", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+    })
+}
+
+export const resetProfileImage = async () => {
+    return await axiosAuth.delete("/auth/profile/image")
+}
+
+export const changePassword = async (data) => {
+    return await axiosAuth.put("/auth/change-password", data)
+}
+
+export const requestPhoneChange = async (data) => {
+    return await axiosAuth.put("/auth/profile/phone", data)
+}
+
+export const confirmPhoneChange = async (data) => {
+    return await axiosAuth.post("/auth/profile/phone/confirm", data)
+}
+>>>>>>> 51920ec32349ec74e311630f7954d68a3d8aae2e

@@ -12,6 +12,63 @@ cloudinary.config({
     api_secret: config.cloudinary.apiSecret,
 });
 
+const stripExtension = (value = '') => value.replace(/\.[^/.]+$/, '');
+
+const buildDefaultAvatarPath = () => {
+    const defaultPath =
+        config.cloudinary.defaultAvatarPath || config.cloudinary.defaultAvatar;
+
+    if (defaultPath && defaultPath.includes('${')) {
+        const folder = process.env.CLOUDINARY_FOLDER;
+        const filename = process.env.CLOUDINARY_DEFAULT_AVATAR_FILENAME;
+        return [folder, filename].filter(Boolean).join('/');
+    }
+
+    if (defaultPath && defaultPath.includes('/')) {
+        return defaultPath.split('/').pop();
+    }
+
+    return defaultPath || '';
+};
+
+const getCloudinaryPublicId = (imagePath) => {
+    if (!imagePath) return '';
+
+    try {
+        if (imagePath.startsWith('http')) {
+            const { pathname } = new URL(imagePath);
+            const segments = pathname.split('/').filter(Boolean);
+            const uploadIndex = segments.indexOf('upload');
+            const publicSegments =
+                uploadIndex >= 0 ? segments.slice(uploadIndex + 1) : segments;
+
+            if (publicSegments[0]?.startsWith('v')) {
+                publicSegments.shift();
+            }
+
+            if (publicSegments.length > 0) {
+                publicSegments[publicSegments.length - 1] = stripExtension(
+                    publicSegments[publicSegments.length - 1]
+                );
+            }
+
+            return publicSegments.join('/');
+        }
+    } catch {
+        return '';
+    }
+
+    const folder = config.cloudinary.folder;
+    const pathToUse = imagePath.includes('/') ? imagePath : `${folder}/${imagePath}`;
+    const segments = pathToUse.split('/').filter(Boolean);
+
+    if (segments.length > 0) {
+        segments[segments.length - 1] = stripExtension(segments[segments.length - 1]);
+    }
+
+    return segments.join('/');
+};
+
 export const uploadImage = async (filePath, fileName) => {
     try {
         const folder = config.cloudinary.folder;
@@ -64,14 +121,13 @@ export const uploadImage = async (filePath, fileName) => {
 
 export const deleteImage = async (imagePath) => {
     try {
-        if (!imagePath || imagePath === config.cloudinary.defaultAvatarPath) {
-        return true;
+        if (isDefaultAvatar(imagePath)) {
+            return true;
         }
 
-        const folder = config.cloudinary.folder;
-        const publicId = imagePath.includes('/')
-        ? imagePath
-        : `${folder}/${imagePath}`;
+        const publicId = getCloudinaryPublicId(imagePath);
+        if (!publicId) return false;
+
         const result = await cloudinary.uploader.destroy(publicId);
 
         return result.result;
@@ -107,19 +163,22 @@ export const getDefaultAvatarUrl = () => {
 };
 
 export const getDefaultAvatarPath = () => {
-    const defaultPath = config.cloudinary.defaultAvatarPath;
-    // If dotenv didn't expand nested vars, build from env pieces
-    if (defaultPath && defaultPath.includes('${')) {
-        const folder = process.env.CLOUDINARY_FOLDER;
-        const filename = process.env.CLOUDINARY_DEFAULT_AVATAR_FILENAME;
-        if (folder || filename) {
-        return [folder, filename].filter(Boolean).join('/');
-        }
-    }
-    if (defaultPath && defaultPath.includes('/')) {
-        return defaultPath.split('/').pop();
-    }
-    return defaultPath;
+    return buildDefaultAvatarPath();
+};
+
+export const isDefaultAvatar = (imagePath) => {
+    if (!imagePath) return true;
+
+    const defaultPath = getDefaultAvatarPath();
+    const defaultUrl = getDefaultAvatarUrl();
+    const defaultPublicId = getCloudinaryPublicId(defaultPath);
+    const imagePublicId = getCloudinaryPublicId(imagePath);
+
+    return (
+        imagePath === defaultPath ||
+        imagePath === defaultUrl ||
+        Boolean(defaultPublicId && imagePublicId && defaultPublicId === imagePublicId)
+    );
 };
 
 export default {
@@ -128,4 +187,5 @@ export default {
     getFullImageUrl,
     getDefaultAvatarUrl,
     getDefaultAvatarPath,
+    isDefaultAvatar,
 };

@@ -65,6 +65,7 @@ router.put('/change-password', authRateLimit, validateJWT, authController.change
 // profile updates
 router.put('/profile', requestLimit, validateJWT, authController.updateProfile);
 router.put('/profile/image', requestLimit, validateJWT, upload.single('profilePicture'), handleUploadError, authController.changeImage);
+router.delete('/profile/image', requestLimit, validateJWT, authController.resetProfileImage);
 
 // username change
 router.put('/profile/username', authRateLimit, validateJWT, authController.requestUsernameChange);

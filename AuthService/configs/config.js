@@ -39,6 +39,9 @@ export const config = {
         folder: process.env.CLOUDINARY_FOLDER,
 
         defaultAvatar: process.env.CLOUDINARY_DEFAULT_AVATAR_FILENAME,
+        defaultAvatarPath:
+            process.env.CLOUDINARY_DEFAULT_AVATAR_PATH ||
+            process.env.CLOUDINARY_DEFAULT_AVATAR_FILENAME,
         defaultAvatarUrl: process.env.CLOUDINARY_DEFAULT_AVATAR_URL,
     },
 

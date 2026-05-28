@@ -15,6 +15,7 @@ import {
     requestPhoneChangeHelper,
     confirmPhoneChangeHelper,
     changeImageHelper,
+    resetProfileImageHelper,
     requestDeactivateAccountHelper,
     confirmDeactivateAccountHelper,
     requestActivateAccountHelper, 
@@ -404,6 +405,20 @@ export const changeImage = asyncHandler(async (req, res) => {
         res.status(error.status || 400).json({
             success: false,
             message: error.message || 'Error al actualizar foto de perfil',
+        });
+    }
+});
+
+export const resetProfileImage = asyncHandler(async (req, res) => {
+    try {
+        const userId = req.userId;
+        const result = await resetProfileImageHelper(userId);
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error in resetProfileImage controller:', error);
+        res.status(error.status || 400).json({
+            success: false,
+            message: error.message || 'Error al restablecer foto de perfil',
         });
     }
 });
