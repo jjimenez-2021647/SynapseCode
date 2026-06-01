@@ -249,8 +249,6 @@
   background-clip: text;
 }
 
-<<<<<<< HEAD
-=======
 .profile-page::after {
   display: none;
 }
@@ -393,7 +391,6 @@
   }
 }
 
->>>>>>> 51920ec32349ec74e311630f7954d68a3d8aae2e
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10px); }

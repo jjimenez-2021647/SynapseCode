@@ -6,15 +6,12 @@ import {
     forgotPassword as forgotPasswordRequest,
     resetPassword as resetPasswordRequest,
     getProfile as getProfileRequest,
-<<<<<<< HEAD
-=======
     updateProfile as updateProfileRequest,
     updateProfileImage as updateProfileImageRequest,
     resetProfileImage as resetProfileImageRequest,
     changePassword as changePasswordRequest,
     requestPhoneChange as requestPhoneChangeRequest,
     confirmPhoneChange as confirmPhoneChangeRequest,
->>>>>>> 51920ec32349ec74e311630f7954d68a3d8aae2e
 } from "../../../shared/api"
 import { showError } from "../../../shared/utils/toast"
 
@@ -25,8 +22,6 @@ const isExpired = (expiresAt) => {
 
 const allowedRoles = ["USER_ROLE", "ADMIN_ROLE", "ORG_ROLE"];
 
-<<<<<<< HEAD
-=======
 const getErrorMessage = (err, fallback) =>
     err.response?.data?.message || err.response?.data?.error || err.message || fallback;
 
@@ -44,7 +39,6 @@ const syncUserProfile = (set, profile) => {
     }));
 }
 
->>>>>>> 51920ec32349ec74e311630f7954d68a3d8aae2e
 export const useAuthStore = create(
     persist(
         (set, get) => ({
@@ -133,10 +127,6 @@ export const useAuthStore = create(
                     return { success: true, role, planType: data.userDetails?.planType }
 
                 } catch (err) {
-<<<<<<< HEAD
-                    console.error("Login error:", err);
-=======
->>>>>>> 51920ec32349ec74e311630f7954d68a3d8aae2e
                     const message =
                         err.response?.status === 401
                             ? "Usuario o contrasena incorrectos"
@@ -204,19 +194,7 @@ export const useAuthStore = create(
                     const { data } = await getProfileRequest();
                     const profile = data?.data;
 
-<<<<<<< HEAD
-                    if (profile) {
-                        set((state) => ({
-                            user: {
-                                ...state.user,
-                                ...profile,
-                                role: profile.role || state.user?.role,
-                            },
-                        }));
-                    }
-=======
                     syncUserProfile(set, profile);
->>>>>>> 51920ec32349ec74e311630f7954d68a3d8aae2e
 
                     return { success: true, data: profile };
                 } catch (err) {
@@ -227,8 +205,6 @@ export const useAuthStore = create(
                 }
             },
 
-<<<<<<< HEAD
-=======
             updateProfile: async ({ name, surname }) => {
                 try {
                     set({ loading: true, error: null });
@@ -349,7 +325,6 @@ export const useAuthStore = create(
                 }
             },
 
->>>>>>> 51920ec32349ec74e311630f7954d68a3d8aae2e
             setUserPlanType: (planType) => {
                 set((state) => ({
                     user: state.user ? { ...state.user, planType } : state.user,
