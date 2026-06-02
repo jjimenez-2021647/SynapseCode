@@ -25,6 +25,14 @@ const axiosRooms = axios.create({
     }
 })
 
+const axiosExecution = axios.create({
+    baseURL: import.meta.env.VITE_EXECUTION_URL || "http://localhost:3010/api/v1",
+    timeout: 10000,
+    headers: {
+        "Content-Type": "application/json"
+    }
+})
+
 axiosAuth.interceptors.request.use((config) => {
     config.axiosClient = "auth";
     const token = useAuthStore.getState().token;
@@ -53,4 +61,13 @@ axiosRooms.interceptors.request.use((config) => {
     return config;
 })
 
-export { axiosAuth, axiosPlans, axiosRooms }
+axiosExecution.interceptors.request.use((config) => {
+    config.axiosClient = "execution";
+    const token = useAuthStore.getState().token;
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+})
+
+export { axiosAuth, axiosPlans, axiosRooms, axiosExecution }

@@ -70,6 +70,16 @@ const getHeaders = () => {
     return headers;
 };
 
+// Función para convertir string a base64
+const encodeBase64 = (str) => {
+    return Buffer.from(str).toString('base64');
+};
+
+// Función para convertir base64 a string
+const decodeBase64 = (base64) => {
+    return Buffer.from(base64, 'base64').toString('utf-8');
+};
+
 // Mapeo de status_id de Judge0 a los estados del sistema
 /**
     Convierte el status_id de Judge0 al enum del sistema
@@ -114,15 +124,16 @@ export const executeCode = async (language, code, input = '', timeLimit = null) 
     }
 
     const body = JSON.stringify({
-        source_code: code,
+        source_code: encodeBase64(code),
         language_id: languageId,
-        stdin: input,
+        stdin: input ? encodeBase64(input) : '',
+        base64_encoded: true,
         ...(timeLimit && { time_limit: timeLimit }), // Agregar límite de tiempo si se especifica
     });
 
     // wait=true → Judge0 espera hasta terminar y devuelve el resultado directo
     const response = await fetch(
-        `${JUDGE0_URL}/submissions?base64_encoded=false&wait=true`,
+        `${JUDGE0_URL}/submissions?base64_encoded=true&wait=true`,
         {
             method: 'POST',
             headers: getHeaders(),
@@ -156,14 +167,15 @@ export const submitCode = async (language, code, input = '', timeLimit = null) =
     }
 
     const body = JSON.stringify({
-        source_code: code,
+        source_code: encodeBase64(code),
         language_id: languageId,
-        stdin: input,
+        stdin: input ? encodeBase64(input) : '',
+        base64_encoded: true,
         ...(timeLimit && { time_limit: timeLimit }), // Agregar límite de tiempo si se especifica
     });
 
     const response = await fetch(
-        `${JUDGE0_URL}/submissions?base64_encoded=false`,
+        `${JUDGE0_URL}/submissions?base64_encoded=true`,
         {
             method: 'POST',
             headers: getHeaders(),
@@ -187,7 +199,7 @@ export const submitCode = async (language, code, input = '', timeLimit = null) =
  */
 export const getSubmissionResult = async (token) => {
     const response = await fetch(
-        `${JUDGE0_URL}/submissions/${token}?base64_encoded=false`,
+        `${JUDGE0_URL}/submissions/${token}?base64_encoded=true`,
         {
             method:  'GET',
             headers: getHeaders(),
@@ -211,14 +223,38 @@ export const getSubmissionResult = async (token) => {
  * @returns {Object}   - Objeto estandarizado para guardar en CodeExecution
  */
 const parseJudge0Response = (raw) => {
-    const normalizedOutput =
-        typeof raw.stdout === 'string'
-            ? raw.stdout.replace(/(?:\r?\n)+$/, '')
+    // Decodificar base64 si es necesario
+    let stdout = '';
+    let stderr = '';
+
+    try {
+        stdout =
+            typeof raw.stdout === 'string' && raw.stdout
+                ? decodeBase64(raw.stdout)
+                : '';
+    } catch (e) {
+        stdout = raw.stdout || '';
+    }
+
+    try {
+        stderr =
+            typeof raw.stderr === 'string' && raw.stderr
+                ? decodeBase64(raw.stderr)
+                : '';
+    } catch (e) {
+        stderr = raw.stderr || '';
+    }
+
+    const compileOutput =
+        typeof raw.compile_output === 'string' && raw.compile_output
+            ? decodeBase64(raw.compile_output)
             : '';
+
+    const normalizedOutput = stdout.replace(/(?:\r?\n)+$/, '');
 
     return {
         output:          normalizedOutput,
-        errors:          raw.stderr          || raw.compile_output || '',
+        errors:          stderr || compileOutput || '',
         executionTimeMs: raw.time            ? Math.round(parseFloat(raw.time) * 1000) : null,
         usedMemoryKb:    raw.memory          || 0,
         executionStatus: mapJudge0Status(raw.status?.id),

@@ -5,6 +5,8 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import { dbConnection } from './db.js';
 import { corsOptions } from './cors-configuration.js';
 import { helmetConfiguration } from './helmet-configuration.js';
@@ -52,8 +54,30 @@ const routes = (app) => {
 
 export const initServer = async () => {
     const app = express();
+    const httpServer = createServer(app);
     const PORT = process.env.PORT;
+    
+    // Configurar Socket.IO
+    const io = new Server(httpServer, {
+        cors: {
+            origin: [
+                process.env.FRONTEND_URL || "http://localhost:5173",
+                "http://localhost:5174", // Soporte para puerto alternativo
+                "http://localhost:3000",
+                "http://localhost:3001",
+                "http://localhost:3002",
+                "http://localhost:3003",
+                "http://localhost:3004",
+                "http://localhost:3005",
+                "http://localhost:3100"
+            ],
+            methods: ["GET", "POST"],
+            credentials: true
+        }
+    });
+    
     app.set('trust proxy', 1);
+    app.set('io', io); // Pasar io a través de app para usar en rutas
 
     try {
         await dbConnection();
@@ -87,9 +111,70 @@ export const initServer = async () => {
 
         routes(app);
 
-        app.listen(PORT, () => {
+        // Configurar eventos de Socket.IO
+        io.on('connection', (socket) => {
+            console.log(`[Socket.IO] Usuario conectado: ${socket.id}`);
+
+            // Usuario se une a una sala
+            socket.on('join-room', (roomId, fileId, userId) => {
+                const roomKey = `room-${roomId}-file-${fileId}`;
+                socket.join(roomKey);
+                console.log(`[Socket.IO] ${socket.id} se unió a ${roomKey}`);
+                
+                // Notificar a otros usuarios que alguien se conectó
+                socket.to(roomKey).emit('user-joined', { userId, socketId: socket.id });
+                
+                // Emitir evento de usuario presente en la sala (para sincronizar lista)
+                socket.emit('room-users-updated', { roomId, fileId, userId });
+                socket.to(roomKey).emit('room-users-updated', { roomId, fileId, userId });
+            });
+
+            // Sincronizar cambios de código en tiempo real
+            socket.on('code-change', (data) => {
+                const { roomId, fileId, code, userId } = data;
+                const roomKey = `room-${roomId}-file-${fileId}`;
+                
+                // Emitir a todos EXCEPTO al usuario que envió el cambio
+                socket.to(roomKey).emit('code-changed', { code, userId });
+            });
+
+            // Sincronizar movimiento del cursor en tiempo real
+            socket.on('cursor-move', (data) => {
+                const { roomId, fileId, position, userId, userName } = data;
+                const roomKey = `room-${roomId}-file-${fileId}`;
+                
+                // Emitir a todos EXCEPTO al usuario que envió el cambio
+                socket.to(roomKey).emit('cursor-moved', { position, userId, userName });
+            });
+
+            // Compartir output de consola con todos los usuarios en el archivo
+            socket.on('console-output', (data) => {
+                const { roomId, fileId, consoleId, output, type } = data;
+                const roomKey = `room-${roomId}-file-${fileId}`;
+                
+                // Emitir a todos EN LA SALA incluyendo al que envió
+                io.to(roomKey).emit('console-output-shared', { consoleId, output, type });
+            });
+
+            // Usuario abandona la sala
+            socket.on('leave-room', (roomId, fileId, userId) => {
+                const roomKey = `room-${roomId}-file-${fileId}`;
+                socket.leave(roomKey);
+                console.log(`[Socket.IO] ${socket.id} abandonó ${roomKey}`);
+                
+                socket.to(roomKey).emit('user-left', { userId, socketId: socket.id });
+            });
+
+            // Desconexión
+            socket.on('disconnect', () => {
+                console.log(`[Socket.IO] Usuario desconectado: ${socket.id}`);
+            });
+        });
+
+        httpServer.listen(PORT, () => {
             console.log(`SynapseCode-ServiceRoom running on port ${PORT}`);
             console.log(`API Docs: http://localhost:${PORT}/api-docs`);
+            console.log(`Socket.IO habilitado en puerto ${PORT}`);
         });
     } catch (error) {
         console.error(`Error starting ServiceRoom: ${error.message}`);

@@ -2,6 +2,7 @@
 import axios from 'axios';
 
 const SERVICES = {
+    AUTH: process.env.AUTH_SERVICE_URL || 'http://localhost:3006',
     CHAT: process.env.CHAT_SERVICE_URL || 'http://localhost:3008',
     CODE_SESSIONS: process.env.CODE_SESSIONS_SERVICE_URL || 'http://localhost:3009',
     EXECUTION_CODE: process.env.EXECUTION_CODE_SERVICE_URL || 'http://localhost:3010',
@@ -94,8 +95,41 @@ export const createChatsInChatService = async (roomId, numberChat, token) => {
     };
 };
 
+/**
+ * Obtiene datos completos del usuario desde el AuthService
+ * @param {string} userId - ID del usuario
+ * @param {string} token - Token JWT para autenticación
+ * @returns {Promise<object>} Datos del usuario (name, profilePicture, etc) o null si falla
+ */
+export const getUserDataFromAuthService = async (userId, token) => {
+    try {
+        const url = `${SERVICES.AUTH}/api/v1/auth/profile/by-id`;
+        
+        const response = await axios.post(
+            url,
+            { userId },
+            {
+                timeout: 3000,
+                headers: {
+                    'x-token': token || '',
+                    'Content-Type': 'application/json',
+                },
+            }
+        );
+        
+        if (response.data?.success && response.data?.data) {
+            return response.data.data;
+        }
+        return null;
+    } catch (error) {
+        console.warn(`[getUserDataFromAuthService] Error obteniendo usuario ${userId}:`, error.message);
+        return null;
+    }
+};
+
 export default {
     callService,
     createChatsInChatService,
+    getUserDataFromAuthService,
     SERVICES,
 };

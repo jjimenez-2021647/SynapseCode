@@ -193,6 +193,7 @@ export const loginUserHelper = async (emailOrUsername, password) => {
                 profilePicture ? getFullImageUrl(profilePicture) : getFullImageUrl(getDefaultAvatarPath()),
             profilePictureIsDefault: isDefaultAvatar(profilePicture),
             role,
+            status: plainUser.Status,
         };
 
         return {

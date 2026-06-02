@@ -100,7 +100,8 @@ export const uploadImage = async (filePath, fileName) => {
             throw new Error(`Error uploading image: ${result.error.message}`);
         }
 
-        // Retornamos la URL completa y segura
+        // Retornamos la URL completa y segura de Cloudinary
+        // result.secure_url ya incluye todas las transformaciones aplicadas
         return result.secure_url;
 
     } catch (error) {
@@ -138,24 +139,31 @@ export const deleteImage = async (imagePath) => {
 };
 
 export const getFullImageUrl = (imagePath) => {
-    //Si no hay imagen, devolver el avatar por defecto
+    // Si no hay imagen, devolver el avatar por defecto
     if (!imagePath) {
         return getDefaultAvatarUrl();
     }
 
+    // Si ya es una URL completa de Cloudinary (https://...), devolverla tal cual
     if (imagePath.startsWith('http')) {
         return imagePath;
     }
 
-    // Si por alguna razón solo es el nombre del archivo, construir la URL 
-    const baseUrl = config.cloudinary.baseUrl;
+    // Si es el avatar por defecto (nombre de archivo sin ruta), devolver la URL del avatar por defecto
+    if (isDefaultAvatar(imagePath)) {
+        return getDefaultAvatarUrl();
+    }
+
+    // Si es una ruta relativa (con o sin carpeta), construir la URL de Cloudinary
+    const cloudName = config.cloudinary.cloudName;
+    const cloudinaryBaseUrl = `https://res.cloudinary.com/${cloudName}/image/upload`;
+
+    // Asegurar que tenga la carpeta y el nombre del archivo
     const folder = config.cloudinary.folder;
+    const pathToUse = imagePath.includes('/') ? imagePath : `${folder}/${imagePath}`;
 
-    const pathToUse = imagePath.includes('/')
-        ? imagePath
-        : `${folder}/${imagePath}`;
-
-    return `${baseUrl}${pathToUse}`;
+    // Construir la URL completa
+    return `${cloudinaryBaseUrl}/${pathToUse}`;
 };
 
 export const getDefaultAvatarUrl = () => {

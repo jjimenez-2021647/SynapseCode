@@ -1,0 +1,8 @@
+export { CodeEditor } from './CodeEditor'
+export { ConsolePanel } from './ConsolePanel'
+export { FileExplorer } from './FileExplorer'
+export { IAChat } from './IAChat'
+export { ChatPanel } from './ChatPanel'
+export { Participants } from './Participants'
+export { ToolsSidebar } from './ToolsSidebar'
+export { TopBar } from './TopBar'

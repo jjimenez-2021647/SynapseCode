@@ -1206,3 +1206,98 @@ export const debugUserParticipations = async (req, res) => {
         });
     }
 };
+
+/**
+ * Obtener una sala por su ID (MongoDB _id)
+ * Usado por el frontend para validar que la sala existe
+ */
+export const getRoomById = async (req, res) => {
+    try {
+        if (!isUserOrAdminRole(req)) {
+            return res.status(403).json({
+                success: false,
+                message: 'Solo USER_ROLE o ADMIN_ROLE puede acceder',
+            });
+        }
+
+        const { roomId } = req.params;
+        
+        if (!roomId) {
+            return res.status(400).json({
+                success: false,
+                message: 'roomId es requerido',
+                error: 'MISSING_ROOM_ID',
+            });
+        }
+
+        // Validar formato de MongoDB ObjectId
+        const mongoIdRegex = /^[a-f\d]{24}$/i;
+        if (!mongoIdRegex.test(roomId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Formato de roomId inválido',
+                error: 'INVALID_ROOM_ID_FORMAT',
+            });
+        }
+
+        const room = await Room.findById(roomId).lean();
+
+        if (!room) {
+            return res.status(404).json({
+                success: false,
+                message: 'Sala no encontrada',
+                error: 'ROOM_NOT_FOUND',
+            });
+        }
+
+        const hostPlan = await resolveRoomHostPlan(room);
+
+        // Obtener chats asociados a la sala
+        let chats = [];
+        try {
+            // eslint-disable-next-line @typescript-eslint/no-base-to-string
+            const roomIdString = room._id.toString();
+            const chatServiceUrl = process.env.CHAT_SERVICE_URL || 'http://localhost:3008';
+            const response = await axios.get(
+                `${chatServiceUrl}/api/v1/chats?roomId=${roomIdString}`,
+                {
+                    headers: {
+                        'x-token': req.token,
+                        'Content-Type': 'application/json'
+                    },
+                    timeout: 3000
+                }
+            );
+
+            const chatData = Array.isArray(response.data) ? response.data : response.data.data || [];
+            chats = chatData.map(chat => ({
+                chatId: chat.chatId,
+                numberChat: chat.numberChat,
+                chatType: chat.chatType,
+            }));
+        } catch (err) {
+            // eslint-disable-next-line @typescript-eslint/no-base-to-string
+            const roomIdStr = room._id.toString();
+            console.warn(`No se pudieron obtener los chats de la sala ${roomIdStr}`);
+            console.debug('Chat service error:', err?.message);
+        }
+
+        const roomWithChats = {
+            success: true,
+            data: {
+                ...room,
+                hostPlan,
+                chats,
+            }
+        };
+
+        return res.status(200).json(roomWithChats);
+    } catch (error) {
+        console.error('getRoomById error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error obteniendo la sala',
+            error: 'GET_ROOM_BY_ID_ERROR',
+        });
+    }
+};

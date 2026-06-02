@@ -7,6 +7,7 @@ import {
     updateRoom,
     getRoom,
     getRoomByCode,
+    getRoomById,
     deleteRoom,
     deactivateRoom,
     getRoomCreatorsAudit,
@@ -27,6 +28,7 @@ router.get('/debug/all-connected', validateJWT, requireRole('ADMIN_ROLE'), debug
 router.get('/debug/rooms-with-participations', validateJWT, requireRole('ADMIN_ROLE'), debugRoomsWithParticipations);
 router.get('/debug/token-extraction', validateJWT, requireRole('ADMIN_ROLE'), debugTokenExtraction);
 router.get('/debug/user-participations', validateJWT, requireRole('ADMIN_ROLE'), debugUserParticipations);
+router.get('/:roomId', validateJWT, getRoomById);
 router.get('/code/:code', validateJWT, getRoomByCode);
 router.put('/code/:code', validateJWT, requireRole('USER_ROLE'), updateRoom);
 router.delete('/code/:code', validateJWT, deleteRoom);

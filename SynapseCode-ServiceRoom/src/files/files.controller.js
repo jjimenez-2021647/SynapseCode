@@ -22,6 +22,227 @@ const LANGUAGE_EXTENSIONS = {
     CSHARP: ['cs'],
 };
 
+// Mapeo de templates por lenguaje
+const CODE_TEMPLATES = {
+    JAVASCRIPT: `// Hola Mundo en JavaScript
+console.log('¡Hola Mundo!');
+`,
+    TYPESCRIPT: `// Hola Mundo en TypeScript
+console.log('¡Hola Mundo!');
+`,
+    PYTHON: `# Hola Mundo en Python
+print('¡Hola Mundo!')
+`,
+    JAVA: `// Hola Mundo en Java
+public class HolaMundo {
+    public static void main(String[] args) {
+        System.out.println("¡Hola Mundo!");
+    }
+}
+`,
+    CSHARP: `// Hola Mundo en C#
+using System;
+
+class Program {
+    static void Main() {
+        Console.WriteLine("¡Hola Mundo!");
+    }
+}
+`,
+    CPLUSPLUS: `// Hola Mundo en C++
+#include <iostream>
+using namespace std;
+
+int main() {
+    cout << "¡Hola Mundo!" << endl;
+    return 0;
+}
+`,
+    C: `// Hola Mundo en C
+#include <stdio.h>
+
+int main() {
+    printf("¡Hola Mundo!\\n");
+    return 0;
+}
+`,
+    PHP: `<?php
+// Hola Mundo en PHP
+echo "¡Hola Mundo!";
+?>
+`,
+    RUBY: `# Hola Mundo en Ruby
+puts "¡Hola Mundo!"
+`,
+    GO: `package main
+
+import "fmt"
+
+func main() {
+    fmt.Println("¡Hola Mundo!")
+}
+`,
+    RUST: `// Hola Mundo en Rust
+fn main() {
+    println!("¡Hola Mundo!");
+}
+`,
+    KOTLIN: `// Hola Mundo en Kotlin
+fun main() {
+    println("¡Hola Mundo!")
+}
+`,
+    SWIFT: `// Hola Mundo en Swift
+import Foundation
+
+print("¡Hola Mundo!")
+`,
+    OBJECTIVE_C: `// Hola Mundo en Objective-C
+#import <Foundation/Foundation.h>
+
+int main(int argc, char *argv[]) {
+    @autoreleasepool {
+        NSLog(@"¡Hola Mundo!");
+    }
+    return 0;
+}
+`,
+    SQL: `-- Hola Mundo en SQL
+SELECT 'Hola Mundo' AS mensaje;
+`,
+    HTML: `<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hola Mundo</title>
+</head>
+<body>
+    <h1>¡Hola Mundo!</h1>
+</body>
+</html>
+`,
+    CSS: `/* Estilos CSS */
+body {
+    margin: 0;
+    padding: 0;
+}
+`,
+    SCSS: `// Estilos SCSS
+$color: #333;
+
+body {
+    color: $color;
+}
+`,
+    LESS: `// Estilos LESS
+@color: #333;
+
+body {
+    color: @color;
+}
+`,
+    JSON: `{
+  "mensaje": "¡Hola Mundo!"
+}
+`,
+    XML: `<?xml version="1.0" encoding="UTF-8"?>
+<root>
+    <mensaje>¡Hola Mundo!</mensaje>
+</root>
+`,
+    YAML: `# Configuración YAML
+mensaje: ¡Hola Mundo!
+`,
+    MARKDOWN: `# Hola Mundo
+
+Este es un documento de ejemplo.
+`,
+    BASH: `#!/bin/bash
+# Hola Mundo en Bash
+echo "¡Hola Mundo!"
+`,
+    POWERSHELL: `# Hola Mundo en PowerShell
+Write-Host "¡Hola Mundo!"
+`,
+    R: `# Hola Mundo en R
+print("¡Hola Mundo!")
+`,
+    PERL: `#!/usr/bin/perl
+# Hola Mundo en Perl
+print "¡Hola Mundo!\\n";
+`,
+    LUA: `-- Hola Mundo en Lua
+print("¡Hola Mundo!")
+`,
+    GROOVY: `// Hola Mundo en Groovy
+println "¡Hola Mundo!"
+`,
+    DART: `// Hola Mundo en Dart
+void main() {
+  print('¡Hola Mundo!');
+}
+`,
+    VB: `' Hola Mundo en Visual Basic
+Module HelloWorld
+    Sub Main()
+        Console.WriteLine("¡Hola Mundo!")
+    End Sub
+End Module
+`,
+    SCALA: `// Hola Mundo en Scala
+object HelloWorld {
+    def main(args: Array[String]): Unit = {
+        println("¡Hola Mundo!")
+    }
+}
+`,
+    CLOJURE: `; Hola Mundo en Clojure
+(println "¡Hola Mundo!")
+`,
+    ELIXIR: `# Hola Mundo en Elixir
+IO.puts("¡Hola Mundo!")
+`,
+    ERLANG: `% Hola Mundo en Erlang
+-module(hello).
+-export([start/0]).
+
+start() ->
+    io:fwrite("¡Hola Mundo!~n").
+`,
+    HASKELL: `-- Hola Mundo en Haskell
+main :: IO ()
+main = putStrLn "¡Hola Mundo!"
+`,
+    HTML_CSS: `<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hola Mundo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        h1 {
+            color: white;
+            font-size: 3em;
+        }
+    </style>
+</head>
+<body>
+    <h1>¡Hola Mundo!</h1>
+</body>
+</html>
+`,
+};
+
 const isExtensionAllowed = (fileExtension, roomLanguage) => {
     if (!roomLanguage) return true;
 
@@ -185,7 +406,7 @@ export const createFile = async (req, res) => {
             fileExtension: fileExtension.toLowerCase(),
             language: language || 'JAVASCRIPT',
             parentFolderId: parentFolderResult.parentFolderId,
-            currentCode: currentCode || '',
+            currentCode: currentCode || CODE_TEMPLATES[language] || CODE_TEMPLATES.JAVASCRIPT,
             createdByUserId: userId,
             lastModifiedByUserId: userId,
             isActive: true,

@@ -1,6 +1,7 @@
 'use strict'
 import RoomParticipation from './roomParticipations.model.js';
 import Room from '../rooms/rooms.model.js';
+import { getUserDataFromAuthService } from '../../helpers/service-communication.js';
 import {
     getRoleDefaultPermissions,
     mergePermissions,
@@ -398,10 +399,35 @@ export const getRoomParticipationsByRoom = async (req, res) => {
             (room?.connectedUsers || []).map((u) => [u.userId, u.username])
         );
 
-        const data = participations.map((p) => ({
-            ...p,
-            username: p.username || usernamesByUserId.get(p.userId) || null,
-        }));
+        // Obtener datos completos del usuario para cada participación
+        const data = await Promise.all(
+            participations.map(async (p) => {
+                // Intentar obtener datos del usuario desde AuthService
+                const userData = await getUserDataFromAuthService(p.userId, req.token);
+                
+                return {
+                    _id: p._id,
+                    roomId: p.roomId,
+                    userId: {
+                        _id: p.userId,
+                        id: p.userId,
+                        name: userData?.name || null,
+                        firstName: userData?.name || null,
+                        surname: userData?.surname || null,
+                        username: userData?.username || p.username || null,
+                        email: userData?.email || null,
+                        profilePicture: userData?.profilePicture || null,
+                        profilePictureIsDefault: userData?.profilePictureIsDefault ?? true,
+                    },
+                    role: p.role,
+                    permissions: p.permissions,
+                    joinedAt: p.joinedAt,
+                    leftAt: p.leftAt,
+                    totalMinutes: p.totalMinutes,
+                    connectionStatus: p.connectionStatus,
+                };
+            })
+        );
 
         return res.status(200).json({
             success: true,

@@ -29,8 +29,7 @@ const feedbackCommentSchema = new mongoose.Schema(
                 values: ['pendiente', 'realizado'],
                 message: 'El estado debe ser pendiente o realizado'
             },
-            default: 'pendiente',
-            index: true
+            default: 'pendiente'
         },
         isEdited: {
             type: Boolean,
